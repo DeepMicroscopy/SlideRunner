@@ -13,6 +13,7 @@
         Bildverarbeitung fuer die Medizin 2018, Springer Verlag, Berlin-Heidelberg
 
 """
+from PyQt5 import QtWidgets
 
 def check_version(actual:str, target:str) -> bool:
     if (target is None):
@@ -21,9 +22,9 @@ def check_version(actual:str, target:str) -> bool:
     target_tup = target.split('.')
 
     for idx in range(len(target_tup)):
-        if target_tup[idx]>actual_tup[idx]:
+        if int(target_tup[idx])>int(actual_tup[idx]):
             return False
-        if target_tup[idx]<actual_tup[idx]:
+        if int(target_tup[idx])<int(actual_tup[idx]):
             return True
     
     return True
@@ -42,10 +43,11 @@ def check_qt_dependencies():
     else:
         from PyQt5.QtCore import QT_VERSION_STR
         if not (check_version(QT_VERSION_STR, '5.6.0')):
-            print('Your PyQT5 is too old. Please upgrade to >= 5.6.0.')
+            print('Your PyQT5 is too old (%s). Please upgrade to >= 5.6.0.' % QT_VERSION_STR)
             sys.exit(1)
 
 def check_all_dependencies():
+
 
     libraries_with_versions = [
                 ('numpy', 'np', '1.13'), 
@@ -67,9 +69,7 @@ def check_all_dependencies():
         try:
             lib = __import__(name)
         except:
-            reply = QtWidgets.QMessageBox.information(None, 'Error',
-                'Missing package %s: %s' % (name, sys.exc_info()[1]), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
-            print(sys.exc_info())
+            print('Missing package %s: %s' % (name, sys.exc_info()[1]))
             sys.exit()
         else:
             globals()[short] = lib
@@ -80,6 +80,7 @@ def check_all_dependencies():
                     'Too old package %s: Version should be at least %s' % (name, version), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
 
 
+import sys
 
 check_qt_dependencies()
 
