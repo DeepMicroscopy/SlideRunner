@@ -341,7 +341,6 @@ class Database(object):
         self.dbcur.execute('SELECT Classes.uid, COUNT(*), name FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass GROUP BY Classes.uid')
         allClasses = self.dbcur.fetchall()
 
-        print('AllClasses: ',allClasses)
         statistics = np.zeros((2,len(allClasses)))
     
         names=list()
@@ -353,7 +352,6 @@ class Database(object):
                 else:
                     names.append('unknown')
 
-        print(names,statistics)
 
         if (slideID is not None):
             self.dbcur.execute('SELECT Classes.uid, COUNT(*), name FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass WHERE Annotations.slide == %d GROUP BY Classes.uid' % slideID )
@@ -363,7 +361,6 @@ class Database(object):
                     if (idx>0):
                         statistics[0,idx] = element[1]
 
-        print(names,statistics)
 
         return (names, statistics)
 
