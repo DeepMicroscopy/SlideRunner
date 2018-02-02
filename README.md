@@ -22,7 +22,7 @@ To install, please make sure that you have the following python packages and the
 
 Library           | version           |  link             
 ------------------|-------------------|-------------------
-PyQT5             | >= 5.1.0          | https://pyqt.sourceforge.net/
+PyQT5             | >= 5.6.0         | https://pyqt.sourceforge.net/
 numpy             | >= 1.13           | https://www.numpy.org
 cv2 (OpenCV3)     | >= 3.1.0          | https://opencv.org
 sqlite3           | >= 2.6.0          | https://www.sqlite.org
@@ -36,7 +36,7 @@ OpenCV3 can be most conveniently installed with anaconda:
 ### Other dependencies
 All other dependencies can be installed most easily using pip:
 
-> pip install pyqt5 numpy openslide
+> pip install --upgrade pyqt5 numpy openslide-python
 
 ## Screenshots
 
