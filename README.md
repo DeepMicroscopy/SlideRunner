@@ -42,4 +42,8 @@ All other dependencies can be installed most easily using pip:
 
 ![SlideRunner Screenshot](SlideRunner/doc/gui.png)
 
+## Database structure
 
+The major entity of our database model is the annotation. Each annotation can have multiple coordinates, with their respective x and y coordinates, and the order they were drawn (for polygons). Further, each annotation has a multitude of labels that were given by one person each and are belonging to one class, respectively. 
+
+![DB Structure](SlideRunner/doc/SlideRunner_UML.png)
