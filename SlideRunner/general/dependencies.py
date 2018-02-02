@@ -42,8 +42,8 @@ def check_qt_dependencies():
         sys.exit(1)
     else:
         from PyQt5.QtCore import QT_VERSION_STR
-        if not (check_version(QT_VERSION_STR, '5.6.0')):
-            print('Your PyQT5 is too old (%s). Please upgrade to >= 5.6.0.' % QT_VERSION_STR)
+        if not (check_version(QT_VERSION_STR, '5.10.0')):
+            print('Your PyQT5 is too old (%s). Please upgrade to >= 5.10.0.' % QT_VERSION_STR)
             sys.exit(1)
 
 def check_all_dependencies():
