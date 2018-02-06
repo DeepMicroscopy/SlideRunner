@@ -1,7 +1,25 @@
 from setuptools import setup, find_packages
 
+# setup.py
+import os
+import sys
+
+# I'll discuss version tricks in a future blog post.
+version = '1.7.2.9'
+
+if sys.argv[-1] == 'publish':
+  if (os.system("python setup.py test") == 0):
+          if (os.system("python setup.py sdist upload") == 0):
+              if (os.system("python setup.py bdist_wheel upload") == 0):
+                 os.system("git tag -a %s -m 'version %s'" % (version, version))
+                 os.system("git push")
+    
+  sys.exit()
+
+# Below this point is the rest of the setup() function
+
 setup(name='SlideRunner',
-      version='1.7.2.7',
+      version=version,
       description='SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images',
       url='http://github.com/maubreville/SlideRunner',
       author='Marc Aubreville',
