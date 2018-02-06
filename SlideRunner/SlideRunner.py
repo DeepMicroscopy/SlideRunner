@@ -975,8 +975,11 @@ class SlideRunnerUI(QMainWindow):
 
         """
 
+        import os
+        SLIDE_DIRNAME = os.path.dirname(os.path.realpath(__file__))+os.sep
+        
         if (filename is None):
-            success = self.db.open('Slides.sqlite')
+            success = self.db.open(SLIDE_DIRNAME+'Slides.sqlite')
         else:
             success = self.db.open(filename)
         
