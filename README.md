@@ -1,5 +1,6 @@
-# SlideRunner
 <img align="right" height="100" src="SlideRunner/doc/logoline.png">
+
+# SlideRunner 
 
 *SlideRunner* is a tool for massive cell annotations in whole slide images.
 
@@ -18,7 +19,30 @@ Please find the authors webpage at: https://www5.cs.fau.de/~aubreville/
 
 SlideRunner is written in Python 3, so you will need a Python 3 distribution like e.g. Anaconda (https://www.anaconda.com/download/) to run it.
 
-To install, please make sure that you have the following python packages and their dependencies installed:
+### Install using PIP
+
+We provide a convenient installation by using pip. On Linux or Mac, simply run:
+
+>sudo pip install -U SlideRunner
+
+On windows, pip should install without sudo (untested):
+
+>pip install -U SlideRunner
+
+## Installation from repository
+
+You need to clone this repository:
+
+>git clone https://github.com/maubreville/SlideRunner
+
+In order to use the automated installation process, you need to have setuptools installed.
+>pip install -U setuptools
+
+The installation procedure is then as easy as:
+>cd SlideRunner
+>python setup.py install
+
+To run, the following libraries and their dependencies will be installed:
 
 Library           | version           |  link             
 ------------------|-------------------|-------------------
@@ -27,16 +51,6 @@ numpy             | >= 1.13           | https://www.numpy.org
 cv2 (OpenCV3)     | >= 3.1.0          | https://opencv.org
 sqlite3           | >= 2.6.0          | https://www.sqlite.org
 openslide         | >= 1.1.1          | https://www.openslide.org
-
-### OpenCV3
-OpenCV3 can be most conveniently installed with anaconda:
-
-> conda install -c conda-forge opencv
-
-### Other dependencies
-All other dependencies can be installed most easily using pip:
-
-> pip install --upgrade pyqt5 numpy openslide-python
 
 ## Screenshots
 

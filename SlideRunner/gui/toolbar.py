@@ -16,25 +16,30 @@
 from functools import partial
 from PyQt5.QtWidgets import QAction
 from PyQt5.QtGui import QIcon
-from gui.types import *
+from SlideRunner.gui.types import *
 """
     Construct toolbar
 """
+import os
+
+ARTWORK_DIR_NAME = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+os.sep+'artwork'+os.sep
+
 
 def defineToolbar(self):
         self.ui.tb = self.addToolBar("Annotation")
-        self.ui.iconView = QAction(QIcon("artwork/iconArrow.png"),"View",self)
-        self.ui.iconCircle = QAction(QIcon("artwork/iconCircle.png"),"Annotate spots",self)
-        self.ui.iconRect = QAction(QIcon("artwork/iconRect.png"),"Annotate areas",self)
-        self.ui.iconPolygon = QAction(QIcon("artwork/iconPolygon.png"),"Annotate polygon",self)
-        self.ui.iconFlag = QAction(QIcon("artwork/icon_flag.png"),"Mark an important position",self)
-        self.ui.iconBlinded = QAction(QIcon("artwork/iconBlinded.png"),"Blinded mode",self)
-        self.ui.iconQuestion = QAction(QIcon("artwork/iconQuestion.png"),"Discovery mode",self)
-        self.ui.iconScreening = QAction(QIcon("artwork/icon_screeningMode.png"),"Screening mode",self)
-        self.ui.iconOverlay = QAction(QIcon("artwork/iconOverlay.png"),"Overlay screening map in overview",self)
-        self.ui.iconAnnoTN = QAction(QIcon("artwork/annoInOverview.png"),"Overlay annotations in overview",self)
-        self.ui.iconNextScreen = QAction(QIcon("artwork/icon_nextView.png"),"Next view (screening)",self)
-        self.ui.iconBack = QAction(QIcon("artwork/backArrow.png"),"Back to last annotation",self)
+        
+        self.ui.iconView = QAction(QIcon(ARTWORK_DIR_NAME+"iconArrow.png"),"View",self)
+        self.ui.iconCircle = QAction(QIcon(ARTWORK_DIR_NAME+"iconCircle.png"),"Annotate spots",self)
+        self.ui.iconRect = QAction(QIcon(ARTWORK_DIR_NAME+"iconRect.png"),"Annotate areas",self)
+        self.ui.iconPolygon = QAction(QIcon(ARTWORK_DIR_NAME+"iconPolygon.png"),"Annotate polygon",self)
+        self.ui.iconFlag = QAction(QIcon(ARTWORK_DIR_NAME+"icon_flag.png"),"Mark an important position",self)
+        self.ui.iconBlinded = QAction(QIcon(ARTWORK_DIR_NAME+"iconBlinded.png"),"Blinded mode",self)
+        self.ui.iconQuestion = QAction(QIcon(ARTWORK_DIR_NAME+"iconQuestion.png"),"Discovery mode",self)
+        self.ui.iconScreening = QAction(QIcon(ARTWORK_DIR_NAME+"icon_screeningMode.png"),"Screening mode",self)
+        self.ui.iconOverlay = QAction(QIcon(ARTWORK_DIR_NAME+"iconOverlay.png"),"Overlay screening map in overview",self)
+        self.ui.iconAnnoTN = QAction(QIcon(ARTWORK_DIR_NAME+"annoInOverview.png"),"Overlay annotations in overview",self)
+        self.ui.iconNextScreen = QAction(QIcon(ARTWORK_DIR_NAME+"icon_nextView.png"),"Next view (screening)",self)
+        self.ui.iconBack = QAction(QIcon(ARTWORK_DIR_NAME+"backArrow.png"),"Back to last annotation",self)
         self.ui.iconRect.setCheckable(True)
         self.ui.iconView.setCheckable(True)
         self.ui.iconView.setChecked(True)

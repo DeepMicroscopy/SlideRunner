@@ -14,7 +14,7 @@
 
 """
 
-from gui.types import *
+from SlideRunner.gui.types import *
 from PyQt5.QtWidgets import QMenu
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
@@ -23,7 +23,7 @@ from functools import partial
 import numpy as np
 import matplotlib.path as path
 import cv2
-from gui import annotation as GUIannotation
+from SlideRunner.gui import annotation as GUIannotation
 
 def doubleClick(self, event):
     """

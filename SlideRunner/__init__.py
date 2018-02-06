@@ -14,5 +14,5 @@
 
 """
 
-__all__ = ['shortcuts','SlideRunner_ui', 'splashScreen', 
-           'mouseEvents', 'annotation', 'menu', 'toolbar','types','style','dialogs']
+__all__ = ['SlideRunner']
+

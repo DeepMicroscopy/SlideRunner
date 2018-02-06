@@ -42,13 +42,13 @@ version = '1.7.2'
 
 SLIDERUNNER_DEBUG = False
 
-from general import dependencies
+from SlideRunner.general import dependencies
 import sys
 
 dependencies.check_qt_dependencies()
 
 from PyQt5 import QtWidgets, QtGui, QtCore
-from gui import splashScreen, menu, style
+from SlideRunner.gui import splashScreen, menu, style
 from PyQt5.QtWidgets import QMainWindow
 
 app = QtWidgets.QApplication(sys.argv)
@@ -56,7 +56,7 @@ splash = splashScreen.splashScreen(app, version)
 
 # Splash screen is displayed, go on with the rest.
 
-from general.dependencies import *
+from SlideRunner.general.dependencies import *
 
 class SlideRunnerUI(QMainWindow):
     progressBarChanged = pyqtSignal(int)
@@ -1242,8 +1242,8 @@ class SlideRunnerUI(QMainWindow):
 
         self.showDBstatistics()
 
-if __name__ == "__main__":
 
+def main():
     style.setStyle(app)    
 
     myapp = SlideRunnerUI()
@@ -1253,3 +1253,6 @@ if __name__ == "__main__":
 
     sys.exit(app.exec_())
 
+if __name__ == "__main__":
+
+    main()

@@ -15,7 +15,7 @@
 """
 
 from functools import partial
-from gui.types import *
+from SlideRunner.gui.types import *
 def defineAnnotationMenu(self):
         annomode = self.ui.menuAnnotation.addMenu('Mode')
         annomode.setEnabled(True)

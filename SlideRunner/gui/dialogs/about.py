@@ -7,6 +7,8 @@ from PyQt5.QtWidgets import QSplashScreen
 from PyQt5.QtCore import  Qt
 from functools import partial
 
+import os
+ARTWORK_DIR_NAME = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))+os.sep+'artwork'+os.sep
 
 
 def closeDlg(splash,e):
@@ -15,7 +17,7 @@ def closeDlg(splash,e):
 def aboutDialog(app,version):
 
         # Create and display the about screen
-        splash_pix = QPixmap('artwork/AboutScreen.png')
+        splash_pix = QPixmap(ARTWORK_DIR_NAME+'AboutScreen.png')
         splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
 
         splash.showMessage('Version %s\n'%version, alignment = Qt.AlignHCenter + Qt.AlignBottom, color=Qt.black)

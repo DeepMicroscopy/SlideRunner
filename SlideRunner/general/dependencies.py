@@ -95,13 +95,13 @@ from PyQt5.QtGui import QPixmap, QColor, QImage, QStandardItemModel, QStandardIt
 from PyQt5.QtWidgets import QDialog, QWidget, QFileDialog, QMenu,QInputDialog, QAction, QPushButton, QItemDelegate, QTableWidgetItem, QCheckBox
 
 # internal imports
-from gui.SlideRunner_ui import Ui_MainWindow
-from gui.dialogs.about import aboutDialog
-from gui import shortcuts, toolbar, mouseEvents, annotation
-from dataAccess.database import Database
-from processing import screening, thumbnail
+from SlideRunner.gui.SlideRunner_ui import Ui_MainWindow
+from SlideRunner.gui.dialogs.about import aboutDialog
+from SlideRunner.gui import shortcuts, toolbar, mouseEvents, annotation
+from SlideRunner.dataAccess.database import Database
+from SlideRunner.processing import screening, thumbnail
 
-from gui.types import *
+from SlideRunner.gui.types import *
 
 partial = functools.partial
 path = path.path
