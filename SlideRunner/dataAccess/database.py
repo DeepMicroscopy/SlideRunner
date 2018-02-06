@@ -398,13 +398,17 @@ class Database(object):
         return coords1, coords2, classes, persons
 
 
-    def create(self,dbfilename):
+    def create(self,dbfilename) -> bool:
  
         if (os.path.isfile(dbfilename)):
              # ok, remove old file
             os.remove(dbfilename)
 
-        tempdb = sqlite3.connect(dbfilename)
+        try:
+            tempdb = sqlite3.connect(dbfilename)
+        except sqlite3.OperationalError:
+            return False
+
         tempcur = tempdb.cursor()
 
         tempcur.execute('CREATE TABLE `Annotations_label` ('
@@ -454,3 +458,4 @@ class Database(object):
         self.dbname = os.path.basename(dbfilename)
         self.dbOpened=True
 
+        return True
