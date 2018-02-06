@@ -344,8 +344,9 @@ class Database(object):
         statistics = np.zeros((2,len(allClasses)))
     
         names=list()
-
+        classids = np.zeros(len(allClasses))        
         for idx,element in enumerate(allClasses):
+                classids[idx] = element[0]
                 statistics[1,idx] = element[1]
                 if (element[2] is not None):
                     names.append( str(element[2]))
@@ -354,12 +355,10 @@ class Database(object):
 
 
         if (slideID is not None):
-            self.dbcur.execute('SELECT Classes.uid, COUNT(*), name FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass WHERE Annotations.slide == %d GROUP BY Classes.uid' % slideID )
-            allClasses = self.dbcur.fetchall()
-
-            for idx,element in enumerate(allClasses):
-                    if (idx>0):
-                        statistics[0,idx] = element[1]
+            for idx, classId in enumerate(classids):
+                self.dbcur.execute('SELECT COUNT(*) FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass WHERE Annotations.slide == %d AND Classes.uid == %d' % (slideID,classId) )
+                allClasses = self.dbcur.fetchone()
+                statistics[0,idx] = allClasses[0]
 
 
         return (names, statistics)

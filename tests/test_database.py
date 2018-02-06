@@ -37,6 +37,7 @@ def test_database():
     DB.insertNewSpotAnnotation(xpos_orig=5,ypos_orig=15, slideUID=1, classID=2, annotator=1, type = 1)
     DB.insertNewSpotAnnotation(xpos_orig=5,ypos_orig=8, slideUID=1, classID=2, annotator=2, type = 1)
     DB.insertNewSpotAnnotation(xpos_orig=5,ypos_orig=4, slideUID=1, classID=1, annotator=2, type = 1)
+    DB.insertNewSpotAnnotation(xpos_orig=5,ypos_orig=4, slideUID=2, classID=2, annotator=2, type = 1)
 
     spotannos = DB.findSpotAnnotations(leftUpper=(0,0), rightLower=(10,10), slideUID=1, blinded = False, currentAnnotator=1)
     assert(spotannos[0][0]==5) # x coordinate
@@ -52,13 +53,16 @@ def test_database():
     assert(spotannos[0][2]==0) # agreed Class is unknown, because blinded
 
     # test statistics
-    (names,stats) = DB.countEntryPerClass()
+    (names,stats) = DB.countEntryPerClass(slideID=2)
     
     assert(names[0]=='Cell')
     assert(names[1]=='Crap')
 
+    assert(stats[0,0]==0)
+    assert(stats[0,1]==1)
+
     assert(stats[1,0]==1)
-    assert(stats[1,1]==3)
+    assert(stats[1,1]==4)
 
 
     cleanup()
