@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.7.1'
+version = '1.7.2'
 
 SLIDERUNNER_DEBUG = False
 
@@ -976,7 +976,7 @@ class SlideRunnerUI(QMainWindow):
         """
 
         if (filename is None):
-            success = self.db.open('..'+os.path.sep+'Slides.sqlite')
+            success = self.db.open('Slides.sqlite')
         else:
             success = self.db.open(filename)
         
