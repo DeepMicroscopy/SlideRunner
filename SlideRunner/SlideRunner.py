@@ -976,17 +976,21 @@ class SlideRunnerUI(QMainWindow):
         """
 
         import os
-        SLIDE_DIRNAME = os.path.dirname(os.path.realpath(__file__))+os.sep
-        
+        SLIDE_DIRNAME = os.path.expanduser("~") + os.sep    
+
         if (filename is None):
-            success = self.db.open(SLIDE_DIRNAME+'Slides.sqlite')
-        else:
-            success = self.db.open(filename)
+            filename = SLIDE_DIRNAME+'Slides.sqlite'
+
+        success = self.db.open(filename)
         
         if not success:
             reply = QtWidgets.QMessageBox.information(self, 'Message',
-                    'Error: File not found.', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
-        else:            
+                    'Warning: Database %s not found. Do you want to create a new database?' % filename, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+            if (reply == QtWidgets.QMessageBox.Yes):
+                success = self.db.create(filename)
+
+        if success:            
             self.showDatabaseUIelements()
             self.showAnnotationsInOverview()
             self.writeDebug('Opened database')
