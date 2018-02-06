@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='SlideRunner',
-      version='1.7.2.4',
+      version='1.7.2.7',
       description='SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images',
       url='http://github.com/maubreville/SlideRunner',
       author='Marc Aubreville',

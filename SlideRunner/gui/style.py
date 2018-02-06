@@ -27,13 +27,23 @@ def setStyle(app):
     darkPalette.setColor(QPalette.Highlight, QColor.fromRgb(42, 130, 218))
     darkPalette.setColor(QPalette.HighlightedText, Qt.black)
 
-    app_icon = QtGui.QIcon()
-    app_icon.addFile('artwork/icons16.png', QtCore.QSize(16,16))
-    app_icon.addFile('artwork/icons24.png', QtCore.QSize(24,24))
-    app_icon.addFile('artwork/icons32.png', QtCore.QSize(32,32))
-    app_icon.addFile('artwork/icons48.png', QtCore.QSize(48,48))
-    app_icon.addFile('artwork/icons256.png', QtCore.QSize(256,256))
+    import os
+
+    ARTWORK_DIR_NAME = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))+os.sep+'artwork'+os.sep
+
+    import platform
+    print('<%s>' % platform.system())
+    if (platform.system() == 'Darwin'):
+        app_icon = QtGui.QIcon(ARTWORK_DIR_NAME+'SlideRunner.icns')
+    else:
+        app_icon = QtGui.QIcon(ARTWORK_DIR_NAME+'icon.png')
+#    app_icon.addFile('artwork/icons16.png', QtCore.QSize(16,16))
+ #   app_icon.addFile('artwork/icons24.png', QtCore.QSize(24,24))
+  #  app_icon.addFile('artwork/icons32.png', QtCore.QSize(32,32))
+   # app_icon.addFile('artwork/icons48.png', QtCore.QSize(48,48))
+    #app_icon.addFile('artwork/icons256.png', QtCore.QSize(256,256))
     app.setWindowIcon(app_icon)
+    app.setApplicationName('SlideRunner')
 
     app.setPalette(darkPalette)
 
