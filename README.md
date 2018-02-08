@@ -1,14 +1,14 @@
-<img align="right" height="100" src="SlideRunner/doc/logoline.png">
+![Logos](SlideRunner/doc/logoline.png)
 
 # SlideRunner 
 
 *SlideRunner* is a tool for massive cell annotations in whole slide images.
 
-It has been created in close cooperation between the Pattern Recognition Lab, Friedrich-Alexander-Universität Erlangen-Nürnberg and the Institute of Veterenary Pathology, Freie Universität Berlin.
+It has been created in close cooperation between the [Pattern Recognition Lab](https://www5.cs.fau.de), Friedrich-Alexander-Universität Erlangen-Nürnberg and the [Institute of Veterenary Pathology](http://www.vetmed.fu-berlin.de/einrichtungen/institute/we12/index.html), Freie Universität Berlin.
 
 If you use the software for research purposes, please cite our paper:
 
-> M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018): SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images, In: Bildverarbeitung für die Medizin 2018, 	[arXiv:1802.02347](https://arxiv.org/abs/1802.02347) [preprint paper](https://arxiv.org/pdf/1802.02347.pdf)
+> M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018): SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images, In: Bildverarbeitung für die Medizin 2018, 	[arXiv:1802.02347](https://arxiv.org/abs/1802.02347) [preprint](https://arxiv.org/pdf/1802.02347.pdf)
 
 Please find the authors webpage at: https://www5.cs.fau.de/~aubreville/
 
@@ -27,7 +27,7 @@ On windows, pip should install without sudo (untested):
 
 >pip install -U SlideRunner
 
-## Installation from repository
+### Installation from repository
 
 You need to clone this repository:
 
@@ -53,6 +53,32 @@ openslide         | >= 1.1.1          | https://www.openslide.org
 ## Screenshots
 
 ![SlideRunner Screenshot](SlideRunner/doc/gui.png)
+
+## Usage
+
+SlideRunner features a number of annotation modes. 
+
+![Annotation modes](SlideRunner/doc/annotations.png)
+
+**View/Select**
+
+This mode is meant for browsing/screening the image, without the intention to add annotations.
+
+**Object center annotation**
+
+In this mode, annotations of object centers (e.g. cells) can be made with one click only. Select the class to annotate by clicking the button next to it in the class list or press 
+the key corresponding to the number in the list of annotations (e.g. key **1** for the first class entry). Objects annotated in this mode are displayed with a circle having a diameter of 50 pixels in full resolution, and scaled appropriately when not viewed in full resolution.
+
+**Outline annotation (rectangular)**
+This mode provides a rectangular annotation tool, that can be used to annotate rectangular patches on the image.
+
+**Outline annotation (polygon)**
+This mode creates a polygon, i.e. a connected line of points corresponding to a single annotation object. This can be handy for cellular structures or tissue types.
+
+**Annotation of important position**
+Important positions are annotations shown with a cross in a circle. The size of this annotation does not change depending on the zooming level. An important position does not
+have a class attached to it.
+
 
 ## Database structure
 
