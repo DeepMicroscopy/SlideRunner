@@ -8,9 +8,7 @@ It has been created in close cooperation between the Pattern Recognition Lab, Fr
 
 If you use the software for research purposes, please cite our paper:
 
-> M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018): SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images, In: Bildverarbeitung für die Medizin 2018 
-
-Link to the paper will be available after BVM 2018.
+> M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018): SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images, In: Bildverarbeitung für die Medizin 2018, 	arXiv:1802.02347 <a href="arXiv:1802.02347">preprint pdf</a>
 
 Please find the authors webpage at: https://www5.cs.fau.de/~aubreville/
 
