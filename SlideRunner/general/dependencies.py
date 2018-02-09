@@ -69,7 +69,7 @@ def check_all_dependencies():
         try:
             lib = __import__(name)
         except:
-            print('Missing package %s: %s' % (name, sys.exc_info()[1]))
+            print('Missing or nonfunctional package %s: %s' % (name, sys.exc_info()[1]))
             sys.exit()
         else:
             globals()[short] = lib

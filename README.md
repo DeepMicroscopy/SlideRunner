@@ -15,11 +15,12 @@ Please find the authors webpage at: https://www5.cs.fau.de/~aubreville/
 
 ## Installation
 
-SlideRunner is written in Python 3, so you will need a Python 3 distribution like e.g. Anaconda (https://www.anaconda.com/download/) to run it.
+SlideRunner is written in Python 3, so you will need a Python 3 distribution like e.g. Anaconda (https://www.anaconda.com/download/) to run it. Further, you need to install
+OpenSlide (http://openslide.org/download/).
 
 ### Install using PIP
 
-We provide a convenient installation by using pip. On Linux or Mac, simply run:
+After OpenSlide is installed, we provide a convenient installation by using pip. On Linux or Mac, simply run:
 
 >sudo pip install -U SlideRunner
 
@@ -85,3 +86,11 @@ have a class attached to it.
 The major entity of our database model is the annotation. Each annotation can have multiple coordinates, with their respective x and y coordinates, and the order they were drawn (for polygons). Further, each annotation has a multitude of labels that were given by one person each and are belonging to one class, respectively. 
 
 ![DB Structure](SlideRunner/doc/SlideRunner_UML.png)
+
+
+## Troubleshotting
+
+**Programm won't start, error message: Missing or nonfunctional package openslide: Couldn't locate OpenSlide dylib. Is OpenSlide installed?**
+
+Unfortunately, the OpenSlide binary libraries can't be fetched using pip. You need to install OpenSlide libraries (and dependencies). See http://openslide.org/download/ for more.
+
