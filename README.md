@@ -39,6 +39,7 @@ In order to use the automated installation process, you need to have setuptools 
 
 The installation procedure is then as easy as:
 >cd SlideRunner
+
 >python setup.py install
 
 To run, the following libraries and their dependencies will be installed:
