@@ -352,7 +352,7 @@ class Database(object):
                     names.append( str(element[2]))
                 else:
                     names.append('unknown')
-
+                    classids[idx] = 0
 
         if (slideID is not None):
             for idx, classId in enumerate(classids):
