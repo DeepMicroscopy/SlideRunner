@@ -5,7 +5,7 @@ import os
 import sys
 
 # I'll discuss version tricks in a future blog post.
-version = '1.7.2.9'
+version = '1.7.3.0'
 
 if sys.argv[-1] == 'publish':
   if (os.system("python setup.py test") == 0):

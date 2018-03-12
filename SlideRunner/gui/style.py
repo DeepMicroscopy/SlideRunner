@@ -37,11 +37,7 @@ def setStyle(app):
         app_icon = QtGui.QIcon(ARTWORK_DIR_NAME+'SlideRunner.icns')
     else:
         app_icon = QtGui.QIcon(ARTWORK_DIR_NAME+'icon.png')
-#    app_icon.addFile('artwork/icons16.png', QtCore.QSize(16,16))
- #   app_icon.addFile('artwork/icons24.png', QtCore.QSize(24,24))
-  #  app_icon.addFile('artwork/icons32.png', QtCore.QSize(32,32))
-   # app_icon.addFile('artwork/icons48.png', QtCore.QSize(48,48))
-    #app_icon.addFile('artwork/icons256.png', QtCore.QSize(256,256))
+
     app.setWindowIcon(app_icon)
     app.setApplicationName('SlideRunner')
 
