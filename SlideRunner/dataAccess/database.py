@@ -38,26 +38,39 @@ class Database(object):
             self.execute(q)
             return self.fetchall()
     
+        q=(' SELECT coordinateX, coordinateY,0,uid,annoId,1 from Annotations_coordinates WHERE coordinateX >= '+str(leftUpper[0])+
+                 ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+' AND slide == %d;' % slideUID)
+                
+        self.execute(q)
+        resp = np.asarray(self.fetchall())
+
+        if (resp.shape[0]==0):
+            return list()
+
+
+        self.execute('SELECT annoId, class from Annotations_label WHERE person==%d' % currentAnnotator)
+        myAnnos = np.asarray(self.fetchall())
+
+        if (myAnnos.shape[0]==0):
+            myOnes = np.zeros(resp.shape).astype(np.bool)
+            mineInAll = np.empty(0)
+        else:
+            myOnes = np.in1d(resp[:,4],myAnnos[:,0])
+            mineInAll = np.in1d(myAnnos[:,0],resp[:,4])
+
+        if mineInAll.shape[0]>0:
+            resp[myOnes,2] = myAnnos[mineInAll,1]
+
+        self.execute('SELECT uid,type from Annotations WHERE type IN (1,4) AND slide == %d'% slideUID)
+        correctTypeUIDs = np.asarray(self.fetchall())
+        if (correctTypeUIDs.shape[0]==0):
+            return list() # No annotation with correct type available
+
+        typeFilter = np.in1d(resp[:,4], correctTypeUIDs[:,0])
+        assignType = np.in1d(correctTypeUIDs[:,0], resp[:,4])
+        resp[:,5] = correctTypeUIDs[assignType,1]
+        return resp[typeFilter,:].tolist()
  
-        q = ('SELECT coordinateX, coordinateY, Annotations_label.class,Annotations_coordinates.uid,Annotations.uid,type  FROM '
-             'Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.'
-             'annoId LEFT JOIN Annotations_label on Annotations_label.annoId == Annotations.uid  WHERE coordinateX >= '+str(leftUpper[0])+
-                ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type==1 AND Annotations_label.person == %d '%(slideUID,currentAnnotator) )
-        self.execute(q)
-        ownLabels = self.fetchall()
-
-        q = ('SELECT coordinateX, coordinateY, 0,Annotations_coordinates.uid,Annotations.uid,type  FROM '
-             'Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.'
-             'annoId WHERE coordinateX >= '+str(leftUpper[0])+
-                ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type==1 AND Annotations.uid NOT IN ( SELECT Annotations_label.annoId from Annotations_label WHERE person==%d group by annoId )'%(slideUID,currentAnnotator) )
-        self.execute(q)
-        otherLabels = self.fetchall()
-
-
-        return otherLabels + ownLabels 
-
 
     def checkIfUnknownAreInScreen(self,leftUpper, rightLower, slideUID, currentAnnotator):
         q = ('SELECT COUNT(*) FROM '

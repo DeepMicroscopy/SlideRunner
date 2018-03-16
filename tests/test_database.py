@@ -33,6 +33,9 @@ def test_database():
 
     assert(DB.findSlideWithFilename('BLA.tiff')==1)
 
+    spotannos = DB.findSpotAnnotations(leftUpper=(0,0), rightLower=(10,10), slideUID=1, blinded = False, currentAnnotator=1)
+    assert(len(spotannos)==0)
+
     DB.insertNewSpotAnnotation(xpos_orig=5,ypos_orig=5, slideUID=1, classID=2, annotator=1, type = 1)
     DB.insertNewSpotAnnotation(xpos_orig=5,ypos_orig=15, slideUID=1, classID=2, annotator=1, type = 1)
     DB.insertNewSpotAnnotation(xpos_orig=5,ypos_orig=8, slideUID=1, classID=2, annotator=2, type = 1)
@@ -51,6 +54,15 @@ def test_database():
     assert(spotannos[0][0]==5) # x coordinate
     assert(spotannos[0][1]==5) # y coordinate
     assert(spotannos[0][2]==0) # agreed Class is unknown, because blinded
+
+    spotannos = DB.findSpotAnnotations(leftUpper=(0,0), rightLower=(10,10), slideUID=1, blinded = True, currentAnnotator=255)
+    assert(spotannos[0][0]==5) # x coordinate
+    assert(spotannos[0][1]==5) # y coordinate
+    assert(spotannos[0][2]==0) # agreed Class is unknown, because blinded
+
+
+    spotannos = DB.findSpotAnnotations(leftUpper=(0,0), rightLower=(10,10), slideUID=5, blinded = True, currentAnnotator=2)
+    assert(len(spotannos)==0)
 
     # test statistics
     (names,stats) = DB.countEntryPerClass(slideID=2)
