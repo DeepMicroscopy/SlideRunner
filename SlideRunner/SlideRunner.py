@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.7.3'
+version = '1.8.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -80,6 +80,8 @@ class SlideRunnerUI(QMainWindow):
         self.currentZoom = 1
         self.annotationsSpots=list()
         self.annotationsArea = list()
+        self.annotationsCircle = list()
+        self.annotationsList = list()
         self.slidename=''
         self.slideUID = 0
         self.ui.annotationMode = 0
@@ -585,9 +587,12 @@ class SlideRunnerUI(QMainWindow):
 
 
     def retrieveAnnotator(self,event):
+        allPers=self.db.getAllPersons()
+        if len(allPers)==0:
+            return 0
         if (self.annotator<1):
             menu = QMenu(self)
-            for clsname in self.db.getAllPersons():
+            for clsname in allPers:
                 act=menu.addAction('as: '+clsname[0],partial(self.defineAnnotator,clsname[1]))
 
             action = menu.exec_(self.mapToGlobal(event.pos()))
@@ -703,6 +708,7 @@ class SlideRunnerUI(QMainWindow):
             self.annotationsSpots=list()
             self.annotationsFlags = list()
             self.annotationsArea=list()
+            self.annotationsCircle=list()
         radius=int(25/zoomLevel)
         if (thickness==1): # thumbnail annotation
             radius = 1
@@ -736,13 +742,22 @@ class SlideRunnerUI(QMainWindow):
         allAnnotations = self.db.findAreaAnnotations(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
         for annotation in allAnnotations:
             if (self.itemsSelected[annotation[4]]):
-                xpos1=max(0,int((annotation[0]-leftUpper[0])/zoomLevel))
-                ypos1=max(0,int((annotation[1]-leftUpper[1])/zoomLevel))
-                xpos2=min(image.shape[1],int((annotation[2]-leftUpper[0])/zoomLevel))
-                ypos2=min(image.shape[0],int((annotation[3]-leftUpper[1])/zoomLevel))
-                image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.colors[annotation[4]], lineType=cv2.LINE_AA)
+                if (annotation[6]==5): # circular type
+                    xpos1=((annotation[0]-leftUpper[0])/zoomLevel)
+                    ypos1=((annotation[1]-leftUpper[1])/zoomLevel)
+                    xpos2=((annotation[2]-leftUpper[0])/zoomLevel)
+                    ypos2=((annotation[3]-leftUpper[1])/zoomLevel)
+                    circCenter = (int(0.5*(xpos1+xpos2)), int(0.5*(ypos1+ypos2)))
+                    radius = int((xpos2-xpos1)*0.5)
+                    image = cv2.circle(image, thickness=thickness, center=circCenter, radius=radius,color=self.colors[annotation[4]], lineType=cv2.LINE_AA)
+                else:
+                    xpos1=max(0,int((annotation[0]-leftUpper[0])/zoomLevel))
+                    ypos1=max(0,int((annotation[1]-leftUpper[1])/zoomLevel))
+                    xpos2=min(image.shape[1],int((annotation[2]-leftUpper[0])/zoomLevel))
+                    ypos2=min(image.shape[0],int((annotation[3]-leftUpper[1])/zoomLevel))
+                    image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.colors[annotation[4]], lineType=cv2.LINE_AA)
                 if (adjustList):
-                    self.annotationsArea.append([xpos1,ypos1,xpos2,ypos2,annotation[4], annotation[5] ])
+                    self.annotationsArea.append([xpos1,ypos1,xpos2,ypos2,annotation[4], annotation[5], annotation[6] ])
 
 
         # finally: find polygons

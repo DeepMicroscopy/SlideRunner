@@ -25,4 +25,6 @@ class UIMainMode (Enum):
     MODE_ANNOTATE_AREA = 3
     MODE_ANNOTATE_POLYGON = 4
     MODE_ANNOTATE_FLAG = 5
+    MODE_ANNOTATE_CIRCLE = 6
+    
 

@@ -24,6 +24,7 @@ def defineAnnotationMenu(self):
         self.menuItemView.setChecked(True)
         self.menuItemView.setEnabled(True)
 
+
         self.menuItemAnnotateCenter = annomode.addAction('Annotate object center', partial(self.setUIMode, UIMainMode.MODE_ANNOTATE_SPOT) )
         self.menuItemAnnotateCenter.setCheckable(True)
         self.menuItemAnnotateCenter.setEnabled(True)
@@ -41,3 +42,8 @@ def defineAnnotationMenu(self):
         self.menuItemAnnotateFlag.setCheckable(True)
         self.menuItemAnnotateFlag.setChecked(False)
         self.menuItemAnnotateFlag.setEnabled(True)
+
+        self.menuItemAnnotateCircle = annomode.addAction('Annotate outline (circle)', partial(self.setUIMode, UIMainMode.MODE_ANNOTATE_CIRCLE))
+        self.menuItemAnnotateCircle.setCheckable(True)
+        self.menuItemAnnotateCircle.setChecked(False)
+        self.menuItemAnnotateCircle.setEnabled(True)

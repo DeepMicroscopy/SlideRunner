@@ -105,6 +105,14 @@ def moveImage(self, event):
         cv2.rectangle(img=tempimage, pt1=self.ui.anno_pt1, pt2=pt2, thickness=2, color=[127,127,127,255])
 
         self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(tempimage)))
+    if (self.ui.mode == UIMainMode.MODE_ANNOTATE_CIRCLE) & (self.ui.annotationMode>0):
+        self.ui.annotationMode=2
+        tempimage = np.copy(self.displayedImage)
+        pt2 = (posx,posy)
+        radius = int(np.sqrt(np.square(pt2[1]-self.ui.anno_pt1[1])+np.square(pt2[0]-self.ui.anno_pt1[0])))
+        cv2.circle(img=tempimage, center=self.ui.anno_pt1, radius=radius, thickness=2, color=[127,127,127,255])
+
+        self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(tempimage)))
 
     if (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
         self.ui.moveDots+=1
@@ -117,7 +125,6 @@ def leftClickImage(self, event):
         """
             Callback function for a left click in the main image
         """
-
         posx, posy = self.getMouseEventPosition(event)
         self.ui.clickToMove = False
         # Move image if shift+left click
@@ -204,8 +211,8 @@ def leftClickImage(self, event):
                 GUIannotation.addSpotAnnotation( self, None, event, typeAnno=4)
             
         
-        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA):
-            # Normal rectangular GUIannotation. 
+        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA) or (self.ui.mode == UIMainMode.MODE_ANNOTATE_CIRCLE):
+            # Normal rectangular or circular GUIannotation. 
             self.ui.annotationMode=1
             self.ui.anno_pt1 =  self.getMouseEventPosition(event)
         
@@ -226,16 +233,36 @@ def releaseImage(self, event):
     self.setCursor(Qt.ArrowCursor)
     if (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA) & (self.ui.annotationMode>1):
         self.ui.annotationMode=0        
-        menu = QMenu(self)
-        addmenu = menu.addMenu('Add annotation')
-        menuitems = list()
-        for clsname in self.db.getAllClasses():
-            act=addmenu.addAction(clsname[0],partial(GUIannotation.addAreaAnnotation,self, clsname[1], event))
-            menuitems.append(act)
+        if (self.lastAnnotationClass == 0):
+            menu = QMenu(self)
+            addmenu = menu.addMenu('Annotate as:')
+            menuitems = list()
+            for clsname in self.db.getAllClasses():
+                act=addmenu.addAction(clsname[0],partial(GUIannotation.addAreaAnnotation,self, clsname[1], event))
+                menuitems.append(act)
 
-        action = menu.exec_(self.mapToGlobal(event.pos()))
+            action = menu.exec_(self.mapToGlobal(event.pos()))
+            self.showImage()
+        else:
+            GUIannotation.addAreaAnnotation(self, self.lastAnnotationClass, event)
+            self.showImage()
+
+    if (self.ui.mode == UIMainMode.MODE_ANNOTATE_CIRCLE) & (self.ui.annotationMode>1):
+        self.ui.annotationMode=0        
+        menu = QMenu(self)
+        if (self.lastAnnotationClass == 0):
+            addmenu = menu.addMenu('Annotate as:')
+            menuitems = list()
+            for clsname in self.db.getAllClasses():
+                act=addmenu.addAction(clsname[0],partial(GUIannotation.addCircleAnnotation,self, clsname[1], event))
+                menuitems.append(act)
+
+            action = menu.exec_(self.mapToGlobal(event.pos()))
+        else:
+            GUIannotation.addCircleAnnotation(self, self.lastAnnotationClass, event)
         self.showImage()
-    
+
+
     if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.moveDots>1):
         menu = QMenu(self)
         addmenu = menu.addMenu('Annotate as:')

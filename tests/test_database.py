@@ -64,6 +64,22 @@ def test_database():
     spotannos = DB.findSpotAnnotations(leftUpper=(0,0), rightLower=(10,10), slideUID=5, blinded = True, currentAnnotator=2)
     assert(len(spotannos)==0)
 
+    # Test Circular annotations
+    DB.insertNewAreaAnnotation(x1=10,y1=10,x2=20,y2=20, slideUID=1, classID=1, annotator=1, typeId=5) # circle
+    DB.insertNewAreaAnnotation(x1=15,y1=10,x2=20,y2=20, slideUID=1, classID=1, annotator=1, typeId=2) # rectangle
+
+    areaannos = DB.findAreaAnnotations(leftUpper=(0,0), rightLower=(40,40), slideUID=1, blinded = False, currentAnnotator = 0)
+    # return list is: x1,y1,x2,y2,class,annoId ID, type
+    print(areaannos)
+    assert(areaannos[0][0] == 10)
+    assert(areaannos[0][6] == 5)
+    assert(len(areaannos)==2)
+
+    assert(areaannos[1][0] == 15)
+    assert(areaannos[1][6] == 2)
+
+
+
     # test statistics
     (names,stats) = DB.countEntryPerClass(slideID=2)
     
@@ -73,7 +89,7 @@ def test_database():
     assert(stats[0,0]==0)
     assert(stats[0,1]==1)
 
-    assert(stats[1,0]==1)
+    assert(stats[1,0]==3)
     assert(stats[1,1]==4)
 
 

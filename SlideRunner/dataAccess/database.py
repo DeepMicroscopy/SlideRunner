@@ -151,23 +151,23 @@ class Database(object):
 
     def findAreaAnnotations(self,leftUpper, rightLower, slideUID, blinded = False, currentAnnotator = 0):
         if not blinded:
-            q = ('SELECT agreedClass,annoId FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
+            q = ('SELECT agreedClass,annoId, type FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
                 ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type==2 '%(slideUID) +' GROUP BY Annotations_coordinates.annoId')
+                ' AND Annotations.slide == %d AND type IN (2,5) '%(slideUID) +' GROUP BY Annotations_coordinates.annoId')
 
             self.execute(q)
             farr = self.fetchall()
         else:
-            q = ('SELECT 0,annoId FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
+            q = ('SELECT 0,annoId,type FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
                 ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type==2 '%(slideUID) +' AND Annotations.uid NOT IN (SELECT annoId FROM Annotations_label WHERE person==%d GROUP BY annoID) GROUP BY Annotations_coordinates.annoId' % currentAnnotator)
+                ' AND Annotations.slide == %d AND type IN (2,5) '%(slideUID) +' AND Annotations.uid NOT IN (SELECT annoId FROM Annotations_label WHERE person==%d GROUP BY annoID) GROUP BY Annotations_coordinates.annoId' % currentAnnotator)
 
             self.execute(q)
             farr1 = self.fetchall()
 
-            q = ('SELECT class,Annotations_label.annoId FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId LEFT JOIN Annotations_label ON Annotations_label.annoId == Annotations.uid WHERE coordinateX >= '+str(leftUpper[0])+
+            q = ('SELECT class,Annotations_label.annoId,type FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId LEFT JOIN Annotations_label ON Annotations_label.annoId == Annotations.uid WHERE coordinateX >= '+str(leftUpper[0])+
                 ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type==2 '%(slideUID) +' AND Annotations_label.person == %d GROUP BY Annotations_coordinates.annoId' % currentAnnotator)
+                ' AND Annotations.slide == %d AND type IN (2,5) '%(slideUID) +' AND Annotations_label.person == %d GROUP BY Annotations_coordinates.annoId' % currentAnnotator)
 
             self.execute(q)
             farr2 = self.fetchall()
@@ -180,8 +180,8 @@ class Database(object):
             # find all annotations for area:
             allAnnos = self.findAllAnnotations(farr[entryOuter][1])
             for entry in np.arange(0,len(allAnnos),2):
-                reply.append([allAnnos[entry][0],allAnnos[entry][1],allAnnos[entry+1][0],allAnnos[entry+1][1],farr[entryOuter][0],farr[entryOuter][1]])
-            # tuple: x1,y1,x2,y2,class,annoId ID
+                reply.append([allAnnos[entry][0],allAnnos[entry][1],allAnnos[entry+1][0],allAnnos[entry+1][1],farr[entryOuter][0],farr[entryOuter][1],farr[entryOuter][2]])
+            # tuple: x1,y1,x2,y2,class,annoId ID, type
         return reply
 #        return self.fetchall()
 
@@ -248,8 +248,8 @@ class Database(object):
         self.commit()
 
 
-    def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator):
-        query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,2)' % (slideUID,classID)
+    def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2):
+        query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,%d)' % (slideUID,classID, typeId)
 #        query = 'INSERT INTO Annotations (coordinateX1, coordinateY1, coordinateX2, coordinateY2, slide, class1, person1) VALUES (%d,%d,%d,%d,%d,%d, %d)' % (x1,y1,x2,y2,slideUID,classID,annotator)
         self.execute(query)
         query = 'SELECT last_insert_rowid()'
@@ -409,6 +409,7 @@ class Database(object):
 
         return coords1, coords2, classes, persons
 
+    
 
     def create(self,dbfilename) -> bool:
  
