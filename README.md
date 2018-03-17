@@ -8,7 +8,8 @@ It has been created in close cooperation between the [Pattern Recognition Lab](h
 
 If you use the software for research purposes, please cite our paper:
 
-> M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018): SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images, In: Bildverarbeitung für die Medizin 2018, 	[arXiv:1802.02347](https://arxiv.org/abs/1802.02347) [preprint](https://arxiv.org/pdf/1802.02347.pdf)
+> M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018) SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images. In: Bildverarbeitung für die Medizin 2018. Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314. [link](https://www.springerprofessional.de/sliderunner/15478976) [arXiv:1802.02347](https://arxiv.org/abs/1802.02347) 
+
 
 Please find the authors webpage at: https://www5.cs.fau.de/~aubreville/
 
@@ -73,6 +74,9 @@ the key corresponding to the number in the list of annotations (e.g. key **1** f
 
 **Outline annotation (rectangular)**
 This mode provides a rectangular annotation tool, that can be used to annotate rectangular patches on the image.
+
+**Outline annotation (circle) (new in ver 1.8.0)**
+This mode provides a circle annotation tool, that can be used to annotate circular patches on the image.
 
 **Outline annotation (polygon)**
 This mode creates a polygon, i.e. a connected line of points corresponding to a single annotation object. This can be handy for cellular structures or tissue types.
