@@ -9,10 +9,11 @@
 
         If you use this software in research, please citer our paper:
         M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier:
-        SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images
-        Bildverarbeitung fuer die Medizin 2018, Springer Verlag, Berlin-Heidelberg
-
+        SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images. 
+        In: Bildverarbeitung für die Medizin 2018. 
+        Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314.
 """
+
 
 from enum import Enum
 
