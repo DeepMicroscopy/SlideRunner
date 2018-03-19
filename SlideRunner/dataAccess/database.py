@@ -48,7 +48,7 @@ class Database(object):
             return list()
 
 
-        self.execute('SELECT annoId, class from Annotations_label WHERE person==%d' % currentAnnotator)
+        self.execute('SELECT annoId, class from Annotations_label WHERE person==%d GROUP BY annoId' % currentAnnotator)
         myAnnos = np.asarray(self.fetchall())
 
         if (myAnnos.shape[0]==0):
