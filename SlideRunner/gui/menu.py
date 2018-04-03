@@ -17,6 +17,25 @@
 
 from functools import partial
 from SlideRunner.gui.types import *
+from PyQt5 import QtWidgets
+import cv2
+
+import SlideRunner.general.pluginFinder
+def definePluginMenu(self):
+        pluginMenu = QtWidgets.QMenu(self.ui.menubar)
+        pluginMenu.setObjectName('PluginMenu')
+        pluginMenu.setTitle('Plugins')
+        self.ui.menubar.addAction(pluginMenu.menuAction())
+
+        self.ui.pluginItems = list()
+        for plugin in SlideRunner.general.pluginFinder.pluginList:
+                plugin.instance = plugin.plugin(self.progressBarQueue)
+                menuItem = pluginMenu.addAction(plugin.commonName, partial(self.togglePlugin, plugin))
+                menuItem.setCheckable(True)
+                menuItem.setEnabled(True)
+                self.ui.pluginItems.append(menuItem)
+        self.pluginList = SlideRunner.general.pluginFinder.pluginList
+
 def defineAnnotationMenu(self):
         annomode = self.ui.menuAnnotation.addMenu('Mode')
         annomode.setEnabled(True)

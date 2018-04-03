@@ -38,9 +38,9 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.8.0'
+version = '1.9.0'
 
-SLIDERUNNER_DEBUG = False
+SLIDERUNNER_DEBUG = True
 
 from SlideRunner.general import dependencies
 import sys
@@ -58,11 +58,49 @@ splash = splashScreen.splashScreen(app, version)
 
 from SlideRunner.general.dependencies import *
 
+
+
+# Thread for receiving images from the plugin
+class imageReceiverThread(threading.Thread):
+
+    def __init__(self, queue, selfObj):
+        threading.Thread.__init__(self)
+        self.queue = queue
+        self.selfObj = selfObj
+        print('Created 1 image receiver thread')
+
+    def run(self):
+        while True:
+            img = self.queue.get()
+            print('Received an image from the plugin queue')
+            self.selfObj.overlayMap = img
+            self.selfObj.showImageRequest.emit()
+
+# Thread for receiving progress bar events
+class PluginStatusReceiver(threading.Thread):
+
+    def __init__(self, queue, selfObj):
+        threading.Thread.__init__(self)
+        self.queue = queue
+        self.selfObj = selfObj
+
+    def run(self):
+        while True:
+            # grabs host from queue
+            msgId, value = self.queue.get()
+            if (msgId == 0):
+                self.selfObj.progressBarChanged.emit(value)
+
+
 class SlideRunnerUI(QMainWindow):
     progressBarChanged = pyqtSignal(int)
     showImageRequest = pyqtSignal()
     annotator = bool # ID of curent annotator
     db = Database()
+    receiverThread = None
+    activePlugin = None
+    overlayMap = None
+    
 
     def __init__(self):
         super(SlideRunnerUI, self).__init__()
@@ -102,6 +140,13 @@ class SlideRunnerUI(QMainWindow):
         self.ui.progressBar.setHidden(True)
 
         self.ui.progressBar.setValue(0)
+        self.progressBarQueue = queue.Queue()
+        self.progressBarChanged.connect(self.setProgressBar)
+        self.showImageRequest.connect(self.showImage)
+
+        self.pluginStatusReceiver = PluginStatusReceiver(self.progressBarQueue, self)
+        self.pluginStatusReceiver.setDaemon(True)
+        self.pluginStatusReceiver.start()
 
         self.wheelEvent = partial(mouseEvents.wheelEvent,self)
 
@@ -123,6 +168,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.threshold_label.setHidden(True)
 
         menu.defineAnnotationMenu(self)
+        menu.definePluginMenu(self)
 
         if (SLIDERUNNER_DEBUG):
             self.logger = logging.getLogger()
@@ -152,9 +198,6 @@ class SlideRunnerUI(QMainWindow):
         self.ui.menubar.setEnabled(True)
         self.ui.menubar.setNativeMenuBar(False)
 
-        self.imageProcessingQueue = queue.Queue()
-        self.imageOutQueue = queue.Queue()
-
 
         if (len(sys.argv)>1):
             if os.path.isfile(sys.argv[1]):
@@ -183,6 +226,68 @@ class SlideRunnerUI(QMainWindow):
             e.accept()
          else:
             e.ignore() 
+
+    """
+    Helper function to toggle Plugin activity
+    """
+    def togglePlugin(self, plugin:pluginEntry):
+        active = False
+        for pluginItem in self.ui.pluginItems:
+            if (plugin.commonName == pluginItem.text()):
+                active = pluginItem.isChecked()
+            else:
+                pluginItem.setChecked(False)
+        
+        if (plugin.receiverThread is None):
+            plugin.receiverThread = imageReceiverThread(plugin.outQueue, self)
+            plugin.receiverThread.setDaemon(True)
+            plugin.receiverThread.start()
+
+        if (active):
+            self.activePlugin = plugin
+            self.ui.opacitySlider.setHidden(False)
+            self.ui.opacitySlider.setEnabled(True)
+            self.ui.opacityLabel.setHidden(False)
+        else:
+            self.activePlugin = None
+            self.ui.opacityLabel.setHidden(True)
+            self.ui.opacitySlider.setHidden(True)
+
+
+
+        print('Active plugin is now ', self.activePlugin)
+        self.showImage()
+
+
+    """
+    Helper function to trigger the plugin
+    """
+    def triggerPlugin(self,currentImage):
+        print('Plugin triggered...')
+        if (self.activePlugin.plugin.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN):
+            self.activePlugin.inQueue.put(currentImage)
+        else:
+            print('Putting big image')
+
+            image_dims=self.slide.level_dimensions[0]
+            actual_downsample = self.getZoomValue()
+            visualarea = self.mainImageSize
+            slidecenter = np.asarray(self.slide.level_dimensions[0])/2
+
+            imgarea_p1 = slidecenter - visualarea * actual_downsample / 2 + self.relativeCoords*slidecenter*2
+            imgarea_w =  visualarea * actual_downsample
+
+#            margin=50
+
+            coordinates = (int(imgarea_p1[0]), int(imgarea_p1[1]), int(imgarea_w[0]), int(imgarea_w[1]))
+
+#            tn = sl.read_region(location=(int(imgarea_p1[0]-margin), int(imgarea_p1[1]-margin)),
+#                               level=0,size=(int(imgarea_w[0]+2*margin), int(imgarea_w[1]+2*margin)))
+
+#            X_test = np.float32(cv2.cvtColor(np.array(tn), cv2.COLOR_BGRA2RGB))[:,:,::-1]
+
+            self.activePlugin.inQueue.put((self.slidepathname, (coordinates), currentImage.shape))
+
 
     """
     Helper function to reset screening completely
@@ -460,6 +565,7 @@ class SlideRunnerUI(QMainWindow):
 
     def pressOverviewImage(self,event):
         if (self.imageOpened):
+            self.overlayMap=None
             self.relativeCoords=np.asarray([event.x()/self.thumbnail.size[0], event.y()/self.thumbnail.size[1]])
             if (self.relativeCoords[1]>1.0):
                 self.relativeCoords[1]=1.0
@@ -776,6 +882,7 @@ class SlideRunnerUI(QMainWindow):
             Callback function when the scrollbars (horizontal/vertical) are changed.
         """
         if (self.imageOpened):
+            self.overlayMap=None
             self.relativeCoords[0] = (self.ui.horizontalScrollBar.value()/self.ui.hsteps)-0.5
             self.relativeCoords[1] = (self.ui.verticalScrollBar.value()/self.ui.vsteps)-0.5
             self.showImage()
@@ -794,6 +901,7 @@ class SlideRunnerUI(QMainWindow):
         except Exception: pass
         viewsize = self.mainImageSize * self.getZoomValue()
 
+        self.overlayMap=None
         self.ui.horizontalScrollBar.setMaximum(0)
         self.ui.hsteps=int(10*self.slide.level_dimensions[0][0]/viewsize[0])
         self.ui.vsteps=int(10*self.slide.level_dimensions[0][1]/viewsize[1])
@@ -838,6 +946,7 @@ class SlideRunnerUI(QMainWindow):
         """
             Resize event, used as callback function when the application is resized.
         """
+        self.overlayMap=None
         if (self.imageOpened):
             self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
 
@@ -862,6 +971,7 @@ class SlideRunnerUI(QMainWindow):
         """
             Sets the zoom of the current image.
         """
+        self.overlayMap=None
         self.currentZoom = zoomValue
         if (self.currentZoom < 0.5):
             self.currentZoom = 0.5
@@ -948,6 +1058,22 @@ class SlideRunnerUI(QMainWindow):
 
         # Resize to real image size
         npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
+
+        if (self.activePlugin is not None) and (self.overlayMap is None):
+            from threading import Timer
+            if (self.updateTimer is not None):
+                self.updateTimer.cancel()
+            self.updateTimer = Timer(0.5, partial(self.triggerPlugin,npi))                
+            self.updateTimer.start()
+
+        if (self.overlayMap is not None):
+                thres = self.ui.threshold.value()/100.0
+                olm = cv2.resize(self.overlayMap, dsize=(npi.shape[1],npi.shape[0]))
+                if (True): # boost mode
+                    npi[:,:,0] = np.uint8(np.clip(np.float32(npi[:,:,0])*(1) - 255.0 * self.opacity * (olm * 10.0 * thres),0,255))
+                    npi[:,:,1] = np.uint8(np.clip(np.float32(npi[:,:,1])*(1) + 255.0 * self.opacity * (olm * 10.0 * thres),0,255))
+                    npi[:,:,2] = np.uint8(np.clip(np.float32(npi[:,:,2])*(1) - 255.0 * self.opacity * (olm * 10.0 * thres),0,255))
+
 
         # Overlay Annotations by the user
         if (self.db.isOpen()):
@@ -1179,7 +1305,9 @@ class SlideRunnerUI(QMainWindow):
         """
             Callback function for when a slider was changed.
         """
+        self.overlayMap=None
         self.setZoomValue(self.sliderToZoomValue())
+        self.overlayMap=None
         self.showImage()
         self.updateScrollbars()
 

@@ -57,6 +57,7 @@ def check_all_dependencies():
                 ('time','time',None), 
                 ('random','random',None),
                 ('os','os',None), 
+                ('multiprocessing','multiprocessing', None),
                 ('threading','threading',None),
                 ('queue','queue', None),
                 ('logging','logging','0.5'),
@@ -100,8 +101,9 @@ from SlideRunner.gui.dialogs.about import aboutDialog
 from SlideRunner.gui import shortcuts, toolbar, mouseEvents, annotation
 from SlideRunner.dataAccess.database import Database
 from SlideRunner.processing import screening, thumbnail
-
+from SlideRunner.general import SlideRunnerPlugin
 from SlideRunner.gui.types import *
+from SlideRunner.general.types import pluginEntry
 
 partial = functools.partial
 path = path.path
