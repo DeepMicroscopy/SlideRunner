@@ -85,6 +85,9 @@ This mode creates a polygon, i.e. a connected line of points corresponding to a 
 Important positions are annotations shown with a cross in a circle. The size of this annotation does not change depending on the zooming level. An important position does not
 have a class attached to it.
 
+## News
+
+Starting with Version 1.10.0, we have a multi-thread-compatible plug-in interface. Up to now, documentation is not yet available. As examples, two plug-ins are provided. 
 
 ## Database structure
 
