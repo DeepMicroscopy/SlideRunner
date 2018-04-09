@@ -11,6 +11,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     shortName = 'OTSU threshold'
     inQueue = Queue()
     outQueue = Queue()
+    outputType = SlideRunnerPlugin.PluginOutputType.BINARY_MASK
     description = 'Apply simple OTSU threshold on the current image'
     pluginType = SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN
     
@@ -22,8 +23,15 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         pass
 
     def queueWorker(self):
-        while True:
-            (image) = self.inQueue.get()
+        quitSignal=False
+        while not quitSignal:
+            job = SlideRunnerPlugin.pluginJob(self.inQueue.get())
+            image = job.currentImage
+
+            if (job.jobDescription == SlideRunnerPlugin.JobDescription.QUIT_PLUGIN_THREAD):
+                # signal to exit this thread
+                quitSignal=True
+                continue
             print('OTSU plugin: received 1 image from queue')
 
             print(image.shape)
@@ -38,6 +46,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             ret, thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
 
             self.outQueue.put(np.float32(thresh/255.0))
+            self.statusQueue.put((1, 'OTSU calculation done.'))
             print('OTSU plugin: done')
 
 

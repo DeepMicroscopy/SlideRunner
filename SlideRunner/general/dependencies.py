@@ -103,6 +103,7 @@ from SlideRunner.dataAccess.database import Database
 from SlideRunner.processing import screening, thumbnail
 from SlideRunner.general import SlideRunnerPlugin
 from SlideRunner.gui.types import *
+from SlideRunner.gui.sidebar import *
 from SlideRunner.general.types import pluginEntry
 
 partial = functools.partial
