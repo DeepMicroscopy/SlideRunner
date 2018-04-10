@@ -89,6 +89,13 @@ have a class attached to it.
 
 Starting with Version 1.10.0, we have a multi-thread-compatible plug-in interface. Up to now, documentation is not yet available. As examples, two plug-ins are provided. 
 
+## Plugins
+
+There are currently two plug-ins available:
+
+- OTSU threshold: A simple OTSU threshold plugin. Positive pixels are shown in green color.
+- PPC: Positive Pixel Count, as in: Olson, Allen H. "Image analysis using the Aperio ScanScope." Technical manual. Aperio Technologies Inc (2006).
+
 ## Database structure
 
 The major entity of our database model is the annotation. Each annotation can have multiple coordinates, with their respective x and y coordinates, and the order they were drawn (for polygons). Further, each annotation has a multitude of labels that were given by one person each and are belonging to one class, respectively. 
