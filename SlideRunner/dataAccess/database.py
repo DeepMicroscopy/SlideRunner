@@ -151,12 +151,20 @@ class Database(object):
 
     def findAreaAnnotations(self,leftUpper, rightLower, slideUID, blinded = False, currentAnnotator = 0):
         if not blinded:
-            q = ('SELECT agreedClass,annoId, type FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
+            q = ('SELECT coordinateX, coordinateY,agreedClass, annoId, type, orderIdx FROM Annotations_coordinates  LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE annoID in (SELECT annoId FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
                 ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type IN (2,5) '%(slideUID) +' GROUP BY Annotations_coordinates.annoId')
-
+                ' AND Annotations.slide == %d AND type IN (2,5) '%(slideUID) +' group by Annotations_coordinates.annoId) ORDER BY Annotations_coordinates.annoId, orderIdx')
             self.execute(q)
             farr = self.fetchall()
+
+            reply = []
+            for entry in range(len(farr)-1):
+                # find all annotations for area:
+                if (farr[entry][5]==1):
+                    reply.append([farr[entry][0],farr[entry][1],farr[entry+1][0],farr[entry+1][1],farr[entry][2],farr[entry][3],farr[entry][4]])
+                    # tuple: x1,y1,x2,y2,class,annoId ID, type
+            return reply
+
         else:
             q = ('SELECT 0,annoId,type FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
                 ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+

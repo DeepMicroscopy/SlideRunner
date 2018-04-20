@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.10.1'
+version = '1.10.2'
 
 SLIDERUNNER_DEBUG = False
 
