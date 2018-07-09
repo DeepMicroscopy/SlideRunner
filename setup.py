@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 import os
 import sys
 
-version = '1.10.2'
+version = '1.11'
 
 if sys.argv[-1] == 'publish':
   if (os.system("python setup.py test") == 0):
@@ -26,7 +26,7 @@ setup(name='SlideRunner',
       license='GPL',
       packages=find_packages(),
       package_data={
-        'SlideRunner': ['artwork/*.png', 'Slides.sqlite'],
+        'SlideRunner': ['artwork/*.png', 'Slides.sqlite', 'plugins/*.py'],
       }, 
       install_requires=[
           'PyQt5', 'openslide-python>=1.1.1', 'pyqt5>=5.5.0', 'opencv-python>=3.1.0',
