@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.10.2'
+version = '1.12.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -62,7 +62,7 @@ class subwindow(QWidget):
     def createWindow(self,WindowWidth,WindowHeight):
         parent=None
         super(subwindow,self).__init__(parent)
-        self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(QtCore.Qt.SubWindow)
         self.resize(WindowWidth,WindowHeight)
 
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -101,16 +101,19 @@ class PluginStatusReceiver(threading.Thread):
         while True:
             # grabs host from queue
             msgId, value = self.queue.get()
-            if (msgId == 0):
+            if (msgId == SlideRunnerPlugin.StatusInformation.PROGRESSBAR):
                 self.selfObj.progressBarChanged.emit(value)
-            elif (msgId == 1):
+            elif (msgId == SlideRunnerPlugin.StatusInformation.TEXT):
                 self.selfObj.statusViewChanged.emit(value)
+            elif (msgId == SlideRunnerPlugin.StatusInformation.ANNOTATIONS):
+                self.selfObj.annotationReceived.emit(value)
 
 
 class SlideRunnerUI(QMainWindow):
     progressBarChanged = pyqtSignal(int)
     showImageRequest = pyqtSignal()
     statusViewChanged = pyqtSignal(str)
+    annotationReceived = pyqtSignal(list)
     annotator = bool # ID of curent annotator
     db = Database()
     receiverThread = None
@@ -120,6 +123,7 @@ class SlideRunnerUI(QMainWindow):
     myPluginSubwindow = None
     slideMagnification = 1
     slideMicronsPerPixel = 20
+    pluginAnnos = list()
     
 
     def __init__(self):
@@ -169,6 +173,7 @@ class SlideRunnerUI(QMainWindow):
         self.progressBarChanged.connect(self.setProgressBar)
         self.statusViewChanged.connect(self.setStatusView)
         self.showImageRequest.connect(self.showImage)
+        self.annotationReceived.connect(self.receiveAnno)
 
         self.pluginStatusReceiver = PluginStatusReceiver(self.progressBarQueue, self)
         self.pluginStatusReceiver.setDaemon(True)
@@ -195,6 +200,7 @@ class SlideRunnerUI(QMainWindow):
 
         menu.defineAnnotationMenu(self)
         menu.definePluginMenu(self)
+        menu.defineZoomMenu(self)
 
         if (SLIDERUNNER_DEBUG):
             self.logger = logging.getLogger()
@@ -229,7 +235,9 @@ class SlideRunnerUI(QMainWindow):
             if os.path.isfile(sys.argv[1]):
                 self.openSlide(sys.argv[1])
 
-        
+        if (len(sys.argv)>2):
+            if os.path.isfile(sys.argv[2]):
+                self.openDatabase(True, filename=sys.argv[2])
 
     class NotImplementedException:
         pass
@@ -248,6 +256,10 @@ class SlideRunnerUI(QMainWindow):
     """
     Signal that we accept drag&drop for files, and show the link icon.
     """
+
+    def receiveAnno(self, anno):
+        self.pluginAnnos = anno
+        self.showImage()
 
     def setProgressBar(self, number):
         if (number == -1):
@@ -284,6 +296,7 @@ class SlideRunnerUI(QMainWindow):
             self.myPluginSubwindow=subwindow()
             self.myPluginSubwindow.createWindow(200,400)
             self.myPluginSubwindow.setWindowTitle('Plugin Settings')
+            self.myPluginSubwindow.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
             self.myPluginSubwindow.centralwidget = QtWidgets.QWidget(self.myPluginSubwindow)
             self.myPluginSubwindow.verticalLayout = QtWidgets.QVBoxLayout(self.myPluginSubwindow.centralwidget)
             sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
@@ -371,13 +384,21 @@ class SlideRunnerUI(QMainWindow):
                 config[key] = self.myPluginSubwindow.parameterSliders[key].value()/1000.0
         return config
 
+
+    """
+        Send annotation to plugin
+    """
+
+    def sendAnnoToPlugin(self, anno ):
+        self.triggerPlugin(self.rawImage, (self.db.annoDetails(anno),))
+
     """
     Helper function to trigger the plugin
     """
-    def triggerPlugin(self,currentImage):
+    def triggerPlugin(self,currentImage, annotations=None):
         print('Plugin triggered...')
         if (self.activePlugin.plugin.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN):
-            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage,configuration=self.gatherPluginConfig()))
+            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage,configuration=self.gatherPluginConfig(), annotations=annotations))
         else:
             print('Putting wholeslide image into plugin ..')
 
@@ -392,7 +413,7 @@ class SlideRunnerUI(QMainWindow):
             coordinates = (int(imgarea_p1[0]), int(imgarea_p1[1]), int(imgarea_w[0]), int(imgarea_w[1]))
 
 #            self.activePlugin.inQueue.put((self.slidepathname, (coordinates), currentImage.shape))
-            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, coordinates=coordinates, configuration=self.gatherPluginConfig()))
+            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, coordinates=coordinates, configuration=self.gatherPluginConfig(), annotations=annotations))
 
 
     """
@@ -528,6 +549,9 @@ class SlideRunnerUI(QMainWindow):
         self.setZoomValue(self.getZoomValue() / 1.25)
         self.showImage()
 
+    def zoomMaxoptical(self):
+        self.setZoomValue(1.0)
+        self.showImage()
 
     def setOverlayHeatmap(self):
         self.overviewOverlayHeatmap = self.ui.iconOverlay.isChecked()
@@ -816,11 +840,11 @@ class SlideRunnerUI(QMainWindow):
 
     def changeAnnotation(self, classId, event, labelIdx, annoId):
         self.db.setAnnotationLabel(classId, self.retrieveAnnotator(event), labelIdx, annoId)
-        self.writeDebug('changed label for object with class %d, slide %d, person %d' % ( classId, self.slideUID,self.retrieveAnnotator(event)))
+        self.writeDebug('changed label for object with class %d, slide %d, person %d, ID %d' % ( classId, self.slideUID,self.retrieveAnnotator(event), annoId))
         self.showImage()
 
     def addAnnotationLabel(self, classId, event, annoId ):
-        self.writeDebug('new label for object with class %d, slide %d, person %d' % ( classId, self.slideUID,self.retrieveAnnotator(event)))
+        self.writeDebug('new label for object with class %d, slide %d, person %d, ID %d' % ( classId, self.slideUID,self.retrieveAnnotator(event), annoId))
         self.db.addAnnotationLabel(classId, self.retrieveAnnotator(event), annoId)
         self.saveLastViewport()
         self.showImage()
@@ -907,13 +931,23 @@ class SlideRunnerUI(QMainWindow):
             Create annotation overlay for current view. This function is called for both, the current screen
             and the overview image.
         """
-        if (self.db.isOpen() == False):
-            return image
         if (region is None):
             region = self.region
+        if (region is None):
+            print('Region is none - whoopsy.')
+            return image
+        leftUpper = region[0]
         if (zoomLevel is None):
             zoomLevel = self.getZoomValue()
-        leftUpper = region[0]
+
+        if (self.activePlugin):
+            for anno in self.pluginAnnos:
+                anno.draw(image, leftUpper, zoomLevel, thickness, self.colors[0])
+        else:
+            print('Plugin inactive.')
+
+        if (self.db.isOpen() == False):
+            return image
         rightLower = region[0] + region[1]
         if (adjustList):
             self.annotationsSpots=list()
@@ -960,7 +994,10 @@ class SlideRunnerUI(QMainWindow):
                     ypos2=((annotation[3]-leftUpper[1])/zoomLevel)
                     circCenter = (int(0.5*(xpos1+xpos2)), int(0.5*(ypos1+ypos2)))
                     radius = int((xpos2-xpos1)*0.5)
-                    image = cv2.circle(image, thickness=thickness, center=circCenter, radius=radius,color=self.colors[annotation[4]], lineType=cv2.LINE_AA)
+                    if (radius<0):
+                        print('Error with data set / Radius <0:', xpos1,ypos1,xpos2,ypos2,circCenter,radius)
+                    else:
+                        image = cv2.circle(image, thickness=thickness, center=circCenter, radius=radius,color=self.colors[annotation[4]], lineType=cv2.LINE_AA)
                 else:
                     xpos1=max(0,int((annotation[0]-leftUpper[0])/zoomLevel))
                     ypos1=max(0,int((annotation[1]-leftUpper[1])/zoomLevel))
@@ -978,7 +1015,6 @@ class SlideRunnerUI(QMainWindow):
 
         if (adjustList):
             self.annotationPolygons = annotationPolygons
-
 
         return image
 
@@ -1167,12 +1203,13 @@ class SlideRunnerUI(QMainWindow):
 
         # Resize to real image size
         npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
+        self.rawImage = np.copy(npi)
 
         if (self.activePlugin is not None) and (self.overlayMap is None):
             from threading import Timer
             if (self.updateTimer is not None):
                 self.updateTimer.cancel()
-            self.updateTimer = Timer(0.5, partial(self.triggerPlugin,npi))                
+            self.updateTimer = Timer(self.activePlugin.plugin.updateTimer, partial(self.triggerPlugin,np.copy(npi)))                
             self.updateTimer.start()
 
         if (self.overlayMap is not None) and (self.activePlugin is not None):
@@ -1184,6 +1221,9 @@ class SlideRunnerUI(QMainWindow):
                         npi[:,:,0] = np.uint8(np.clip(np.float32(npi[:,:,0])*(1) - 255.0 * self.opacity * (olm * 5.0 * thres),0,255))
                         npi[:,:,1] = np.uint8(np.clip(np.float32(npi[:,:,1])*(1) + 255.0 * self.opacity * (olm * 5.0 * thres),0,255))
                         npi[:,:,2] = np.uint8(np.clip(np.float32(npi[:,:,2])*(1) - 255.0 * self.opacity * (olm * 5.0 * thres),0,255))
+                    else:
+                        print('Overlay map shape not proper')
+                        print('OLM shape: ', olm.shape, 'NPI shape: ', npi.shape)
                 elif (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE):
                     olm = self.overlayMap
                     if (len(olm.shape)==3) and (olm.shape[2]==3) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
@@ -1193,8 +1233,7 @@ class SlideRunnerUI(QMainWindow):
 
 
         # Overlay Annotations by the user
-        if (self.db.isOpen()):
-            npi = self.overlayAnnotations(npi)
+        npi = self.overlayAnnotations(npi)
         
         # Show the current polygon (if in polygon annotation mode)
         if (self.db.isOpen()) & (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
@@ -1220,7 +1259,7 @@ class SlideRunnerUI(QMainWindow):
         positionLegendX = 40
         positionLegendY = npi.shape[0]-40
         
-        npi[positionLegendY:positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:] = np.clip(npi[positionLegendY:positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:]*1.4,0,255)
+        npi[positionLegendY:positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:] = np.clip(npi[positionLegendY:positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:]*1.2,0,255)
         npi[positionLegendY:positionLegendY+20,positionLegendX+actualLegendWidth:positionLegendX+actualLegendWidth,:] = np.clip(npi[positionLegendY:positionLegendY+20,positionLegendX+actualLegendWidth:positionLegendX+actualLegendWidth,:]*0.2,0,255)
         npi[positionLegendY:positionLegendY+20,positionLegendX:positionLegendX,:] = np.clip(npi[positionLegendY:positionLegendY+20,positionLegendX:positionLegendX,:]*0.2,0,255)
         npi[positionLegendY,positionLegendX:positionLegendX+actualLegendWidth,:] = np.clip(npi[positionLegendY,positionLegendX:positionLegendX+actualLegendWidth,:]*0.2,0,255)
@@ -1426,6 +1465,7 @@ class SlideRunnerUI(QMainWindow):
             self.ui.categoryView.setCellWidget(clsid+1,0, checkbx)
             self.ui.categoryView.setCellWidget(clsid+1,3, btn)
             checkbx.stateChanged.connect(self.selectClasses)
+            
 
         model.itemChanged.connect(self.selectClasses)
 
@@ -1505,7 +1545,11 @@ class SlideRunnerUI(QMainWindow):
         """
 
         self.slide = openslide.open_slide(filename)
-        self.slideMagnification = self.slide.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
+        if (openslide.PROPERTY_NAME_OBJECTIVE_POWER in self.slide.properties):
+            self.slideMagnification = self.slide.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
+        else:
+            self.slideMagnification = 1
+                    
         self.slideMicronsPerPixel = self.slide.properties[openslide.PROPERTY_NAME_MPP_X]
         self.slidename = os.path.basename(filename)
 
