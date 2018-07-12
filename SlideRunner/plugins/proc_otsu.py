@@ -11,6 +11,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     shortName = 'OTSU threshold'
     inQueue = Queue()
     outQueue = Queue()
+    updateTimer=0.5
     outputType = SlideRunnerPlugin.PluginOutputType.BINARY_MASK
     description = 'Apply simple OTSU threshold on the current image'
     pluginType = SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN
@@ -33,21 +34,18 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 quitSignal=True
                 continue
             print('OTSU plugin: received 1 image from queue')
+            self.setProgressBar(0)
 
-            print(image.shape)
             rgb = np.copy(image[:,:,0:3])
-            print(rgb.shape)
-            # Convert to grayscale
-#            rgb = np.float32(cv2.cvtColor(np.array(image), cv2.COLOR_BGRA2RGB))[:,:,::-1]
-#            print(rgb.shape)
 
             gray = cv2.cvtColor(rgb,cv2.COLOR_RGB2GRAY)
             # OTSU thresholding
             ret, thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
 
             self.outQueue.put(np.float32(thresh/255.0))
-            self.statusQueue.put((1, 'OTSU calculation done.'))
+            self.setMessage('OTSU calculation done.')
             print('OTSU plugin: done')
+            self.setProgressBar(-1)
 
 
 
