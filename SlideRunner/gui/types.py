@@ -15,9 +15,7 @@
 """
 
 
-from enum import Enum
-
-class UIMainMode (Enum):
+class UIMainMode (enumerate):
     """
         GUI main modes
     """
