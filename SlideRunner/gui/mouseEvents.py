@@ -264,17 +264,6 @@ def releaseImage(self, event):
         self.showImage()
 
 
-    if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.moveDots>1):
-        menu = QMenu(self)
-        addmenu = menu.addMenu('Annotate as:')
-        menuitems = list()
-        for clsname in self.db.getAllClasses():
-            act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self, clsname[1], event))
-            menuitems.append(act)
-        addmenu = menu.addAction('Cancel', self.hitEscape)
-
-        action = menu.exec_(self.mapToGlobal(event.pos()))
-
 
 def rightClickImage(self, event):
     """
