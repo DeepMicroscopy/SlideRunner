@@ -36,6 +36,25 @@ def definePluginMenu(self):
                 self.ui.pluginItems.append(menuItem)
         self.pluginList = SlideRunner.general.pluginFinder.pluginList
 
+def defineZoomMenu(self):
+        zoomMenu = QtWidgets.QMenu(self.ui.menubar)
+        zoomMenu.setObjectName('zoomMenu')
+        zoomMenu.setTitle('View')
+        self.ui.menubar.addAction(zoomMenu.menuAction())
+
+        self.ui.zoomInAction = zoomMenu.addAction('Zoom in')
+        self.ui.zoomInAction.setShortcut("+")
+        self.ui.zoomInAction.triggered.connect(self.zoomIn)
+
+        self.ui.zoomInAction = zoomMenu.addAction('Zoom out')
+        self.ui.zoomInAction.setShortcut("-")
+        self.ui.zoomInAction.triggered.connect(self.zoomOut)
+
+        self.ui.zoomInAction = zoomMenu.addAction('Max optical zoom')
+        self.ui.zoomInAction.setShortcut("Ctrl+M")
+        self.ui.zoomInAction.triggered.connect(self.zoomMaxoptical)
+
+        
 def defineAnnotationMenu(self):
         annomode = self.ui.menuAnnotation.addMenu('Mode')
         annomode.setEnabled(True)
