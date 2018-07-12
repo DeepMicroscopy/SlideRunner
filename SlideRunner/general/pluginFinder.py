@@ -15,22 +15,25 @@ def iter_namespace(ns_pkg):
 sliderunner_plugins = {
     name: importlib.import_module(name)
     for finder, name, ispkg
-    in iter_namespace(SlideRunner.plugins)
+    in sorted(iter_namespace(SlideRunner.plugins))
 }
 
 pluginList = list()
 
-for plugin in sliderunner_plugins.keys():
+for plugin in sorted(sliderunner_plugins.keys()):
     newPlugin = pluginEntry()
     classes = inspect.getmembers(sliderunner_plugins[plugin], inspect.isclass)
-    newPlugin.mainClass = classes[0][0]
-    newPlugin.commonName = classes[0][1].shortName
-    newPlugin.plugin = classes[0][1]
-    newPlugin.inQueue = classes[0][1].inQueue
-    newPlugin.outQueue = classes[0][1].outQueue
-    newPlugin.version = classes[0][1].version
-#    newPlugin.instance = classes[0][1]()
-    pluginList.append(newPlugin)
+    for classIdx in range(len(classes)):
+        print(classes[classIdx])
+        if (classes[classIdx][0] == 'Plugin'):
+            newPlugin.mainClass = classes[classIdx][0]
+            newPlugin.commonName = classes[classIdx][1].shortName
+            newPlugin.plugin = classes[classIdx][1]
+            newPlugin.inQueue = classes[classIdx][1].inQueue
+            newPlugin.outQueue = classes[classIdx][1].outQueue
+            newPlugin.version = classes[classIdx][1].version
+        #    newPlugin.instance = classes[0][1]()
+            pluginList.append(newPlugin)
 
 
 print('List of available plugins:')
