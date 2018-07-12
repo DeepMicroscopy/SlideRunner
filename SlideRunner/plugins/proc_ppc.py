@@ -42,12 +42,13 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     outputType = SlideRunnerPlugin.PluginOutputType.RGB_IMAGE
     description = 'H&E Image normalization (Method by Macenko)'
     pluginType = SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN
-    configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='HUE Value', initValue=0.04, minValue=0.0, maxValue=1.0),
-                            SlideRunnerPlugin.PluginConfigurationEntry(uid=1, name='HUE Range', initValue=0.08, minValue=0.0, maxValue=1.0),
-                            SlideRunnerPlugin.PluginConfigurationEntry(uid=2, name='SAT Threshold', initValue=0.2, minValue=0.0, maxValue=1.0),
-                            SlideRunnerPlugin.PluginConfigurationEntry(uid=3, name='Weak Signals', initValue=220, minValue=0.0, maxValue=255.0),
-                            SlideRunnerPlugin.PluginConfigurationEntry(uid=4, name='Medium Signals', initValue=175, minValue=0.0, maxValue=255.0),
-                            SlideRunnerPlugin.PluginConfigurationEntry(uid=5, name='Strong Signals', initValue=100, minValue=0.0, maxValue=255.0)))
+    configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Hue value', initValue=0.04, minValue=0.0, maxValue=1.0),
+                            SlideRunnerPlugin.PluginConfigurationEntry(uid=1, name='Hue width', initValue=0.08, minValue=0.0, maxValue=1.0),
+                            SlideRunnerPlugin.PluginConfigurationEntry(uid=2, name='Saturation threshold', initValue=0.2, minValue=0.0, maxValue=1.0),
+                            SlideRunnerPlugin.PluginConfigurationEntry(uid=3, name='Weak Upper', initValue=220, minValue=0.0, maxValue=255.0),
+                            SlideRunnerPlugin.PluginConfigurationEntry(uid=4, name='Medium Upper = Weak Lower', initValue=175, minValue=0.0, maxValue=255.0),
+                            SlideRunnerPlugin.PluginConfigurationEntry(uid=5, name='Strong Upper = Medium Lower', initValue=100, minValue=0.0, maxValue=255.0),
+                            SlideRunnerPlugin.PluginConfigurationEntry(uid=6, name='Strong Lower', initValue=0, minValue=0.0, maxValue=255.0)))
     
     def __init__(self, statusQueue:Queue):
         self.statusQueue = statusQueue
@@ -57,7 +58,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         pass
 
     def queueWorker(self):
-        debugModule= False
+        debugModule= True
         quitSignal = False
         while not quitSignal:
             job = SlideRunnerPlugin.pluginJob(self.inQueue.get())
@@ -100,7 +101,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 plt.hist(val[sat_masked & hue_masked],255)
                 plt.savefig('histo_val.pdf')
 
-            strong = (val<job.configuration[5]) & sat_masked & hue_masked
+            strong = (val>job.configuration[6]) & (val<=job.configuration[5]) & sat_masked & hue_masked
             medium = (val>job.configuration[5]) & (val<=job.configuration[4])  & sat_masked & hue_masked
             weak = (val>job.configuration[4]) & (val<=job.configuration[3])  & sat_masked & hue_masked
 
@@ -118,8 +119,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             rgb[weak,0] = 255.0
             rgb[weak,1] = 255.0
             rgb[weak,2] = 0.0
-
-
+            
             img_hsv = np.reshape(hsv[hue_masked&sat_masked], [-1,3])
 
             if (debugModule):
