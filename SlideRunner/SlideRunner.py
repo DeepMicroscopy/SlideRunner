@@ -1075,7 +1075,10 @@ class SlideRunnerUI(QMainWindow):
                     self.findSlideUID()
                     return
                 else:
-                    self.openSlideDialog()
+                    slname = self.openSlideDialog()
+                    if (len(slname) == 0):
+                        self.imageOpened=False
+                        self.showImage()
             else:
                 self.slideUID = slideUID
 
@@ -1527,8 +1530,9 @@ class SlideRunnerUI(QMainWindow):
         """
         filename = QFileDialog.getOpenFileName(filter='OpenSlide files (*.svs *.tif *.bif *.svslide *.mrxs *.scn *.vms *.vmu *.ndpi *.tiff);;Aperio SVS format (*.svs);;All files (*.*)')[0]
         if (len(filename)==0):
-            return
+            return ''
         self.openSlide(filename)
+        return filename
     
     def initZoomSlider(self):
         """
