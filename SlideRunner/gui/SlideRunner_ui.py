@@ -176,7 +176,7 @@ class Ui_MainWindow(object):
         self.menuFile.setTitle(_translate("MainWindow", "Slide"))
         self.menuAnnotation.setTitle(_translate("MainWindow", "Annotation"))
         self.menuHelp.setTitle(_translate("MainWindow", "Help"))
-        self.action_Open.setText(_translate("MainWindow", "&Open"))
+        self.action_Open.setText(_translate("MainWindow", "&Open default"))
         self.actionOpen.setText(_translate("MainWindow", "Open"))
         self.action_Close.setText(_translate("MainWindow", "&Close"))
         self.action_Quit.setText(_translate("MainWindow", "&Quit"))

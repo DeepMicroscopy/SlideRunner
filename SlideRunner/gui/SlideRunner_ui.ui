@@ -256,7 +256,7 @@
   <widget class="QStatusBar" name="statusbar"/>
   <action name="action_Open">
    <property name="text">
-    <string>&amp;Open</string>
+    <string>&amp;Open default</string>
    </property>
   </action>
   <action name="actionOpen">
