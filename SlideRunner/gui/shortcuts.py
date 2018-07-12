@@ -33,12 +33,6 @@ def defineShortcuts(self):
         shortcuts.append(shortcut)
 
     # Set keyboard shortcuts
-    shortcutPlus = QShortcut(QKeySequence("+"), self)
-    shortcutPlus.activated.connect(self.zoomIn)
-    shortcuts.append(shortcutPlus)
-    shortcutMinus = QShortcut(QKeySequence("-"), self)
-    shortcutMinus.activated.connect(self.zoomOut)
-    shortcuts.append(shortcutMinus)
     shortcutEsc = QShortcut(QKeySequence("Esc"), self)
     shortcutEsc.activated.connect(self.hitEscape)
     shortcuts.append(shortcutEsc)
