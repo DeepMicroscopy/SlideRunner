@@ -1090,9 +1090,6 @@ class SlideRunnerUI(QMainWindow):
         self.overlayMap=None
         if (self.imageOpened):
             self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
-            print('New mainImage size: ', self.mainImageSize)
-            print('MainFrame frameShape: ',self.ui.MainImage.frameShape())
-            print('MainFrame frameWidth: ',self.ui.MainImage.frameWidth())
             self.showImage()
             self.updateScrollbars()
         if (event is not None):
