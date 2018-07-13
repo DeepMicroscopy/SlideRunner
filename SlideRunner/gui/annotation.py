@@ -23,11 +23,9 @@ def addSpotAnnotation(self, classID, event, typeAnno=1):
     pos_image = mouseEvents.getMouseEventPosition(self,event)
 
     p1 = self.region[0]
-    print('Adding anno at : ',pos_image, 'p1 was', p1)
     xpos_orig = int(pos_image[0] * self.getZoomValue() + p1[0])
     ypos_orig = int(pos_image[1] * self.getZoomValue() + p1[1])
     annotation = [xpos_orig, ypos_orig]
-    print('Anno coords: ', annotation)
     if (classID is not None):
         self.lastAnnotationClass = classID
         self.showAnnoclass()

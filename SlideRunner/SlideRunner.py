@@ -309,7 +309,6 @@ class SlideRunnerUI(QMainWindow):
             self.myPluginSubwindow.parameterSliders=dict()
             self.myPluginSubwindow.sliderLabels=dict()
             for pluginConfig in plugin.configurationList:
-                print(pluginConfig.uid)
                 newLabel = QtWidgets.QLabel(self.myPluginSubwindow.centralwidget)
                 newLabel.setText(pluginConfig.name)
                 newLabel.setSizePolicy(sizePolicy)
@@ -1087,10 +1086,13 @@ class SlideRunnerUI(QMainWindow):
         """
             Resize event, used as callback function when the application is resized.
         """
+        super().resizeEvent(event)
         self.overlayMap=None
         if (self.imageOpened):
             self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
-
+            print('New mainImage size: ', self.mainImageSize)
+            print('MainFrame frameShape: ',self.ui.MainImage.frameShape())
+            print('MainFrame frameWidth: ',self.ui.MainImage.frameWidth())
             self.showImage()
             self.updateScrollbars()
         if (event is not None):
@@ -1202,6 +1204,9 @@ class SlideRunnerUI(QMainWindow):
 
         # find the top left conter (p1) and the width of the current screen
         imgarea_p1 = slidecenter - self.mainImageSize * self.getZoomValue() / 2 + self.relativeCoords*slidecenter*2
+        print('New P1 is: ',imgarea_p1, self.getZoomValue(), self.mainImageSize, slidecenter)
+        print('MainImageSize: ',self.mainImageSize)
+        print('New relCoords: ', self.relativeCoords)
         imgarea_w =  self.mainImageSize * self.getZoomValue()
 
         # Annotate current screen being presented on overview map
@@ -1529,6 +1534,8 @@ class SlideRunnerUI(QMainWindow):
 
         if (self.imageOpened):
             self.showImage()
+
+        self.resizeEvent(None)
 
     def sliderChanged(self):
         """

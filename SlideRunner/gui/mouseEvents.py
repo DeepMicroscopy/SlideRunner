@@ -229,11 +229,7 @@ def getMouseEventPosition(self,event):
     """
         Retrieves the current position of a mouse pointer event
     """
-    print('Global', event.globalPos(),event.globalX(), event.globalY())
-    print(event.localPos(), event.screenPos(), event.windowPos())
-    print('x,y:', event.x(), event.y())
     pos = (int(event.localPos().x()), int(event.localPos().y()))
-    print('Returned: ',pos)
     return pos
 
 
