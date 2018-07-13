@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.12.0'
+version = '1.12.1'
 
 SLIDERUNNER_DEBUG = False
 
@@ -124,6 +124,9 @@ class SlideRunnerUI(QMainWindow):
     slideMagnification = 1
     slideMicronsPerPixel = 20
     pluginAnnos = list()
+    cachedLevel = None
+    cachedLocation = None
+    cachedImage = None
     
 
     def __init__(self):
@@ -728,12 +731,6 @@ class SlideRunnerUI(QMainWindow):
 
             
 
-    def getMouseEventPosition(self,event):
-        """
-            Retrieves the current position of a mouse pointer event
-        """
-        return (int(event.localPos().x()+2), int(event.localPos().y()))
-
  
     def writeDebug(self, message):
         if SLIDERUNNER_DEBUG:
@@ -944,7 +941,7 @@ class SlideRunnerUI(QMainWindow):
             for anno in self.pluginAnnos:
                 anno.draw(image, leftUpper, zoomLevel, thickness, self.colors[0])
         else:
-            print('Plugin inactive.')
+            pass
 
         if (self.db.isOpen() == False):
             return image
@@ -1141,6 +1138,49 @@ class SlideRunnerUI(QMainWindow):
         return self.currentZoom
 
 
+    """
+        read_region: cached version of openslide's read_region.
+
+        Reads from the original slide with 50% overlap to each side.
+
+    """
+
+    def read_region(self, location, level, size):
+        reader_location = (int(location[0]-0.5*size[0]*self.slide.level_downsamples[level]),
+                          int(location[1]-0.5*size[1]*self.slide.level_downsamples[level]))
+        reader_size = (int(size[0]*2), int(size[1]*2))
+        readNew = False
+        if (not(level == self.cachedLevel) or (self.cachedLocation is None)):
+            readNew = True
+        
+        if (self.cachedLocation is not None):
+            x0 = int((location[0]-self.cachedLocation[0])/self.slide.level_downsamples[level])
+            y0 = int((location[1]-self.cachedLocation[1])/self.slide.level_downsamples[level])
+            x1 = x0 + size[0]
+            y1 = y0 + size[1]
+            if (x0<0) or (y0<0): # out of cache
+                readNew = True
+            
+            if ((y1>self.cachedImage.shape[0]) or
+                (x1>self.cachedImage.shape[1])):
+                readNew = True
+        
+        if not readNew:
+            ret = self.cachedImage[y0:y1,x0:x1,:]
+            return ret
+        else:
+            # refill cache
+            region = self.slide.read_region(location=reader_location,level=level,size=reader_size)
+            # Convert to numpy array
+            self.cachedImage = np.array(region, dtype=np.uint8)
+            self.cachedLevel = level
+            self.cachedLocation = reader_location
+            x0 = int((location[0]-self.cachedLocation[0])/self.slide.level_downsamples[level])
+            y0 = int((location[1]-self.cachedLocation[1])/self.slide.level_downsamples[level])
+            x1 = x0 + size[0]
+            y1 = y0 + size[1]
+            return self.cachedImage[y0:y1,x0:x1,:]
+
 
     def showImage(self):
         """
@@ -1190,7 +1230,8 @@ class SlideRunnerUI(QMainWindow):
         location_im = (int(imgarea_p1[0]), int(imgarea_p1[1]))
 
         # Read from Whole Slide Image
-        tn = self.slide.read_region(location=location_im,level=act_level,size=size_im)
+
+        npi = self.read_region(location=location_im,level=act_level,size=size_im)
 
         aspectRatio_image = float(self.slide.level_dimensions[-1][0]) / self.slide.level_dimensions[-1][1]
 
@@ -1201,8 +1242,6 @@ class SlideRunnerUI(QMainWindow):
         else:
             im_size=(int(self.ui.MainImage.frameGeometry().height()*aspectRatio_image),self.ui.MainImage.frameGeometry().height())
 
-        # Convert to numpy array
-        npi = np.array(tn, dtype=np.uint8)
 
         # Resize to real image size
         npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))

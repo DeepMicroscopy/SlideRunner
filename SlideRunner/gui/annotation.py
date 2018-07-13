@@ -15,14 +15,19 @@
 """
 
 import numpy as np
+from SlideRunner.gui import mouseEvents as mouseEvents
+
 
 def addSpotAnnotation(self, classID, event, typeAnno=1):
     self.saveLastViewport()
-    pos_image = self.getMouseEventPosition(event)
+    pos_image = mouseEvents.getMouseEventPosition(self,event)
+
     p1 = self.region[0]
+    print('Adding anno at : ',pos_image, 'p1 was', p1)
     xpos_orig = int(pos_image[0] * self.getZoomValue() + p1[0])
     ypos_orig = int(pos_image[1] * self.getZoomValue() + p1[1])
     annotation = [xpos_orig, ypos_orig]
+    print('Anno coords: ', annotation)
     if (classID is not None):
         self.lastAnnotationClass = classID
         self.showAnnoclass()
@@ -50,13 +55,13 @@ def addPolygonAnnotation(self,classID,event):
 
 def addCircleAnnotation(self, classID, event):
     self.saveLastViewport()
-    pt2 = self.getMouseEventPosition(event)
+    pt2 = mouseEvents.getMouseEventPosition(self,event)
     x1 = min(pt2[0],self.ui.anno_pt1[0])
     x2 = max(pt2[0],self.ui.anno_pt1[0])
     y1 = min(pt2[1],self.ui.anno_pt1[1])
     y2 = max(pt2[1],self.ui.anno_pt1[1])
 
-    pos_image = self.getMouseEventPosition(event)
+    pos_image = mouseEvents.getMouseEventPosition(self,event)
     leftUpper = self.region[0]
     xpos_orig_1 = int(x1 * self.getZoomValue() + leftUpper[0])
     ypos_orig_1 = int(y1 * self.getZoomValue() + leftUpper[1])
@@ -87,13 +92,13 @@ def addCircleAnnotation(self, classID, event):
 
 def addAreaAnnotation(self, classID, event):
     self.saveLastViewport()
-    pt2 = self.getMouseEventPosition(event)
+    pt2 = mouseEvents.getMouseEventPosition(self,event)
     x1 = min(pt2[0],self.ui.anno_pt1[0])
     x2 = max(pt2[0],self.ui.anno_pt1[0])
     y1 = min(pt2[1],self.ui.anno_pt1[1])
     y2 = max(pt2[1],self.ui.anno_pt1[1])
 
-    pos_image = self.getMouseEventPosition(event)
+    pos_image = mouseEvents.getMouseEventPosition(self,event)
     leftUpper = self.region[0]
     xpos_orig_1 = int(x1 * self.getZoomValue() + leftUpper[0])
     ypos_orig_1 = int(y1 * self.getZoomValue() + leftUpper[1])

@@ -82,7 +82,7 @@ def moveImage(self, event):
 
     # Move image if shift+left click
     modifiers = QtWidgets.QApplication.keyboardModifiers()
-    posx,posy = self.getMouseEventPosition(event)
+    posx,posy = getMouseEventPosition(self, event)
     if (modifiers == Qt.ShiftModifier) or (self.ui.clickToMove):
         self.setCursor(Qt.ClosedHandCursor)
         cx,cy = self.screenToSlide((posx,posy))
@@ -117,7 +117,7 @@ def moveImage(self, event):
 
     if (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
         self.ui.moveDots+=1
-        self.ui.annotationsList.append(self.screenToSlide(self.getMouseEventPosition(event)))            
+        self.ui.annotationsList.append(self.screenToSlide(getMouseEventPosition(self,event)))            
         self.showImage()
 
 
@@ -126,7 +126,7 @@ def leftClickImage(self, event):
         """
             Callback function for a left click in the main image
         """
-        posx, posy = self.getMouseEventPosition(event)
+        posx, posy = getMouseEventPosition(self, event)
         self.ui.clickToMove = False
         # Move image if shift+left click
         modifiers = QtWidgets.QApplication.keyboardModifiers()
@@ -215,15 +215,27 @@ def leftClickImage(self, event):
         if (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA) or (self.ui.mode == UIMainMode.MODE_ANNOTATE_CIRCLE):
             # Normal rectangular or circular GUIannotation. 
             self.ui.annotationMode=1
-            self.ui.anno_pt1 =  self.getMouseEventPosition(event)
+            self.ui.anno_pt1 =  getMouseEventPosition(self, event)
         
         if (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON):
             if (self.ui.annotationMode == 0):
                 self.ui.annotationsList = list()
                 self.ui.annotationMode=1
                 self.ui.moveDots=0
-            self.ui.annotationsList.append(self.screenToSlide(self.getMouseEventPosition(event)))            
+            self.ui.annotationsList.append(self.screenToSlide(getMouseEventPosition(self,event)))            
             self.showImage()
+
+def getMouseEventPosition(self,event):
+    """
+        Retrieves the current position of a mouse pointer event
+    """
+    print('Global', event.globalPos(),event.globalX(), event.globalY())
+    print(event.localPos(), event.screenPos(), event.windowPos())
+    print('x,y:', event.x(), event.y())
+    pos = (int(event.localPos().x()), int(event.localPos().y()))
+    print('Returned: ',pos)
+    return pos
+
 
 
 def releaseImage(self, event):
@@ -273,7 +285,7 @@ def rightClickImage(self, event):
 
     menu = QMenu(self)
 
-    posx,posy = self.getMouseEventPosition(event)
+    posx,posy = getMouseEventPosition(self, event)
 
     annoIsFlag=False
 
