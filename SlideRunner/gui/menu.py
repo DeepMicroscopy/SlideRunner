@@ -22,7 +22,7 @@ import cv2
 
 import SlideRunner.general.pluginFinder
 def defineMenu(self):
-        self.ui.saveto = self.ui.menuDatabase.addAction('Copy To')
+        self.ui.saveto = self.ui.menuDatabase.addAction('Copy To ...')
         self.ui.saveto.setEnabled(False)
         self.ui.saveto.triggered.connect(self.saveDBto)
 
