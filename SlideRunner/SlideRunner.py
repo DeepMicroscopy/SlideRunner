@@ -1201,9 +1201,6 @@ class SlideRunnerUI(QMainWindow):
 
         # find the top left conter (p1) and the width of the current screen
         imgarea_p1 = slidecenter - self.mainImageSize * self.getZoomValue() / 2 + self.relativeCoords*slidecenter*2
-        print('New P1 is: ',imgarea_p1, self.getZoomValue(), self.mainImageSize, slidecenter)
-        print('MainImageSize: ',self.mainImageSize)
-        print('New relCoords: ', self.relativeCoords)
         imgarea_w =  self.mainImageSize * self.getZoomValue()
 
         # Annotate current screen being presented on overview map
