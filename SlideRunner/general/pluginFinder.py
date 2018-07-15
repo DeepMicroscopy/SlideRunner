@@ -24,7 +24,6 @@ for plugin in sorted(sliderunner_plugins.keys()):
     newPlugin = pluginEntry()
     classes = inspect.getmembers(sliderunner_plugins[plugin], inspect.isclass)
     for classIdx in range(len(classes)):
-        print(classes[classIdx])
         if (classes[classIdx][0] == 'Plugin'):
             newPlugin.mainClass = classes[classIdx][0]
             newPlugin.commonName = classes[classIdx][1].shortName
