@@ -166,7 +166,6 @@ class SlideRunnerUI(QMainWindow):
         self.ui.opacitySlider.setValue(40)
         self.ui.opacitySlider.valueChanged.connect(self.changeOpacity)
         self.ui.threshold.valueChanged.connect(self.changeOpacity)
-
         self.ui.progressBar.setHidden(True)
 
         self.disableStatusView()
@@ -204,6 +203,7 @@ class SlideRunnerUI(QMainWindow):
         menu.defineAnnotationMenu(self)
         menu.definePluginMenu(self)
         menu.defineZoomMenu(self)
+        menu.defineMenu(self)
 
         if (SLIDERUNNER_DEBUG):
             self.logger = logging.getLogger()
@@ -1362,6 +1362,7 @@ class SlideRunnerUI(QMainWindow):
 
             self.ui.iconBlinded.setEnabled(True)
             self.ui.iconQuestion.setEnabled(True)
+            self.ui.saveto.setEnabled(True)
 
             classes =   self.db.getAllClasses()
             for cls in classes:
@@ -1582,6 +1583,11 @@ class SlideRunnerUI(QMainWindow):
         self.ui.horizontalSlider.setMaximum(100)
         self.ui.horizontalSlider.setMinimum(0)
         self.ui.horizontalSlider.valueChanged.connect(self.sliderChanged)
+
+    def saveDBto(self):
+        filename = QFileDialog.getSaveFileName(filter='*.sqlite')[0]
+        if filename is not None and len(filename)>0:
+            self.db.saveTo(filename)
 
 
     def openSlide(self, filename):

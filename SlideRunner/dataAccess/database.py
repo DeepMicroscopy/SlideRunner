@@ -29,6 +29,17 @@ class Database(object):
             return True
         else:
             return False
+    
+    # copy database to new file
+    def saveTo(self, dbfilename):
+        new_db = sqlite3.connect(dbfilename) # create a memory database
+
+        query = "".join(line for line in self.db.iterdump())
+
+        # Dump old database in the new one. 
+        new_db.executescript(query)
+
+        return True
 
     def findSpotAnnotations(self,leftUpper, rightLower, slideUID, blinded = False, currentAnnotator=None):
         q = ('SELECT coordinateX, coordinateY, agreedClass,Annotations_coordinates.uid,annoId,type FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
