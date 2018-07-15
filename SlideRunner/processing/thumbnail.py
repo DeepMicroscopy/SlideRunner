@@ -34,7 +34,12 @@ class thumbnail():
         thumbNail = sl.get_thumbnail(size=(200, 200))
         self.thumbnail = thumbNail
         self.thumbnail_numpy = np.array(self.thumbnail, dtype=np.uint8)
-        self.thumbnail_numpy = cv2.resize(self.thumbnail_numpy, dsize=(200,thumbNail.size[1]))
+        if (self.thumbnail_numpy.shape[0]>self.thumbnail_numpy.shape[1]):
+            thumbnail_numpy_new = np.ones((200,200,3), np.uint8)*52
+            thumbnail_numpy_new[0:self.thumbnail_numpy.shape[0],0:self.thumbnail_numpy.shape[1],:] = self.thumbnail_numpy
+            self.thumbnail_numpy = thumbnail_numpy_new
+        else:
+            self.thumbnail_numpy = cv2.resize(self.thumbnail_numpy, dsize=(200,thumbNail.size[1]))
         self.downsamplingFactor = np.float32(sl.dimensions[1]/thumbNail.size[1])
         self.size = self.thumbnail.size
         self.slide = sl
