@@ -115,7 +115,7 @@ def moveImage(self, event):
 
         self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(tempimage)))
 
-    if (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
+    if not (modifiers == Qt.ShiftModifier) and (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
         self.ui.moveDots+=1
         self.ui.annotationsList.append(self.screenToSlide(getMouseEventPosition(self,event)))            
         self.showImage()
