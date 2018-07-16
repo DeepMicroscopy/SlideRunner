@@ -126,6 +126,9 @@ def leftClickImage(self, event):
         """
             Callback function for a left click in the main image
         """
+        if not (self.imageOpened):
+            return
+
         posx, posy = getMouseEventPosition(self, event)
         self.ui.clickToMove = False
         # Move image if shift+left click
