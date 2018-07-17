@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.12.1'
+version = '1.12.1-git'
 
 SLIDERUNNER_DEBUG = False
 
@@ -632,6 +632,19 @@ class SlideRunnerUI(QMainWindow):
             self.showImage()
 
     def setUIMode(self,mode: UIMainMode):
+        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) and (self.ui.annotationMode>0):
+            reply = QtWidgets.QMessageBox.question(self, 'Question',
+                                          'Do you want to stop your polygon annotation? Hint: If you want to move the image during annotation, hold shift while dragging the image.', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+            if reply == QtWidgets.QMessageBox.No:
+                return
+            
+            self.ui.mode = mode
+            self.ui.annotationsList = list()
+            self.showImage()
+            
+
+
         self.ui.mode = mode
         self.menuItemAnnotateCenter.setChecked(False)
         self.menuItemView.setChecked(False)
