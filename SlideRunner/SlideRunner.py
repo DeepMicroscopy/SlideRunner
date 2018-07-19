@@ -114,6 +114,7 @@ class SlideRunnerUI(QMainWindow):
     showImageRequest = pyqtSignal()
     statusViewChanged = pyqtSignal(str)
     annotationReceived = pyqtSignal(list)
+    updatedCacheAvailable = pyqtSignal(dict)
     annotator = bool # ID of curent annotator
     db = Database()
     receiverThread = None
@@ -127,6 +128,7 @@ class SlideRunnerUI(QMainWindow):
     cachedLevel = None
     cachedLocation = None
     cachedImage = None
+    refreshTimer = None
     
 
     def __init__(self):
@@ -176,6 +178,7 @@ class SlideRunnerUI(QMainWindow):
         self.statusViewChanged.connect(self.setStatusView)
         self.showImageRequest.connect(self.showImage)
         self.annotationReceived.connect(self.receiveAnno)
+        self.updatedCacheAvailable.connect(self.updateCache)
 
         self.pluginStatusReceiver = PluginStatusReceiver(self.progressBarQueue, self)
         self.pluginStatusReceiver.setDaemon(True)
@@ -263,6 +266,7 @@ class SlideRunnerUI(QMainWindow):
     def receiveAnno(self, anno):
         self.pluginAnnos = anno
         self.showImage()
+
 
     def setProgressBar(self, number):
         if (number == -1):
@@ -1114,6 +1118,20 @@ class SlideRunnerUI(QMainWindow):
         """
         return np.power(2,self.ui.horizontalSlider.value()/100*(np.log2(0.5/ self.getMaxZoom())))*self.getMaxZoom()
 
+    def updateImageCache(self):
+        """
+          Update image cache during times of inactivity
+        """
+
+        self.read_region(self.lastReadRequest['location'], self.lastReadRequest['level'], self.lastReadRequest['size'], forceRead=True)
+        newcache = dict()
+        newcache['image'] = self.cachedImage
+        newcache['level'] = self.cachedLevel
+        newcache['location'] = self.cachedLocation
+
+        self.updatedCacheAvailable.emit(newcache)
+
+
     def getMaxZoom(self):
         """
             Returns the maximum zoom available for this image.
@@ -1157,7 +1175,11 @@ class SlideRunnerUI(QMainWindow):
 
     """
 
-    def read_region(self, location, level, size):
+    def read_region(self, location, level, size, forceRead = False):
+        self.lastReadRequest = dict()
+        self.lastReadRequest['location'] = location
+        self.lastReadRequest['level'] = level
+        self.lastReadRequest['size'] = size
         reader_location = (int(location[0]-0.5*size[0]*self.slide.level_downsamples[level]),
                           int(location[1]-0.5*size[1]*self.slide.level_downsamples[level]))
         reader_size = (int(size[0]*2), int(size[1]*2))
@@ -1177,10 +1199,11 @@ class SlideRunnerUI(QMainWindow):
                 (x1>self.cachedImage.shape[1])):
                 readNew = True
         
-        if not readNew:
+        if not forceRead and not readNew:
             ret = self.cachedImage[y0:y1,x0:x1,:]
             return ret
         else:
+            print('Reading from slide.')
             # refill cache
             region = self.slide.read_region(location=reader_location,level=level,size=reader_size)
             # Convert to numpy array
@@ -1192,6 +1215,14 @@ class SlideRunnerUI(QMainWindow):
             x1 = x0 + size[0]
             y1 = y0 + size[1]
             return self.cachedImage[y0:y1,x0:x1,:]
+
+
+    def updateCache(self, newcache):
+        self.cachedImage = newcache['image']
+        self.cachedLevel = newcache['level']
+        self.cachedLocation = newcache['location']
+        print('Cache updated.')
+#        self.showImage()
 
 
     def showImage(self):
@@ -1258,6 +1289,13 @@ class SlideRunnerUI(QMainWindow):
         # Resize to real image size
         npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
         self.rawImage = np.copy(npi)
+
+        # reset timer to reload image
+        from threading import Timer
+        if (self.refreshTimer is not None):
+                self.refreshTimer.cancel()
+        self.refreshTimer = Timer(1, self.updateImageCache)                
+        self.refreshTimer.start()
 
         if (self.activePlugin is not None) and (self.overlayMap is None):
             from threading import Timer
