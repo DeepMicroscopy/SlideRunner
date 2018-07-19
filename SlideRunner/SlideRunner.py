@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.12.1-git'
+version = '1.12.2'
 
 SLIDERUNNER_DEBUG = False
 
@@ -1492,7 +1492,7 @@ class SlideRunnerUI(QMainWindow):
         itemcol = QTableWidgetItem('')
         itemcol.setBackground(QColor.fromRgb(self.colors[0][0],self.colors[0][1],self.colors[0][2]))
         checkbx = QCheckBox()
-        checkbx.setChecked(False)
+        checkbx.setChecked(True)
         checkbx.stateChanged.connect(self.selectClasses)
         self.ui.categoryView.setItem(0,2, item)
         self.ui.categoryView.setItem(0,1, itemcol)
@@ -1526,7 +1526,6 @@ class SlideRunnerUI(QMainWindow):
         model.itemChanged.connect(self.selectClasses)
 
         self.itemsSelected = np.ones(len(classes)+1)
-        self.itemsSelected[0] = 0
         self.ui.categoryView.verticalHeader().setVisible(False)
         vheader = self.ui.categoryView.verticalHeader()
         vheader.setDefaultSectionSize(vheader.fontMetrics().height()+2)
