@@ -9,6 +9,8 @@ class StatusInformation(enumerate):
       PROGRESSBAR = 0
       TEXT = 1
       ANNOTATIONS = 2
+      SET_CENTER = 3
+      SET_ZOOM = 4
 
 class PluginTypes(enumerate):
       IMAGE_PLUGIN = 0
@@ -66,9 +68,10 @@ class pluginJob():
       def __init__(self, queueTuple):
             self.jobDescription, self.currentImage, self.slideFilename, self.coordinates, self.configuration, self.annotations = queueTuple
 
+      
+
 def jobToQueueTuple(description=JobDescription.PROCESS, currentImage=None, coordinates=None, configuration=list(), slideFilename=None, annotations=None):
       return (description, currentImage, slideFilename, coordinates, configuration, annotations)
-
 
 class PluginConfigurationEntry():
       uid = 0
@@ -104,15 +107,22 @@ class SlideRunnerPlugin:
       
       def __str__(self):
             return self.shortName
+
       def setProgressBar(self, value : int):
             self.statusQueue.put((StatusInformation.PROGRESSBAR,value))
 
       def setMessage(self, msg:str):
             self.statusQueue.put((StatusInformation.TEXT,msg))
-      
+
+      def setCenter(self, tup:str):
+            self.statusQueue.put((StatusInformation.SET_CENTER,tup))
+
+      def setZoomLevel(self, zoom:float):
+            self.statusQueue.put((StatusInformation.SET_ZOOM,zoom))
+
       def updateAnnotations(self):
             self.statusQueue.put((StatusInformation.ANNOTATIONS, self.getAnnotations()))
 
       def getAnnotations(self):
             print('Sent empty annotation list.')
-            return list()            
+            return list()
