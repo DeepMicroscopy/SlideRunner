@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.12.2'
+version = '1.12.3'
 
 SLIDERUNNER_DEBUG = False
 
@@ -107,6 +107,10 @@ class PluginStatusReceiver(threading.Thread):
                 self.selfObj.statusViewChanged.emit(value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.ANNOTATIONS):
                 self.selfObj.annotationReceived.emit(value)
+            elif (msgId == SlideRunnerPlugin.StatusInformation.SET_ZOOM):
+                self.selfObj.setZoomReceived.emit(value)
+            elif (msgId == SlideRunnerPlugin.StatusInformation.SET_CENTER):
+                self.selfObj.setCenterReceived.emit(value)
 
 
 class SlideRunnerUI(QMainWindow):
@@ -115,6 +119,8 @@ class SlideRunnerUI(QMainWindow):
     statusViewChanged = pyqtSignal(str)
     annotationReceived = pyqtSignal(list)
     updatedCacheAvailable = pyqtSignal(dict)
+    setZoomReceived = pyqtSignal(float)
+    setCenterReceived = pyqtSignal(tuple)
     annotator = bool # ID of curent annotator
     db = Database()
     receiverThread = None
@@ -179,6 +185,8 @@ class SlideRunnerUI(QMainWindow):
         self.showImageRequest.connect(self.showImage)
         self.annotationReceived.connect(self.receiveAnno)
         self.updatedCacheAvailable.connect(self.updateCache)
+        self.setZoomReceived.connect(self.setZoom)
+        self.setCenterReceived.connect(self.setCenter)
 
         self.pluginStatusReceiver = PluginStatusReceiver(self.progressBarQueue, self)
         self.pluginStatusReceiver.setDaemon(True)
@@ -266,7 +274,6 @@ class SlideRunnerUI(QMainWindow):
     def receiveAnno(self, anno):
         self.pluginAnnos = anno
         self.showImage()
-
 
     def setProgressBar(self, number):
         if (number == -1):
@@ -500,7 +507,15 @@ class SlideRunnerUI(QMainWindow):
         self.setCenterTo( (leftupper_x+relOffset_x/2)*self.slide.level_dimensions[0][0], (leftupper_y+relOffset_y/2)*self.slide.level_dimensions[0][1])
         self.showImage()
 
-    
+    def setCenter(self, target):
+        self.setCenterTo(target[0], target[1])
+        self.showImage()
+
+    def setZoom(self, target):
+        self.setZoomValue(target)
+        self.showImage()
+
+
     """
         Start or stop the guided screening mode.
 
@@ -646,7 +661,7 @@ class SlideRunnerUI(QMainWindow):
             self.ui.mode = mode
             self.ui.annotationsList = list()
             self.showImage()
-            
+
 
 
         self.ui.mode = mode
@@ -1149,7 +1164,7 @@ class SlideRunnerUI(QMainWindow):
         maxzoom = self.getMaxZoom()
         if (self.currentZoom > maxzoom):
             self.currentZoom = maxzoom
-        
+
         sliderVal = 100*np.log2(self.currentZoom/(maxzoom))/(np.log2(0.5/maxzoom))
 
         self.ui.horizontalSlider.valueChanged.disconnect()
@@ -1221,7 +1236,6 @@ class SlideRunnerUI(QMainWindow):
         self.cachedImage = newcache['image']
         self.cachedLevel = newcache['level']
         self.cachedLocation = newcache['location']
-        print('Cache updated.')
 #        self.showImage()
 
 
