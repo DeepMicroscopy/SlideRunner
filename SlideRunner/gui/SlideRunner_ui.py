@@ -7,6 +7,7 @@
 # WARNING! All changes made in this file will be lost!
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from SlideRunner.gui.zoomSlider import *
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -48,24 +49,13 @@ class Ui_MainWindow(object):
         self.verticalLayout.addWidget(self.horizontalScrollBar)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        self.horizontalSlider = QtWidgets.QSlider(self.centralwidget)
+        self.zoomSlider = zoomSlider()
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Maximum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.horizontalSlider.sizePolicy().hasHeightForWidth())
-        self.horizontalSlider.setSizePolicy(sizePolicy)
-        self.horizontalSlider.setOrientation(QtCore.Qt.Horizontal)
-        self.horizontalSlider.setObjectName("horizontalSlider")
-        self.horizontalLayout_2.addWidget(self.horizontalSlider)
-        self.zoomFactor = QtWidgets.QLabel(self.centralwidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Maximum)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.zoomFactor.sizePolicy().hasHeightForWidth())
-        self.zoomFactor.setSizePolicy(sizePolicy)
-        self.zoomFactor.setMinimumSize(QtCore.QSize(0, 10))
-        self.zoomFactor.setObjectName("zoomFactor")
-        self.horizontalLayout_2.addWidget(self.zoomFactor)
+        sizePolicy.setHeightForWidth(self.zoomSlider.sizePolicy().hasHeightForWidth())
+        self.zoomSlider.setSizePolicy(sizePolicy)
+        self.verticalLayout.addWidget(self.zoomSlider)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
         self.horizontalLayout.addLayout(self.verticalLayout)
         self.verticalScrollBar = QtWidgets.QScrollBar(self.centralwidget)
@@ -166,8 +156,6 @@ class Ui_MainWindow(object):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "SlideRunner"))
         self.MainImage.setText(_translate("MainWindow", "No Slide Open"))
-        self.horizontalSlider.setToolTip(_translate("MainWindow", "Zoom Level"))
-        self.zoomFactor.setText(_translate("MainWindow", "0x"))
         self.label_3.setText(_translate("MainWindow", "Overview"))
         self.OverviewLabel.setText(_translate("MainWindow", "TextLabel"))
         self.filenameLabel.setText(_translate("MainWindow", "TextLabel"))

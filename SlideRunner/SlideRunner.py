@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.12.3'
+version = '1.13.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -1131,7 +1131,7 @@ class SlideRunnerUI(QMainWindow):
         """
             Convert slider position to zoom value
         """
-        return np.power(2,self.ui.horizontalSlider.value()/100*(np.log2(0.5/ self.getMaxZoom())))*self.getMaxZoom()
+        return np.power(2,self.ui.zoomSlider.getValue()/100*(np.log2(0.5/ self.getMaxZoom())))*self.getMaxZoom()
 
     def updateImageCache(self):
         """
@@ -1167,14 +1167,13 @@ class SlideRunnerUI(QMainWindow):
 
         sliderVal = 100*np.log2(self.currentZoom/(maxzoom))/(np.log2(0.5/maxzoom))
 
-        self.ui.horizontalSlider.valueChanged.disconnect()
-
-        self.ui.horizontalSlider.setValue(sliderVal)
-        self.ui.horizontalSlider.valueChanged.connect(self.sliderChanged)
+        self.ui.zoomSlider.valueChanged.disconnect()
+        self.ui.zoomSlider.setValue(sliderVal)
+        self.ui.zoomSlider.valueChanged.connect(self.sliderChanged)
         if (self.currentZoom<1):
-            self.ui.zoomFactor.setText('(%.1f x)' % (float(self.slideMagnification)/self.currentZoom))
+            self.ui.zoomSlider.setText('(%.1f x)' % (float(self.slideMagnification)/self.currentZoom))
         else:
-            self.ui.zoomFactor.setText('%.1f x' % (float(self.slideMagnification)/self.currentZoom))
+            self.ui.zoomSlider.setText('%.1f x' % (float(self.slideMagnification)/self.currentZoom))
 
     def getZoomValue(self):
         """
@@ -1195,9 +1194,9 @@ class SlideRunnerUI(QMainWindow):
         self.lastReadRequest['location'] = location
         self.lastReadRequest['level'] = level
         self.lastReadRequest['size'] = size
-        reader_location = (int(location[0]-0.5*size[0]*self.slide.level_downsamples[level]),
-                          int(location[1]-0.5*size[1]*self.slide.level_downsamples[level]))
-        reader_size = (int(size[0]*2), int(size[1]*2))
+        reader_location = (int(location[0]-1.*size[0]*self.slide.level_downsamples[level]),
+                          int(location[1]-1.*size[1]*self.slide.level_downsamples[level]))
+        reader_size = (int(size[0]*3), int(size[1]*3))
         readNew = False
         if (not(level == self.cachedLevel) or (self.cachedLocation is None)):
             readNew = True
@@ -1218,7 +1217,6 @@ class SlideRunnerUI(QMainWindow):
             ret = self.cachedImage[y0:y1,x0:x1,:]
             return ret
         else:
-            print('Reading from slide.')
             # refill cache
             region = self.slide.read_region(location=reader_location,level=level,size=reader_size)
             # Convert to numpy array
@@ -1248,6 +1246,9 @@ class SlideRunnerUI(QMainWindow):
 
         if (not self.imageOpened):
             return
+        
+        self.ui.zoomSlider.setMaxZoom(self.getMaxZoom())
+        self.ui.zoomSlider.setMinZoom(2.0*np.float32(self.slideMagnification))
 
         slidecenter = np.asarray(self.slide.level_dimensions[0])/2
 
@@ -1644,9 +1645,7 @@ class SlideRunnerUI(QMainWindow):
         """
             Initialize the scrollbar slider.
         """
-        self.ui.horizontalSlider.setMaximum(100)
-        self.ui.horizontalSlider.setMinimum(0)
-        self.ui.horizontalSlider.valueChanged.connect(self.sliderChanged)
+        self.ui.zoomSlider.valueChanged.connect(self.sliderChanged)
 
     def saveDBto(self):
         filename = QFileDialog.getSaveFileName(filter='*.sqlite')[0]
