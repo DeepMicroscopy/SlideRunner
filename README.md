@@ -91,10 +91,11 @@ Starting with Version 1.10.0, we have a multi-thread-compatible plug-in interfac
 
 ## Plugins
 
-There are currently two plug-ins available:
+There are currently three plug-ins available:
 
 - OTSU threshold: A simple OTSU threshold plugin. Positive pixels are shown in green color.
 - PPC: Positive Pixel Count, as in: Olson, Allen H. "Image analysis using the Aperio ScanScope." Technical manual. Aperio Technologies Inc (2006).
+- Macenko normalization: Image-based normalization using the method of Macenko et al. [link](https://ieeexplore.ieee.org/document/5193250/)
 
 ## Database structure
 
