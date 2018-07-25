@@ -19,7 +19,7 @@ from SlideRunner.gui.types import *
 from PyQt5.QtWidgets import QMenu
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QWheelEvent
 from functools import partial
 import numpy as np
 import matplotlib.path as path
@@ -41,13 +41,17 @@ def doubleClick(self, event):
 
         action = menu.exec_(self.mapToGlobal(event.pos()))
 
-def wheelEvent(self, event):
+def wheelEvent(self, event: QWheelEvent):
     """
         WheelEvent is the callback for wheel events of the operating system.
         Dependent on the OS, this can be a trackpad or a mouse wheel
     """
 
     if not (self.imageOpened):
+        return
+    
+    # Disable wheel if x position is leaving image compartment
+    if (event.x()>self.ui.verticalScrollBar.pos().x()):
         return
 
     if (event.source() == Qt.MouseEventSynthesizedBySystem):
