@@ -62,4 +62,30 @@ def setStyle(app):
 
     app.setPalette(darkPalette)
 
-    app.setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }")
+    app.setStyleSheet("""QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; } QTabWidget::pane { /* The tab widget frame */
+border-top: 2px solid #C2C7CB;
+}
+QTabWidget::tab-bar {
+left: 5px; /* move to the right by 5px */
+}
+
+QTabWidget {
+font-size:8px;
+}
+QTabBar::tab:selected, QTabBar::tab:hover {
+background: #883333;
+}
+/* Style the tab using the tab sub-control. Note that it reads QTabBar _not_ QTabWidget */
+QTabBar::tab {
+border: 2px solid #C4C4C3;
+border-bottom-color: #C2C7CB; /* same as the pane color */
+border-top-left-radius: 4px;
+border-top-right-radius: 4px;
+font-size:8px;
+min-width: 8ex;
+padding: 2px;
+}
+QTabBar::tab:!selected {
+margin-top: 2px; /* make non-selected tabs look smaller */
+}
+""")

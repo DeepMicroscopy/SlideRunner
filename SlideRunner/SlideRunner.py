@@ -127,13 +127,14 @@ class SlideRunnerUI(QMainWindow):
     activePlugin = None
     overlayMap = None
     statusViewOffTimer = None
-    myPluginSubwindow = None
     slideMagnification = 1
     slideMicronsPerPixel = 20
     pluginAnnos = list()
     cachedLevel = None
     cachedLocation = None
+    pluginTextLabels = dict()
     cachedImage = None
+    pluginParameterSliders = dict()
     refreshTimer = None
     
 
@@ -167,13 +168,12 @@ class SlideRunnerUI(QMainWindow):
         self.displayedImage = None
         self.overviewOverlayHeatmap = False
         self.annotationPolygons=[]
-        self.ui.statisticView.setHidden(True)
+        #self.ui.statisticView.setHidden(True)
         self.ui.MainImage.installEventFilter(self)
         self.ui.horizontalScrollBar.valueChanged.connect(self.changeScrollbars)
         self.ui.verticalScrollBar.valueChanged.connect(self.changeScrollbars)
         self.ui.opacitySlider.setValue(40)
         self.ui.opacitySlider.valueChanged.connect(self.changeOpacity)
-        self.ui.threshold.valueChanged.connect(self.changeOpacity)
         self.ui.progressBar.setHidden(True)
 
         self.disableStatusView()
@@ -208,8 +208,6 @@ class SlideRunnerUI(QMainWindow):
 
         self.ui.opacitySlider.setHidden(True)
         self.ui.opacityLabel.setHidden(True)
-        self.ui.threshold.setHidden(True)
-        self.ui.threshold_label.setHidden(True)
 
         menu.defineAnnotationMenu(self)
         menu.definePluginMenu(self)
@@ -297,9 +295,8 @@ class SlideRunnerUI(QMainWindow):
     def triggerPluginConfigChanged(self):
         self.overlayMap = None
         self.showImage()
-        if (self.myPluginSubwindow is not None):
-            for key in self.myPluginSubwindow.sliderLabels.keys():
-                self.myPluginSubwindow.sliderLabels[key].setText('%.3f' % (self.myPluginSubwindow.parameterSliders[key].value() / 1000.0 ))
+        for key in self.pluginSliderLabels.keys():
+            self.pluginSliderLabels[key].setText('%.3f' % (self.pluginParameterSliders[key].value() / 1000.0 ))
 
 
     """
@@ -307,46 +304,56 @@ class SlideRunnerUI(QMainWindow):
     """
     def addActivePluginToSidebar(self, plugin:SlideRunnerPlugin):
         if len(plugin.configurationList)>0:
-            self.myPluginSubwindow=subwindow()
-            self.myPluginSubwindow.createWindow(200,400)
-            self.myPluginSubwindow.setWindowTitle('Plugin Settings')
-            self.myPluginSubwindow.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
-            self.myPluginSubwindow.centralwidget = QtWidgets.QWidget(self.myPluginSubwindow)
-            self.myPluginSubwindow.verticalLayout = QtWidgets.QVBoxLayout(self.myPluginSubwindow.centralwidget)
+            self.pluginParameterSliders=dict()
+            self.pluginSliderLabels=dict()
+            self.pluginTextLabels = dict()
             sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
             sizePolicy.setHorizontalStretch(1.0)
             sizePolicy.setVerticalStretch(0)
-
-            self.myPluginSubwindow.parameterSliders=dict()
-            self.myPluginSubwindow.sliderLabels=dict()
             for pluginConfig in plugin.configurationList:
-                newLabel = QtWidgets.QLabel(self.myPluginSubwindow.centralwidget)
+                newLabel = QtWidgets.QLabel(self.ui.tab3widget)
                 newLabel.setText(pluginConfig.name)
                 newLabel.setSizePolicy(sizePolicy)
-                self.myPluginSubwindow.verticalLayout.addWidget(newLabel)
-                sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+                newLabel.setStyleSheet('font-size:8px')
+                self.ui.tab3Layout.addWidget(newLabel)
+                self.pluginTextLabels[pluginConfig.uid] = newLabel
+                sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Minimum)
                 sizePolicy.setHorizontalStretch(1.0)
                 sizePolicy.setVerticalStretch(0)
-                newSlider = QtWidgets.QSlider(self.myPluginSubwindow.centralwidget)
+                newSlider = QtWidgets.QSlider(self.ui.tab3widget)
                 newSlider.setMinimum(pluginConfig.minValue*1000)
                 newSlider.setMaximum(pluginConfig.maxValue*1000)
                 newSlider.setValue(pluginConfig.initValue*1000)
                 newSlider.setOrientation(QtCore.Qt.Horizontal)
                 newSlider.setSizePolicy(sizePolicy)
+                sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+                sizePolicy.setHorizontalStretch(1.0)
+                sizePolicy.setVerticalStretch(0)
                 newSlider.valueChanged.connect(self.triggerPluginConfigChanged)
-                hLayout = QtWidgets.QHBoxLayout(self.myPluginSubwindow.centralwidget)
+                hLayout = QtWidgets.QHBoxLayout(self.ui.tab3widget)
                 hLayout.addWidget(newSlider)
-                valLabel = QtWidgets.QLabel(self.myPluginSubwindow.centralwidget)
+                valLabel = QtWidgets.QLabel(self.ui.tab3widget)
                 valLabel.setText('%.3f' % pluginConfig.initValue)
+                valLabel.setStyleSheet('font-size:8px')
+                sizePolicy.setHorizontalStretch(0.0)
+                valLabel.setSizePolicy(sizePolicy)
                 hLayout.addWidget(valLabel)
-                self.myPluginSubwindow.verticalLayout.addLayout(hLayout)
-                self.myPluginSubwindow.parameterSliders[pluginConfig.uid] = newSlider
-                self.myPluginSubwindow.sliderLabels[pluginConfig.uid] = valLabel
+                self.ui.tab3Layout.addLayout(hLayout)
+                self.pluginParameterSliders[pluginConfig.uid] = newSlider
+                self.pluginSliderLabels[pluginConfig.uid] = valLabel
+                newSlider.setStyleSheet("""
+QSlider:horizontal {
+    min-height: 10px;
+}
+ 
+QSlider::groove:horizontal {
+    margin: 0px 0; /* decrease this size (make it more negative)—I changed mine from –2px to –8px. */
+}
+""")
 
 
                 
                 
-            self.myPluginSubwindow.show()
 
     """
     Helper function to toggle Plugin activity
@@ -359,9 +366,20 @@ class SlideRunnerUI(QMainWindow):
             else:
                 pluginItem.setChecked(False)
 
-        if (self.myPluginSubwindow is not None):
-            self.myPluginSubwindow.hide()        
-            self.myPluginSubwindow = None # destroy object
+        if (len(self.pluginParameterSliders) > 0):
+            for slider in self.pluginParameterSliders.keys():
+                self.ui.tab3Layout.removeWidget(self.pluginParameterSliders[slider])
+                self.pluginParameterSliders[slider].deleteLater()
+            for label in self.pluginSliderLabels.keys():
+                self.ui.tab3Layout.removeWidget(self.pluginSliderLabels[label])
+                self.pluginSliderLabels[label].deleteLater()
+            for label in self.pluginTextLabels.keys():
+                self.ui.tab3Layout.removeWidget(self.pluginTextLabels[label])
+                self.pluginTextLabels[label].deleteLater()
+
+            self.pluginParameterSliders = dict()
+            self.pluginSliderLabels = dict()
+            self.pluginTextLabels = dict()
 
         if (plugin.receiverThread is None):
             plugin.receiverThread = imageReceiverThread(plugin.outQueue, self)
@@ -379,7 +397,6 @@ class SlideRunnerUI(QMainWindow):
             self.activePlugin = None
             self.ui.opacityLabel.setHidden(True)
             self.ui.opacitySlider.setHidden(True)
-            self.myPluginSubwindow = None
 
 
 
@@ -392,9 +409,8 @@ class SlideRunnerUI(QMainWindow):
 
     def gatherPluginConfig(self):
         config = dict()
-        if self.myPluginSubwindow is not None:
-            for key in self.myPluginSubwindow.parameterSliders.keys():
-                config[key] = self.myPluginSubwindow.parameterSliders[key].value()/1000.0
+        for key in self.pluginParameterSliders.keys():
+            config[key] = self.pluginParameterSliders[key].value()/1000.0
         return config
 
 
@@ -1321,8 +1337,8 @@ class SlideRunnerUI(QMainWindow):
 
         if (self.overlayMap is not None) and (self.activePlugin is not None):
                 if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.BINARY_MASK):
-                    thres = self.ui.threshold.value()/100.0
                     olm = self.overlayMap
+                    thres=1
                     if ((len(olm.shape)==2) or ((len(olm.shape)==3) and (olm.shape[2]==1))) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
                         olm = cv2.resize(self.overlayMap, dsize=(npi.shape[1],npi.shape[0]))
                         npi[:,:,0] = np.uint8(np.clip(np.float32(npi[:,:,0])*(1) - 255.0 * self.opacity * (olm * 5.0 * thres),0,255))
@@ -1463,7 +1479,6 @@ class SlideRunnerUI(QMainWindow):
         """
         if (self.db.isOpen() == False):
             return
-        self.ui.statisticView.setHidden(False)
         table_model = QtGui.QStandardItemModel()
         table_model.setColumnCount(3)
         table_model.setHorizontalHeaderLabels("Name;# on slide;# total".split(";"))
@@ -1514,7 +1529,6 @@ class SlideRunnerUI(QMainWindow):
         self.ui.actionAdd_annotator.setEnabled(True)
         self.ui.actionAdd_cell_class.setEnabled(True)
         self.ui.inspectorTableView.setVisible(True)
-        self.ui.statisticView.setVisible(True)
         self.ui.categoryView.setVisible(True)
         self.ui.annotatorComboBox.setVisible(True)
 
@@ -1596,12 +1610,12 @@ class SlideRunnerUI(QMainWindow):
         if (self.imageOpened):
             self.showImage()
 
-        self.resizeEvent(None)
 
     def sliderChanged(self):
         """
             Callback function for when a slider was changed.
         """
+        print('Slider changed')
         self.overlayMap=None
         self.setZoomValue(self.sliderToZoomValue())
         self.overlayMap=None
@@ -1707,8 +1721,6 @@ def main():
     myapp.show()
     myapp.raise_()
     splash.finish(myapp)
-    if (myapp.myPluginSubwindow is not None):
-        myapp.myPluginSubwindow.close()   
 
     if (myapp.activePlugin is not None):
         myapp.activePlugin.inQueue.put(None)
