@@ -667,7 +667,7 @@ QSlider::groove:horizontal {
             self.showImage()
 
     def setUIMode(self,mode: UIMainMode):
-        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) and (self.ui.annotationMode>0):
+        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) and not (mode == UIMainMode.MODE_ANNOTATE_POLYGON ) and (self.ui.annotationMode>0):
             reply = QtWidgets.QMessageBox.question(self, 'Question',
                                           'Do you want to stop your polygon annotation? Hint: If you want to move the image during annotation, hold shift while dragging the image.', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
 
@@ -787,6 +787,11 @@ QSlider::groove:horizontal {
     def showPolygon(self, tempimage, polygon, color):
         markersize = 5
         listIdx=-1
+
+        # small assertion to fix bug #12
+        if (len(polygon)==0):
+            return tempimage
+
         for listIdx in range(len(polygon)-1):
             anno = self.slideToScreen(polygon[listIdx])
             cv2.line(img=tempimage, pt1=anno, pt2=self.slideToScreen(polygon[listIdx+1]), thickness=2, color=color, lineType=cv2.LINE_AA)       
