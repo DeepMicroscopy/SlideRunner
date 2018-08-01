@@ -440,6 +440,8 @@ QSlider::groove:horizontal {
     def resetGuidedScreening(self):
             self.lastScreeningLeftUpper = np.zeros(2)
             self.screeningMap.reset()
+            self.lastScreeningCenters = list()
+            self.screeningIndex = 0
             self.nextScreeningStep()
 
     """
@@ -469,7 +471,23 @@ QSlider::groove:horizontal {
     """
 
 
-    
+    def previousScreeningStep(self):
+        if not (self.imageOpened):
+            return
+
+        if not (self.screeningMode):
+            return
+
+        self.screeningIndex -= 1
+
+        self.setCenterTo(self.screeningHistory[self.screeningIndex-1][0],self.screeningHistory[self.screeningIndex-1][1])
+
+        if (self.screeningIndex+len(self.screeningHistory)<=0):
+            self.ui.iconPreviousScreen.setEnabled(False)
+
+        self.showImage()
+        return
+
     def nextScreeningStep(self):
         if not (self.imageOpened):
             return
@@ -477,8 +495,15 @@ QSlider::groove:horizontal {
         if not (self.screeningMode):
             return
 
+        self.ui.iconPreviousScreen.setEnabled(True)
         self.writeDebug('Next screen in screening mode')
 
+        if (self.screeningIndex<0):
+            self.screeningIndex+= 1
+    #        self.setCenterTo(self.screeningHistory[self.screeningIndex])
+            self.setCenterTo(self.screeningHistory[self.screeningIndex-1][0],self.screeningHistory[self.screeningIndex-1][1])
+            self.showImage()
+            return
 
 
         relOffset_x = self.mainImageSize[0] / self.slide.level_dimensions[0][0]
@@ -514,6 +539,7 @@ QSlider::groove:horizontal {
         self.screeningMap.screeningHistory = self.relativeCoords
 
         self.setCenterTo( (leftupper_x+relOffset_x/2)*self.slide.level_dimensions[0][0], (leftupper_y+relOffset_y/2)*self.slide.level_dimensions[0][1])
+        self.screeningHistory.append( ( (leftupper_x+relOffset_x/2)*self.slide.level_dimensions[0][0], (leftupper_y+relOffset_y/2)*self.slide.level_dimensions[0][1] ) )
         self.showImage()
 
     def setCenter(self, target):
@@ -539,7 +565,8 @@ QSlider::groove:horizontal {
         if (self.screeningMode):
             self.setZoomValue(1.0) # no magnification
             self.setCenterTo(0+self.mainImageSize[0]/2,+self.mainImageSize[1]/2)
-            self.showImage()
+            self.nextScreeningStep()
+#            self.showImage()
     
         self.writeDebug('Screening mode: %d' % self.screeningMode)
 
@@ -1693,6 +1720,8 @@ QSlider::groove:horizontal {
         self.findSlideUID()
         self.relativeCoords = np.asarray([0,0], np.float32)
         self.lastScreeningLeftUpper = np.zeros(2)
+        self.screeningHistory = list()
+        self.screeningIndex = 0
 
         self.thumbnail = thumbnail.thumbnail(self.slide)
 

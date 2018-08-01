@@ -40,6 +40,7 @@ def defineToolbar(self):
         self.ui.iconScreening = QAction(QIcon(ARTWORK_DIR_NAME+"icon_screeningMode.png"),"Screening mode",self)
         self.ui.iconOverlay = QAction(QIcon(ARTWORK_DIR_NAME+"iconOverlay.png"),"Overlay screening map in overview",self)
         self.ui.iconAnnoTN = QAction(QIcon(ARTWORK_DIR_NAME+"annoInOverview.png"),"Overlay annotations in overview",self)
+        self.ui.iconPreviousScreen = QAction(QIcon(ARTWORK_DIR_NAME+"icon_previousView.png"),"Previous view (screening)",self)
         self.ui.iconNextScreen = QAction(QIcon(ARTWORK_DIR_NAME+"icon_nextView.png"),"Next view (screening)",self)
         self.ui.iconBack = QAction(QIcon(ARTWORK_DIR_NAME+"backArrow.png"),"Back to last annotation",self)
         self.ui.iconRect.setCheckable(True)
@@ -57,6 +58,7 @@ def defineToolbar(self):
         self.ui.iconScreening.setCheckable(True)
         self.ui.iconBlinded.setEnabled(False)
         self.ui.iconNextScreen.setEnabled(False)
+        self.ui.iconPreviousScreen.setEnabled(False)
         self.ui.iconQuestion.setEnabled(False)
 
 
@@ -74,6 +76,7 @@ def defineToolbar(self):
         self.ui.tb.addAction(self.ui.iconOverlay)
         self.ui.tb.addAction(self.ui.iconAnnoTN)
         self.ui.tb.addSeparator()
+        self.ui.tb.addAction(self.ui.iconPreviousScreen)
         self.ui.tb.addAction(self.ui.iconNextScreen)
         self.ui.tb.addAction(self.ui.iconBack)
 
@@ -91,3 +94,4 @@ def defineToolbar(self):
         self.ui.iconAnnoTN.triggered.connect(self.setOverlayHeatmap)
         self.ui.iconScreening.triggered.connect(self.startStopScreening)
         self.ui.iconNextScreen.triggered.connect(self.nextScreeningStep)
+        self.ui.iconPreviousScreen.triggered.connect(self.previousScreeningStep)
