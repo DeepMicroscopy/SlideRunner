@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.13.0'
+version = '1.14.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -58,19 +58,7 @@ splash = splashScreen.splashScreen(app, version)
 
 from SlideRunner.general.dependencies import *
 
-class subwindow(QWidget):
-    def createWindow(self,WindowWidth,WindowHeight):
-        parent=None
-        super(subwindow,self).__init__(parent)
-        self.setWindowFlags(QtCore.Qt.SubWindow)
-        self.resize(WindowWidth,WindowHeight)
-
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.sizePolicy().hasHeightForWidth())
-        self.setSizePolicy(sizePolicy)
-
+from PyQt5.QtCore import QSettings
 
 
 # Thread for receiving images from the plugin
@@ -136,7 +124,8 @@ class SlideRunnerUI(QMainWindow):
     cachedImage = None
     pluginParameterSliders = dict()
     refreshTimer = None
-    
+    settings = QSettings('Pattern Recognition Lab, FAU Erlangen Nuernberg', 'SlideRunner')
+
 
     def __init__(self):
         super(SlideRunnerUI, self).__init__()
@@ -194,8 +183,6 @@ class SlideRunnerUI(QMainWindow):
 
         self.wheelEvent = partial(mouseEvents.wheelEvent,self)
 
-        shortcuts.defineMenuShortcuts(self)
-
         self.ui.MainImage.setPixmap(self.vidImageToQImage(127*np.ones((600,600,3),np.uint8)))
         self.ui.MainImage.mousePressEvent = partial(mouseEvents.pressImage, self)
         self.ui.MainImage.mouseReleaseEvent = partial(mouseEvents.releaseImage, self)
@@ -209,10 +196,11 @@ class SlideRunnerUI(QMainWindow):
         self.ui.opacitySlider.setHidden(True)
         self.ui.opacityLabel.setHidden(True)
 
+        menu.defineMenu(self.ui, self)
         menu.defineAnnotationMenu(self)
-        menu.definePluginMenu(self)
-        menu.defineZoomMenu(self)
-        menu.defineMenu(self)
+
+        shortcuts.defineMenuShortcuts(self)
+
 
         if (SLIDERUNNER_DEBUG):
             self.logger = logging.getLogger()
@@ -481,6 +469,7 @@ QSlider::groove:horizontal {
     """
 
 
+    
     def nextScreeningStep(self):
         if not (self.imageOpened):
             return
@@ -489,6 +478,8 @@ QSlider::groove:horizontal {
             return
 
         self.writeDebug('Next screen in screening mode')
+
+
 
         relOffset_x = self.mainImageSize[0] / self.slide.level_dimensions[0][0]
         relOffset_y =  self.mainImageSize[1] / self.slide.level_dimensions[0][1]
@@ -519,6 +510,8 @@ QSlider::groove:horizontal {
         leftupper_y = self.lastScreeningLeftUpper[1]
 
         center = ( leftupper_x+relOffset_x/2, leftupper_y+relOffset_y/2)
+
+        self.screeningMap.screeningHistory = self.relativeCoords
 
         self.setCenterTo( (leftupper_x+relOffset_x/2)*self.slide.level_dimensions[0][0], (leftupper_y+relOffset_y/2)*self.slide.level_dimensions[0][1])
         self.showImage()
@@ -1374,11 +1367,15 @@ QSlider::groove:horizontal {
         viewMicronsPerPixel = float(self.slideMicronsPerPixel) * float(self.currentZoom)
 
         legendWidth=150.0
-        legendQuantization = 25.0
-        if (viewMicronsPerPixel*legendWidth>1000):
-            legendQuantization = 100.0
-        elif (viewMicronsPerPixel*legendWidth>2000):
+        legendQuantization = 2.5
+        if (viewMicronsPerPixel*legendWidth>2000):
             legendQuantization = 500.0
+        elif (viewMicronsPerPixel*legendWidth>1000):
+            legendQuantization = 100.0
+        elif (viewMicronsPerPixel*legendWidth>200):
+            legendQuantization = 100.0
+        elif (viewMicronsPerPixel*legendWidth>50):
+            legendQuantization = 25.0
         legendMicrons = np.floor(legendWidth*viewMicronsPerPixel/legendQuantization)*legendQuantization
 
         actualLegendWidth = int(legendMicrons/viewMicronsPerPixel)
@@ -1717,6 +1714,17 @@ QSlider::groove:horizontal {
         self.updateScrollbars()
 
         self.showDBstatistics()
+
+        filename = os.path.abspath(filename)
+        lastslideslist = self.settings.value('LastSlides', type=list)
+        if filename in (lastslideslist):
+            lastslideslist.remove(filename)
+
+        lastslideslist.append(filename)
+        lastslideslist = lastslideslist[0:10]
+        self.settings.setValue('LastSlides', lastslideslist)
+
+
 
 
 def main():
