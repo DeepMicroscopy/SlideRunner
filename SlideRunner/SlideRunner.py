@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.14.1'
+version = '1.14.2'
 
 SLIDERUNNER_DEBUG = False
 
@@ -805,7 +805,8 @@ QSlider::groove:horizontal {
 
 
     def showPolygon(self, tempimage, polygon, color):
-        markersize = 5
+        zoomLevel = self.getZoomValue()
+        markersize = int(5/zoomLevel)
         listIdx=-1
 
         # small assertion to fix bug #12
@@ -1510,6 +1511,31 @@ QSlider::groove:horizontal {
         self.ui.databaseLabel.setText(dbinfo)
 
         self.showDBstatistics()
+
+    def findAnnoByID(self):
+        if (self.db.isOpen() == False):
+            return
+        num,ok = QInputDialog.getInt(self, "Find by ID",  "Please give UID of annotation")
+        if (ok):
+            allAnnos = self.db.findAllAnnotations(num, self.slideUID)
+            if (allAnnos is None) or len(allAnnos)==0:
+                correctSlide = self.db.findSlideForAnnotation(num)
+                if (correctSlide is None) or len(correctSlide)==0:
+                    reply = QtWidgets.QMessageBox.information(self, 'Message',
+                           'Not found in database.', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                else:
+                    reply = QtWidgets.QMessageBox.information(self, 'Message',
+                           'Not found on slide. Please open "%s".' % correctSlide[0], QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                return
+                
+            coords = np.asarray(allAnnos)
+            minC = np.min(coords,axis=0)
+            maxC = np.max(coords,axis=0)
+            diff = maxC-minC
+            cent = np.int32(minC+(maxC-minC)/2)
+            self.setCenterTo(cent[0],cent[1])
+            self.setZoomTo(diff[0],diff[1])
+
 
 
     def showDBstatistics(self):

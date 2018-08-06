@@ -109,6 +109,7 @@ def defineMenu(self, MainWindow):
         self.actionCreate_new.setText(("Create new"))
         self.actionAbout.setText(("About"))
 
+        self.menuItemView = self.menuAnnotation.addAction('Find by ID', MainWindow.findAnnoByID)
 
         self.saveto = self.menuDatabase.addAction('Copy To ...')
         self.saveto.setEnabled(False)

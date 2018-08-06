@@ -103,10 +103,19 @@ class Database(object):
         self.execute(q)
         return self.fetchone()[0]
 
-    def findAllAnnotations(self, annoId):
-        q = 'SELECT coordinateX, coordinateY FROM Annotations_coordinates WHERE annoId==%d' % annoId
+    def findAllAnnotations(self, annoId, slideUID = None):
+        if (slideUID is None):
+            q = 'SELECT coordinateX, coordinateY FROM Annotations_coordinates WHERE annoId==%d' % annoId
+        else:
+            q = 'SELECT coordinateX, coordinateY FROM Annotations_coordinates WHERE annoId==%d AND slide == %d' % (annoId, slideUID)
         self.execute(q)
         return self.fetchall()    
+
+    def findSlideForAnnotation(self, annoId):
+        q = 'SELECT filename FROM Annotations_coordinates LEFT JOIN Slides on Slides.uid == Annotations_coordinates.slide WHERE annoId==%d' % annoId
+        self.execute(q)
+        return self.fetchall()    
+
 
     def pickRandomUnlabeled(self, slideID, type = 1, byAnnotator=0):
         q = ('SELECT coordinateX, coordinateY, Annotations.uid '
