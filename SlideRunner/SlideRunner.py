@@ -1706,8 +1706,11 @@ QSlider::groove:horizontal {
             self.slideMagnification = self.slide.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         else:
             self.slideMagnification = 1
-                    
-        self.slideMicronsPerPixel = self.slide.properties[openslide.PROPERTY_NAME_MPP_X]
+
+        if (openslide.PROPERTY_NAME_MPP_X in self.slide.properties):
+            self.slideMicronsPerPixel = self.slide.properties[openslide.PROPERTY_NAME_MPP_X]
+        else:
+            self.slideMicronsPerPixel = 1E-6
         self.slidename = os.path.basename(filename)
 
         # unhide label and show filename
