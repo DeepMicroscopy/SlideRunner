@@ -103,6 +103,11 @@ class Database(object):
         self.execute(q)
         return self.fetchone()[0]
 
+    def findClassidOfClass(self, classname):
+        q = 'SELECT uid FROM Classes WHERE name == "%s"' % classname
+        self.execute(q)
+        return self.fetchall()
+
     def findAllAnnotations(self, annoId, slideUID = None):
         if (slideUID is None):
             q = 'SELECT coordinateX, coordinateY FROM Annotations_coordinates WHERE annoId==%d' % annoId
