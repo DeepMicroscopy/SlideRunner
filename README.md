@@ -87,7 +87,15 @@ have a class attached to it.
 
 ## News
 
-Starting with Version 1.10.0, we have a multi-thread-compatible plug-in interface. Up to now, documentation is not yet available. As examples, two plug-ins are provided. 
+Starting with Version 1.10.0, we have a multi-thread-compatible plug-in interface. Up to now, documentation is not yet available. As examples, three plug-ins are provided. 
+
+## Databases
+
+The MITOS2012 and MITOS-ATYPIA-2014 data sets are provided as SlideRunner database in the repository. Please download the original images (*.bmp, *.tif) in order to use them.
+
+## Tools
+
+Mingrui Jiang has written a tool to extract patches around ROIS. Find it here: https://github.com/mingrui/SlideRunner-ROI-Patch-Maker
 
 ## Plugins
 
