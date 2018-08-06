@@ -78,6 +78,7 @@ def defineMenu(self, MainWindow):
         self.menuDatabase.addAction(self.actionCreate_new)
         self.menuDatabase.addAction(self.action_Open)
         self.menuDatabase.addAction(self.actionOpen_custom)
+        defineOpenRecentDatabase(MainWindow)
         self.menuDatabase.addSeparator()
         self.menuDatabase.addAction(self.actionAdd_annotator)
         self.menuDatabase.addAction(self.actionAdd_cell_class)
@@ -141,6 +142,16 @@ def defineOpenRecent(self):
                 for idx,item in enumerate(lastOpenList):
                         openrecent.addAction('%d: %s' % (idx+1, os.path.basename(item)), partial(self.openSlide,item))
 
+
+def defineOpenRecentDatabase(self):
+        openrecent = self.ui.menuDatabase.addMenu('Open recent')
+        openrecent.setEnabled(True)
+
+        lastOpenList = self.settings.value('lastDatabases', type=list)
+        lastOpenList.reverse()
+        if len(lastOpenList) > 0:
+                for idx,item in enumerate(lastOpenList):
+                        openrecent.addAction('%d: %s' % (idx+1, os.path.basename(item)), partial(self.openDatabase, False, item))
 
         
 def defineAnnotationMenu(self):

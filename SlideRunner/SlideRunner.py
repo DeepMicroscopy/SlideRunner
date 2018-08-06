@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.14.0'
+version = '1.14.1'
 
 SLIDERUNNER_DEBUG = False
 
@@ -1466,6 +1466,16 @@ QSlider::groove:horizontal {
                 success = self.db.create(filename)
 
         if success:            
+            filename = os.path.abspath(filename)
+            lastdatabaseslist = self.settings.value('lastDatabases', type=list)
+            if filename in (lastdatabaseslist):
+                lastdatabaseslist.remove(filename)
+
+            lastdatabaseslist.append(filename)
+            lastdatabaseslist = lastdatabaseslist[0:10]
+            self.settings.setValue('lastDatabases', lastdatabaseslist)
+
+
             self.showDatabaseUIelements()
             self.showAnnotationsInOverview()
             self.writeDebug('Opened database')
