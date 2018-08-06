@@ -91,7 +91,7 @@ Starting with Version 1.10.0, we have a multi-thread-compatible plug-in interfac
 
 ## Databases
 
-The MITOS2012, MITOS-ATYPIA-2014 [https://mitos-atypia-14.grand-challenge.org/] and TUPAC [http://tupac.tue-image.nl] data sets are provided as SlideRunner database in the repository. Please download the original images (*.bmp, *.tif) in order to use them.
+The MITOS2012 [http://ludo17.free.fr/mitos_2012/], MITOS-ATYPIA-2014 [https://mitos-atypia-14.grand-challenge.org/] and TUPAC16 [http://tupac.tue-image.nl] data sets are provided as SlideRunner database in the repository. Please download the original images (*.bmp, *.tif) in order to use them.
 
 ## Tools
 
