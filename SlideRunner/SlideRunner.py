@@ -1799,6 +1799,10 @@ QSlider::groove:horizontal {
         """
             Helper function to open a whole slide image
         """
+        if not (os.path.exists(filename)):
+            reply = QtWidgets.QMessageBox.information(self, 'Error',
+                           'File not found: %s' % filename, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            return
 
         self.slide = openslide.open_slide(filename)
         if (openslide.PROPERTY_NAME_OBJECTIVE_POWER in self.slide.properties):
