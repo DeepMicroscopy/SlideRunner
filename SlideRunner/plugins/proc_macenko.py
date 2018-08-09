@@ -199,8 +199,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             rgb = np.copy(image[:,:,0:3])
             rgb = normalize(rgb)
 
-
-            self.outQueue.put(np.float32(rgb))
+            self.returnImage(np.float32(rgb), job.procId)
             self.setMessage('Macenko normalization: done.')
             self.setProgressBar(-1)
 

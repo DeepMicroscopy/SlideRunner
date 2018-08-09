@@ -63,15 +63,16 @@ class pluginJob():
       coordinates = None
       currentImage = None
       annotations = None
+      procId = None
       configuration = list()
       
       def __init__(self, queueTuple):
-            self.jobDescription, self.currentImage, self.slideFilename, self.coordinates, self.configuration, self.annotations = queueTuple
+            self.jobDescription, self.currentImage, self.slideFilename, self.coordinates, self.configuration, self.annotations, self.procId = queueTuple
 
       
 
-def jobToQueueTuple(description=JobDescription.PROCESS, currentImage=None, coordinates=None, configuration=list(), slideFilename=None, annotations=None):
-      return (description, currentImage, slideFilename, coordinates, configuration, annotations)
+def jobToQueueTuple(description=JobDescription.PROCESS, currentImage=None, coordinates=None, configuration=list(), slideFilename=None, annotations=None, procId=None):
+      return (description, currentImage, slideFilename, coordinates, configuration, annotations, procId)
 
 class PluginConfigurationEntry():
       uid = 0
@@ -119,6 +120,9 @@ class SlideRunnerPlugin:
 
       def setZoomLevel(self, zoom:float):
             self.statusQueue.put((StatusInformation.SET_ZOOM,zoom))
+
+      def returnImage(self, img : np.ndarray, procId = None):
+            self.outQueue.put((img, procId))
 
       def updateAnnotations(self):
             self.statusQueue.put((StatusInformation.ANNOTATIONS, self.getAnnotations()))

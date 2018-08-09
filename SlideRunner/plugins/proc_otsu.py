@@ -42,7 +42,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             # OTSU thresholding
             ret, thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
 
-            self.outQueue.put(np.float32(thresh/255.0))
+            self.returnImage(np.float32(thresh/255.0), job.procId)
             self.setMessage('OTSU calculation done.')
             print('OTSU plugin: done')
             self.setProgressBar(-1)

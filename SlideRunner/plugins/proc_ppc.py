@@ -58,7 +58,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         pass
 
     def queueWorker(self):
-        debugModule= True
+        debugModule= False
         quitSignal = False
         while not quitSignal:
             job = SlideRunnerPlugin.pluginJob(self.inQueue.get())
@@ -127,7 +127,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 plt.hist(img_hsv[:,0],255)
                 plt.savefig('histo_limited.pdf')
 
-            self.outQueue.put(np.float32(rgb))
+            self.returnImage(np.float32(rgb))
             self.statusQueue.put((1, 'PPC: Total: %d    Weak: %d   Medium: %d   Strong: %d ' % (np.prod(rgb.shape[0:2]),np.sum(weak),np.sum(medium),np.sum(strong)) ))
 
 
