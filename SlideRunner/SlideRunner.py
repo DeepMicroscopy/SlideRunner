@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.14.2'
+version = '1.14.3'
 
 SLIDERUNNER_DEBUG = False
 
@@ -72,10 +72,26 @@ class imageReceiverThread(threading.Thread):
 
     def run(self):
         while True:
-            img = self.queue.get()
+            (img, procId) = self.queue.get()
             print('Received an image from the plugin queue')
             self.selfObj.overlayMap = img
-            self.selfObj.showImageRequest.emit()
+            self.selfObj.showImageRequest.emit(np.empty(0), procId)
+
+class SlideReaderThread(threading.Thread):
+    queue = queue.Queue()
+    def __init__(self, SlideRunnerObject):
+        threading.Thread.__init__(self)
+        self.SlideRunnerObject = SlideRunnerObject
+    
+    def run(self):
+        while (True):
+            (location, level, size, id) = self.queue.get()
+            img = self.SlideRunnerObject.read_region(location, level, size)
+            if (self.queue.empty()): # new request pending
+                if (img is not None):
+                    self.SlideRunnerObject.readRegionCompleted.emit(img,id)
+
+
 
 # Thread for receiving progress bar events
 class PluginStatusReceiver(threading.Thread):
@@ -103,7 +119,8 @@ class PluginStatusReceiver(threading.Thread):
 
 class SlideRunnerUI(QMainWindow):
     progressBarChanged = pyqtSignal(int)
-    showImageRequest = pyqtSignal()
+    showImageRequest = pyqtSignal(np. ndarray, int)
+    readRegionCompleted = pyqtSignal(np.ndarray, int)
     statusViewChanged = pyqtSignal(str)
     annotationReceived = pyqtSignal(list)
     updatedCacheAvailable = pyqtSignal(dict)
@@ -114,11 +131,13 @@ class SlideRunnerUI(QMainWindow):
     receiverThread = None
     activePlugin = None
     overlayMap = None
+    processingStep = 0
     statusViewOffTimer = None
     slideMagnification = 1
     slideMicronsPerPixel = 20
     pluginAnnos = list()
     cachedLevel = None
+    lastReadRequest = None
     cachedLocation = None
     pluginTextLabels = dict()
     cachedImage = None
@@ -171,15 +190,21 @@ class SlideRunnerUI(QMainWindow):
         self.progressBarQueue = queue.Queue()
         self.progressBarChanged.connect(self.setProgressBar)
         self.statusViewChanged.connect(self.setStatusView)
-        self.showImageRequest.connect(self.showImage)
+        self.showImageRequest.connect(self.showImage_part2)
         self.annotationReceived.connect(self.receiveAnno)
         self.updatedCacheAvailable.connect(self.updateCache)
         self.setZoomReceived.connect(self.setZoom)
         self.setCenterReceived.connect(self.setCenter)
+        self.readRegionCompleted.connect(self.showImage_part2)
 
         self.pluginStatusReceiver = PluginStatusReceiver(self.progressBarQueue, self)
         self.pluginStatusReceiver.setDaemon(True)
         self.pluginStatusReceiver.start()
+
+        self.slideReaderThread = SlideReaderThread(self)
+        self.slideReaderThread.setDaemon(True)
+        self.slideReaderThread.start()
+
 
         self.wheelEvent = partial(mouseEvents.wheelEvent,self)
 
@@ -1179,14 +1204,14 @@ QSlider::groove:horizontal {
         """
           Update image cache during times of inactivity
         """
+        if (self.lastReadRequest is not None):
+            self.read_region(self.lastReadRequest['location'], self.lastReadRequest['level'], self.lastReadRequest['size'], forceRead=True)
+            newcache = dict()
+            newcache['image'] = self.cachedImage
+            newcache['level'] = self.cachedLevel
+            newcache['location'] = self.cachedLocation
 
-        self.read_region(self.lastReadRequest['location'], self.lastReadRequest['level'], self.lastReadRequest['size'], forceRead=True)
-        newcache = dict()
-        newcache['image'] = self.cachedImage
-        newcache['level'] = self.cachedLevel
-        newcache['location'] = self.cachedLocation
-
-        self.updatedCacheAvailable.emit(newcache)
+            self.updatedCacheAvailable.emit(newcache)
 
 
     def getMaxZoom(self):
@@ -1223,7 +1248,15 @@ QSlider::groove:horizontal {
         """
         return self.currentZoom
 
-
+    def prepare_region_from_overview(self, location, level, size):
+        locationInOverview = ( int(location[0]/self.slide.level_downsamples[-1]),
+                               int(location[1]/self.slide.level_downsamples[-1]))
+        scale = self.slide.level_downsamples[-1]/self.slide.level_downsamples[level]
+        M = np.array([[scale,0,-locationInOverview[0]*scale],
+             [0, scale, -locationInOverview[1]*scale]])
+        sp = cv2.warpAffine(self.slideOverview[:,:,0:3], M, dsize=size)
+        subpix_a = np.expand_dims(cv2.warpAffine(self.slideOverview[:,:,3], M, dsize=size),axis=2)
+        return np.concatenate((sp, subpix_a), axis=2)
     """
         read_region: cached version of openslide's read_region.
 
@@ -1231,15 +1264,9 @@ QSlider::groove:horizontal {
 
     """
 
-    def read_region(self, location, level, size, forceRead = False):
-        self.lastReadRequest = dict()
-        self.lastReadRequest['location'] = location
-        self.lastReadRequest['level'] = level
-        self.lastReadRequest['size'] = size
-        reader_location = (int(location[0]-1.*size[0]*self.slide.level_downsamples[level]),
-                          int(location[1]-1.*size[1]*self.slide.level_downsamples[level]))
-        reader_size = (int(size[0]*3), int(size[1]*3))
+    def image_in_cache(self, location, level, size):
         readNew = False
+        coords = None
         if (not(level == self.cachedLevel) or (self.cachedLocation is None)):
             readNew = True
         
@@ -1254,8 +1281,22 @@ QSlider::groove:horizontal {
             if ((y1>self.cachedImage.shape[0]) or
                 (x1>self.cachedImage.shape[1])):
                 readNew = True
+
+            coords = (x0,x1,y0,y1)
+        return readNew,coords
+
+    def read_region(self, location, level, size, forceRead = False):
+        self.lastReadRequest = dict()
+        self.lastReadRequest['location'] = location
+        self.lastReadRequest['level'] = level
+        self.lastReadRequest['size'] = size
+        reader_location = (int(location[0]-1.*size[0]*self.slide.level_downsamples[level]),
+                          int(location[1]-1.*size[1]*self.slide.level_downsamples[level]))
+        reader_size = (int(size[0]*3), int(size[1]*3))
+        readNew,coords = self.image_in_cache(location, level, size)
         
-        if not forceRead and not readNew:
+        if not readNew:
+            (x0,x1,y0,y1) = coords
             ret = self.cachedImage[y0:y1,x0:x1,:]
             return ret
         else:
@@ -1330,11 +1371,33 @@ QSlider::groove:horizontal {
         location_im = (int(imgarea_p1[0]), int(imgarea_p1[1]))
 
         # Read from Whole Slide Image
+        npi = self.prepare_region_from_overview(location_im, act_level, size_im)
 
-        npi = self.read_region(location=location_im,level=act_level,size=size_im)
+        self.processingStep += 1
+        outOfCache,_ = self.image_in_cache(location_im, act_level, size_im)
+#        npi = self.read_region(location=location_im,level=act_level,size=size_im)
+        if (act_level == self.slide.level_count-1): # overview image is always correct from cache
+            self.showImage_part2(npi, self.processingStep)
+        elif not (outOfCache):
+            npi = self.read_region(location_im, act_level, size_im)
+            self.showImage_part2(npi, self.processingStep)
+
+        else:
+            npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
+            self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(npi)))
+            
+            self.slideReaderThread.queue.put((location_im, act_level, size_im, self.processingStep))
+
+    def showImage_part2(self, npi, id):
+        if (len(npi.shape)==1): # empty was given as parameter - i.e. trigger comes from plugin
+            npi = self.cachedLastImage
+
+        self.cachedLastImage = npi
+
+        if (id<self.processingStep):
+            return
 
         aspectRatio_image = float(self.slide.level_dimensions[-1][0]) / self.slide.level_dimensions[-1][1]
-
 
         # Calculate real image size on screen
         if (self.ui.MainImage.frameGeometry().width()/aspectRatio_image<self.ui.MainImage.frameGeometry().height()):
@@ -1766,6 +1829,7 @@ QSlider::groove:horizontal {
 
         # Read overview thumbnail from slide
         overview = self.slide.read_region(location=(0,0), level=self.slide.level_count-1, size=self.slide.level_dimensions[-1])
+        self.slideOverview = np.asarray(overview)
         overview = cv2.cvtColor(np.asarray(overview), cv2.COLOR_BGRA2RGB)
 
         # Initialize a new screening map
