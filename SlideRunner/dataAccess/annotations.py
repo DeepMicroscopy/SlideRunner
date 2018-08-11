@@ -71,6 +71,16 @@ class annotation():
       def addLabel(self, label:AnnotationLabel):
           self.labels.append(label)
         
+      def getDimensions(self) -> (int, int):
+          minC = self.minCoordinates()
+          maxC = self.maxCoordinates()
+          return (int(maxC.x-minC.x),int(maxC.y-minC.y))
+        
+      def getCenter(self) -> (annoCoordinate):
+          minC = self.minCoordinates()
+          maxC = self.maxCoordinates()
+          return annoCoordinate(int(0.5*(minC.x+maxC.x)),int(0.5*(minC.y+maxC.y)))
+        
       def removeLabel(self, uid:int):
           for label in range(len(self.labels)):
               if (self.labels[label].uid == uid):

@@ -11,7 +11,7 @@ import sqlite3
 import os
 import time
 import numpy as np
-
+import random
     
 from SlideRunner.dataAccess.annotations import *
 
@@ -160,15 +160,12 @@ class Database(object):
         return resp[typeFilter,:].tolist()
  
 
-    def checkIfUnknownAreInScreen(self,leftUpper, rightLower, slideUID, currentAnnotator):
-        q = ('SELECT COUNT(*) FROM '
-             'Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.'
-             'annoId WHERE coordinateX >= '+str(leftUpper[0])+
-                ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type==1 AND Annotations.uid NOT IN ( SELECT Annotations_label.annoId from Annotations_label WHERE person==%d group by annoId )'%(slideUID,currentAnnotator) )
-        self.execute(q)
-        otherLabels = self.fetchone()[0]
-        return otherLabels>0      
+    def getUnknownInCurrentScreen(self,leftUpper, rightLower, currentAnnotator) -> annotation:
+        visAnnos = self.getVisibleAnnotations(leftUpper, rightLower)
+        for anno in visAnnos.keys():
+            if (visAnnos[anno].labelBy(currentAnnotator) == 0):
+                return anno   
+        return None
 
     def findAllAnnotationLabels(self, uid):
         q = 'SELECT person, class, uid FROM Annotations_label WHERE annoId== %d' % uid
@@ -199,20 +196,13 @@ class Database(object):
         return self.fetchall()    
 
 
-    def pickRandomUnlabeled(self, slideID, type = 1, byAnnotator=0):
-        q = ('SELECT coordinateX, coordinateY, Annotations.uid '
-             'FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId '
-             'WHERE Annotations.slide == %d AND type==%d ' % (slideID, type) +
-             'AND Annotations.uid NOT IN ( SELECT Annotations_label.annoId from Annotations_label WHERE person==%d group by annoId ) ' % byAnnotator +
-             'ORDER BY RANDOM() LIMIT 1') 
-        self.execute(q)
-        ret = self.fetchone()
-        if (ret is None):
-            return None,None,None
-        else:
-            [cx,cy,annoId] = ret
-            return [cx,cy,annoId]
-        
+    def pickRandomUnlabeled(self, byAnnotator=0) -> annotation:
+        annoIds = list(self.annotations.keys())
+        random.shuffle(annoIds)
+        for annoId in annoIds:
+            if (self.annotations[annoId].labelBy(byAnnotator) == 0):
+                return self.annotations[annoId]
+        return None
 
     def findPolygonAnnotatinos(self,leftUpper,rightLower, slideUID,blinded = False, currentAnnotator=None):
         if not blinded:

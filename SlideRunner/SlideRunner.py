@@ -647,7 +647,7 @@ QSlider::groove:horizontal {
         50 pixels of the screen are discarded, since annotations might be
         only partially shown.
     """
-    def discoverUnclassified(self):
+    def discoverUnclassified(self, force=False):
 
         if not (self.db.isOpen()): 
             return
@@ -659,24 +659,17 @@ QSlider::groove:horizontal {
         rightLower[0] -= 50
         rightLower[1] -= 50
         
-        if not (self.db.checkIfUnknownAreInScreen(leftUpper,rightLower,self.slideUID, self.annotator)):
-            [cx,cy,anno] = self.db.pickRandomUnlabeled(self.slideUID, 1, self.annotator)
-            if (anno is not None):
-                self.setCenterTo(cx,cy)
+        unknownInScreen = self.db.getUnknownInCurrentScreen(leftUpper, rightLower, self.annotator)
+        if not (unknownInScreen) or force:
+            unknownAnno = self.db.pickRandomUnlabeled(self.annotator)
+            if (unknownAnno is not None):
+                annoCenter = unknownAnno.getCenter()
+                annoDims = unknownAnno.getDimensions()
+                self.setCenterTo(annoCenter.x,annoCenter.y)
+                self.setZoomTo(annoDims[0],annoDims[1])
             else:
-                # All spot annotations seem to be done, continue with polygons
-                [cx,cy,anno] = self.db.pickRandomUnlabeled(self.slideUID, 3, self.annotator)
-                if (anno is not None):
-                    coords = np.asarray(self.db.findAllAnnotations(anno))
-                    minC = np.min(coords,axis=0)
-                    maxC = np.max(coords,axis=0)
-                    diff = maxC-minC
-                    cent = np.int32(minC+(maxC-minC)/2)
-                    self.setCenterTo(cent[0],cent[1])
-                    self.setZoomTo(diff[0],diff[1])
-                else:
-                    reply = QtWidgets.QMessageBox.information(self, 'Message',
-                                           'All objects have been rated by you. Thanks :)', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                reply = QtWidgets.QMessageBox.information(self, 'Message',
+                                        'All objects have been rated by you. Thanks :)', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
 
 
         self.showImage()
@@ -684,7 +677,7 @@ QSlider::groove:horizontal {
     def setDiscoveryMode(self):
         self.discoveryMode= self.ui.iconQuestion.isChecked()
         if (self.discoveryMode):
-            self.discoverUnclassified()
+            self.discoverUnclassified(force=True)
 
     def setBlindedMode(self):
         self.modelItems[0].setChecked(True) # enable unknown class

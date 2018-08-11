@@ -160,7 +160,7 @@ def leftClickImage(self, event):
                 addmenu = menu.addMenu('Add another label')
                 menuitems = list()
                 for clsname in self.db.getAllClasses():
-                    act=addmenu.addAction(clsname[0],partial(self.addAnnotationLabel, self,clsname[1], event, clickedAnno.uid))
+                    act=addmenu.addAction(clsname[0],partial(self.addAnnotationLabel, clsname[1], event, clickedAnno.uid))
                     menuitems.append(act)
                 action = menu.exec_(self.mapToGlobal(event.pos()))
             else:
