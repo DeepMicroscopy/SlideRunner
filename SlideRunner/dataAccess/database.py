@@ -50,11 +50,11 @@ class Database(object):
         ids = self.maxCoords[potentiallyVisible,2]
         return dict(filter(lambda i:i[0] in ids, self.annotations.items()))
 
-    def annotateImage(self, img: np.ndarray, leftUpper: list, rightLower:list, zoomLevel:float):
+    def annotateImage(self, img: np.ndarray, leftUpper: list, rightLower:list, zoomLevel:float, vp : ViewingProfile):
         annos = self.getVisibleAnnotations(leftUpper, rightLower)
         self.VA = annos
         for idx,anno in annos.items():
-            anno.draw(img, leftUpper, zoomLevel, thickness=2)
+            anno.draw(img, leftUpper, zoomLevel, thickness=2, vp=vp)
         
     def findClickAnnotation(self, clickPosition):
         for idx,anno in self.VA.items():

@@ -57,7 +57,7 @@ splash = splashScreen.splashScreen(app, version)
 # Splash screen is displayed, go on with the rest.
 
 from SlideRunner.general.dependencies import *
-
+from SlideRunner.dataAccess.annotations import ViewingProfile
 from PyQt5.QtCore import QSettings
 
 
@@ -137,6 +137,7 @@ class SlideRunnerUI(QMainWindow):
     slideMicronsPerPixel = 20
     pluginAnnos = list()
     cachedLevel = None
+    currentVP = ViewingProfile()
     lastReadRequest = None
     cachedLocation = None
     pluginTextLabels = dict()
@@ -688,6 +689,8 @@ QSlider::groove:horizontal {
     def setBlindedMode(self):
         self.modelItems[0].setChecked(True) # enable unknown class
         self.blindedMode = self.ui.iconBlinded.isChecked()
+        self.currentVP.blindMode = self.blindedMode
+        self.currentVP.annotator = self.annotator
         self.showImage()
 
     def changeOpacity(self, e):
@@ -882,6 +885,7 @@ QSlider::groove:horizontal {
 
     def defineAnnotator(self, uid):
         self.annotator = uid
+        self.currentVP.annotator = self.annotator
         allPers=self.db.getAllPersons()
         for persIdx in range(len(allPers)):
             person=allPers[persIdx]
@@ -895,6 +899,7 @@ QSlider::groove:horizontal {
             self.annotator = 0
         else:
             self.annotator = allPers[self.ui.annotatorComboBox.currentIndex()][1]
+        self.currentVP.annotator = self.annotator
         self.showImage()
         
 
@@ -1430,7 +1435,7 @@ QSlider::groove:horizontal {
         # Overlay Annotations by the user
         #npi = self.overlayAnnotations(npi)
         if (self.db.isOpen()):
-            self.db.annotateImage(npi, self.region[0], self.region[0]+self.region[1], self.getZoomValue())
+            self.db.annotateImage(npi, self.region[0], self.region[0]+self.region[1], self.getZoomValue(), self.currentVP)
         
         # Show the current polygon (if in polygon annotation mode)
         if (self.db.isOpen()) & (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
