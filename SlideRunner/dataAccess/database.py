@@ -12,12 +12,89 @@ import os
 import time
 import numpy as np
 
+    
+from SlideRunner.dataAccess.annotations import *
+
+from typing import Dict
+
 class Database(object):
+    annotations = Dict[int,annotation]
+
+    minCoords = np.empty(0)
+    maxCoords = np.empty(0)
     def __init__(self):
         self.dbOpened = False
+        self.VA = list()
 
     def isOpen(self):
         return self.dbOpened
+
+    def appendToMinMaxCoordsList(self, anno: annotation):
+        self.minCoords = np.vstack((self.minCoords, np.asarray(anno.minCoordinates().tolist()+[anno.uid])))
+        self.maxCoords = np.vstack((self.maxCoords, np.asarray(anno.maxCoordinates().tolist()+[anno.uid])))
+    def generateMinMaxCoordsList(self):
+        # MinMaxCoords lists shows extreme coordinates from object, to decide if an object shall be shown
+        self.minCoords = np.zeros(shape=(len(self.annotations),3))
+        self.maxCoords = np.zeros(shape=(len(self.annotations),3))
+        keys = self.annotations.keys() 
+        for idx,annokey in enumerate(keys):
+            annotation = self.annotations[annokey]
+            self.minCoords[idx] = np.asarray(annotation.minCoordinates().tolist()+[annokey])
+            self.maxCoords[idx] = np.asarray(annotation.maxCoordinates().tolist()+[annokey])
+
+#        print(self.getVisibleAnnotations([0,0],[20,20]))
+    
+    def getVisibleAnnotations(self, leftUpper:list, rightLower:list) -> Dict[int, annotation]:
+        potentiallyVisible =  ( (self.maxCoords[:,0] > leftUpper[0]) & (self.minCoords[:,0] < rightLower[0]) & 
+                                (self.maxCoords[:,1] > leftUpper[1]) & (self.minCoords[:,1] < rightLower[1]) )
+        ids = self.maxCoords[potentiallyVisible,2]
+        return dict(filter(lambda i:i[0] in ids, self.annotations.items()))
+
+    def annotateImage(self, img: np.ndarray, leftUpper: list, rightLower:list, zoomLevel:float):
+        annos = self.getVisibleAnnotations(leftUpper, rightLower)
+        self.VA = annos
+        for idx,anno in annos.items():
+            anno.draw(img, leftUpper, zoomLevel, thickness=2)
+        
+    def findClickAnnotation(self, clickPosition):
+        for idx,anno in self.VA.items():
+            if (anno.positionInAnnotation(clickPosition )):
+                return anno
+        return None
+
+    def loadIntoMemory(self, slideId):
+        self.annotations = dict()
+
+        self.dbcur.execute('SELECT uid, type FROM Annotations WHERE slide == %d'% slideId)
+        allAnnos = self.dbcur.fetchall()
+        print('Loading DB into memory ...')
+
+        self.dbcur.execute('SELECT coordinateX, coordinateY,annoid FROM Annotations_coordinates where annoId IN (SELECT uid FROM Annotations WHERE slide == %d) ORDER BY orderIdx' % (slideId))
+        allCoords = np.asarray(self.dbcur.fetchall())
+
+        for uid, annotype in allAnnos:
+            coords = allCoords[allCoords[:,2]==uid,0:2]
+            if (annotype == AnnotationType.SPOT):
+                self.annotations[uid] = spotAnnotation(uid, coords[0][0], coords[0][1])
+            elif (annotype == AnnotationType.SPECIAL_SPOT):
+                self.annotations[uid] = spotAnnotation(uid, coords[0][0], coords[0][1], True)
+            elif (annotype == AnnotationType.POLYGON):
+                self.annotations[uid] = polygonAnnotation(uid, coords)
+            elif (annotype == AnnotationType.AREA):
+                self.annotations[uid] = rectangularAnnotation(uid, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
+            elif (annotype == AnnotationType.CIRCLE):
+                self.annotations[uid] = circleAnnotation(uid, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
+            else:
+                print('Unknown annotation type %d found :( ' % annotype)
+            
+        # Add all labels
+        self.dbcur.execute('SELECT annoid, person, class,uid FROM Annotations_label WHERE annoID in (SELECT uid FROM Annotations WHERE slide == %d)'% slideId)
+        allLabels = self.dbcur.fetchall()
+
+        for (annoId, person, classId,uid) in allLabels:
+            self.annotations[annoId].addLabel(AnnotationLabel(person, classId, uid))
+
+        self.generateMinMaxCoordsList()
 
     def open(self, dbfilename):
         if os.path.isfile(dbfilename):
@@ -59,7 +136,7 @@ class Database(object):
             return list()
 
 
-        self.execute('SELECT annoId, class from Annotations_label WHERE person==%d GROUP BY annoId' % currentAnnotator)
+        self.execute('SELECT annoId, class from Annotations_label LEFT JOIN Annotations on Annotations_label.annoId == Annotations.uid WHERE person==%d and TYPE IN (1,4) GROUP BY annoId' % currentAnnotator)
         myAnnos = np.asarray(self.fetchall())
 
         if (myAnnos.shape[0]==0):
@@ -239,6 +316,7 @@ class Database(object):
         q = 'UPDATE Annotations_label SET person==%d, class=%d WHERE uid== %d' % (person,classId,entryId)
         self.execute(q)
         self.commit()
+        self.annotations[annoIdx].changeLabel(entryId, person, classId)
         self.checkCommonAnnotation(annoIdx)
 
     def checkCommonAnnotation(self, annoIdx ):
@@ -260,6 +338,10 @@ class Database(object):
         query = ('INSERT INTO Annotations_label (person, class, annoId) VALUES (%d,%d,%d)'
                  % (person, classId, annoId))
         self.execute(query)
+        query = 'SELECT last_insert_rowid()'
+        self.execute(query)
+        newid = self.fetchone()[0]
+        self.annotations[annoId].addLabel(AnnotationLabel(person, classId, newid))
         self.checkCommonAnnotation( annoId)
         self.commit()
 
@@ -270,6 +352,8 @@ class Database(object):
         query = 'SELECT last_insert_rowid()'
         self.execute(query)
         annoId = self.fetchone()[0]
+        self.annotations[annoId] = polygonAnnotation(annoId, np.asarray(annoList))
+        self.appendToMinMaxCoordsList(self.annotations[annoId])
 
         for annotation in annoList:
             query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
@@ -288,6 +372,11 @@ class Database(object):
         query = 'SELECT last_insert_rowid()'
         self.execute(query)
         annoId = self.fetchone()[0]
+        if (typeId==2):
+            self.annotations[annoId] = rectangularAnnotation(annoId, x1,y1,x2,y2)
+        else:
+            self.annotations[annoId] = circleAnnotation(annoId, x1,y1,x2,y2)
+        self.appendToMinMaxCoordsList(self.annotations[annoId])
 
         query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
                  % (x1,y1,slideUID, annoId, 1))
@@ -313,6 +402,7 @@ class Database(object):
             query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
                     % (xpos_orig,ypos_orig,slideUID, annoId, 1))
             self.execute(query)
+            self.annotations[annoId] = spotAnnotation(annoId, xpos_orig,ypos_orig, (type==4))
 
         else:
             query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,%d)' % (slideUID,classID, type)
@@ -325,13 +415,16 @@ class Database(object):
                     % (xpos_orig,ypos_orig,slideUID, annoId, 1))
             self.execute(query)
 
+            self.annotations[annoId] = spotAnnotation(annoId, xpos_orig,ypos_orig, (type==4))
             self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId)
 
+        self.appendToMinMaxCoordsList(self.annotations[annoId])
         self.commit()
 
     def removeAnnotationLabel(self, labelIdx, annoIdx):
             q = 'DELETE FROM Annotations_label WHERE uid == %d' % labelIdx
             self.execute(q)
+            self.annotations[annoIdx].removeLabel(labelIdx)
             self.commit()
             self.checkCommonAnnotation(annoIdx)
 
@@ -339,6 +432,7 @@ class Database(object):
             self.execute('DELETE FROM Annotations_label WHERE annoId == %d' % annoId)
             self.execute('DELETE FROM Annotations_coordinates WHERE annoId == %d' % annoId)
             self.execute('DELETE FROM Annotations WHERE uid == '+str(annoId))
+            self.annotations.pop(annoId)
             self.commit()
             
 
@@ -371,6 +465,15 @@ class Database(object):
         else:
             return ''
     
+    def getAnnotatorByID(self, id):
+        self.execute('SELECT name FROM Persons WHERE uid == %d' % id)
+        return self.fetchone()[0]
+
+    def getClassByID(self, id):
+        self.execute('SELECT name FROM Classes WHERE uid == %d' % id)
+        return self.fetchone()[0]
+
+
     def getAllPersons(self):
         self.execute('SELECT name, uid FROM Persons ORDER BY uid')
         return self.fetchall()

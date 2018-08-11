@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.14.3'
+version = '1.15.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -176,7 +176,6 @@ class SlideRunnerUI(QMainWindow):
         self.displayedImage = None
         self.overviewOverlayHeatmap = False
         self.annotationPolygons=[]
-        #self.ui.statisticView.setHidden(True)
         self.ui.MainImage.installEventFilter(self)
         self.ui.horizontalScrollBar.valueChanged.connect(self.changeScrollbars)
         self.ui.verticalScrollBar.valueChanged.connect(self.changeScrollbars)
@@ -184,6 +183,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.opacitySlider.valueChanged.connect(self.changeOpacity)
         self.ui.progressBar.setHidden(True)
 
+        self.removeLastPolygonPoint = mouseEvents.removeLastPolygonPoint #redirect
         self.disableStatusView()
 
         self.ui.progressBar.setValue(0)
@@ -414,6 +414,7 @@ QSlider::groove:horizontal {
 
 
         print('Active plugin is now ', self.activePlugin)
+        self.overlayMap = None
         self.showImage()
 
     """
@@ -859,38 +860,20 @@ QSlider::groove:horizontal {
 
         return tempimage
 
-    def showDBEntry(self, entryId, type='spot'):
+    def showDBEntry(self, entry:annotation):
         table_model = QtGui.QStandardItemModel()
         table_model.setColumnCount(2)
         table_model.setHorizontalHeaderLabels("Name;Description".split(";"))
 
-        coords, classes, persons = self.db.fetchSpotAnnotation(entryId)
-
         lab1 = QStandardItem('Unique ID ')
-        item = QStandardItem(str(entryId))
+        item = QStandardItem(str(entry.uid))
         table_model.appendRow([lab1,item])
-        if (type=='spot'):
-            lab1 = QStandardItem('Position ')
-            item = QStandardItem('x=%d, y=%d' % coords)
-            table_model.appendRow([lab1,item])
-        elif (type=='flag'):
-            lab1 = QStandardItem('Position ')
-            item = QStandardItem('x=%d, y=%d' % coords)
-            table_model.appendRow([lab1,item])
-        elif (type=='area'):
-            coords1, coords2, classes, persons= self.db.fetchAreaAnnotation(entryId)
-            lab1 = QStandardItem('Position1 ')
-            item = QStandardItem('x1=%d, y1=%d' % coords1)
-            table_model.appendRow([lab1,item])
 
-            lab1 = QStandardItem('Position2 ')
-            item = QStandardItem('x1=%d, y1=%d' % coords2)
-            table_model.appendRow([lab1,item])
-            
-        for k in range(len(classes)):
-            lab1 = QStandardItem('Anno %d ' % (k+1))
-            item = QStandardItem('%s (%s)' % (classes[k][0], persons[k][0]))
-            table_model.appendRow([lab1,item])
+        getdesc = entry.getDescription(self.db)
+        for (label, item) in getdesc:
+            lab1 = QStandardItem(label)
+            itemi = QStandardItem(item)
+            table_model.appendRow([lab1,itemi])
 
         self.ui.inspectorTableView.setModel(table_model)
         self.ui.inspectorTableView.resizeRowsToContents()
@@ -1445,7 +1428,9 @@ QSlider::groove:horizontal {
 
 
         # Overlay Annotations by the user
-        npi = self.overlayAnnotations(npi)
+        #npi = self.overlayAnnotations(npi)
+        if (self.db.isOpen()):
+            self.db.annotateImage(npi, self.region[0], self.region[0]+self.region[1], self.getZoomValue())
         
         # Show the current polygon (if in polygon annotation mode)
         if (self.db.isOpen()) & (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
@@ -1534,6 +1519,11 @@ QSlider::groove:horizontal {
             lastdatabaseslist = self.settings.value('lastDatabases', type=list)
             if filename in (lastdatabaseslist):
                 lastdatabaseslist.remove(filename)
+            
+            if (self.imageOpened):
+                self.findSlideUID()
+                self.db.loadIntoMemory(self.slideUID)
+
 
             lastdatabaseslist.append(filename)
             lastdatabaseslist = lastdatabaseslist[0:10]
@@ -1823,7 +1813,12 @@ QSlider::groove:horizontal {
         self.imageOpened=True
         self.ui.statusbar.showMessage(filename+': '+str(self.slide.dimensions))
 
-        self.findSlideUID()
+        if (self.db.isOpen()):
+            self.findSlideUID()
+            t = time.time()
+            self.db.loadIntoMemory(self.slideUID)
+            print('Took: ',time.time()-t)
+
         self.relativeCoords = np.asarray([0,0], np.float32)
         self.lastScreeningLeftUpper = np.zeros(2)
         self.screeningHistory = list()

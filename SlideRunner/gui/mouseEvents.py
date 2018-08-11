@@ -146,46 +146,25 @@ def leftClickImage(self, event):
         if not (self.db.isOpen()):
             return
         
-        # Find annotation
-        foundAnno=None
-        for annotation in self.annotationsFlags:
-            dist = np.sqrt(np.square(annotation[0]-posx)+np.square(annotation[1]-posy))
-            if (dist < (annotation[2]+3)):
-                foundAnno = annotation[5]
-                self.showDBEntry(annotation[5], type='flag')
-                break
+        mouseClickGlobal = self.screenToSlide((posx,posy))
 
-        for annotation in self.annotationsArea:
-            if ((annotation[0]<=posx) & (annotation[2]>=posx) & 
-                (annotation[1]<=posy) & (annotation[3]>=posy)):
-                self.showDBEntry(annotation[5],type='area')
-        for annotation in self.annotationsSpots:
-            dist = np.sqrt(np.square(annotation[0]-posx)+np.square(annotation[1]-posy))
-            if (dist < (annotation[2]+3)):
-                # We found a match!
-                self.showDBEntry(annotation[5])
-                foundAnno=annotation[5]
-                break
-        for annotation in self.annotationPolygons:
-            p = path.Path(annotation[0])
-            if (p.contains_point(self.screenToSlide((posx,posy)))):
-                self.showDBEntry(annotation[2],type='poly')
-                foundAnno=annotation[2]
-                break
+        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal)
+        if (clickedAnno is not None):
+            self.showDBEntry(clickedAnno)
         
-        if foundAnno is not None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT):
+        if clickedAnno is not None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT):
             # fast annotation on previous anno
             # check: did I annotate this item already?
-            if (self.db.checkIfAnnotatorLabeled(foundAnno, self.retrieveAnnotator(event))):
+            if (self.db.checkIfAnnotatorLabeled(clickedAnno.uid, self.retrieveAnnotator(event))):
                 menu = QMenu(self)
                 addmenu = menu.addMenu('Add another label')
                 menuitems = list()
                 for clsname in self.db.getAllClasses():
-                    act=addmenu.addAction(clsname[0],partial(self.addAnnotationLabel, self,clsname[1], event, foundAnno))
+                    act=addmenu.addAction(clsname[0],partial(self.addAnnotationLabel, self,clsname[1], event, clickedAnno.uid))
                     menuitems.append(act)
                 action = menu.exec_(self.mapToGlobal(event.pos()))
             else:
-                self.db.addAnnotationLabel(self.lastAnnotationClass, self.retrieveAnnotator(event), foundAnno)
+                self.db.addAnnotationLabel(self.lastAnnotationClass, self.retrieveAnnotator(event), clickedAnno.uid)
                 self.writeDebug('new label for object with class %d, slide %d, person %d' % ( self.lastAnnotationClass, self.slideUID,self.retrieveAnnotator(event)))
                 self.saveLastViewport()                
                 if (self.discoveryMode):
@@ -193,14 +172,14 @@ def leftClickImage(self, event):
                 else:
                     self.showImage()
 
-        if not foundAnno and (self.ui.mode==UIMainMode.MODE_VIEW):
+        if clickedAnno is None and (self.ui.mode==UIMainMode.MODE_VIEW):
             # Move image
             self.ui.anno_pt1 = (posx,posy)
             self.ui.clickToMove = True
             self.setCursor(Qt.ClosedHandCursor)
 
 
-        if foundAnno is None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT):
+        if clickedAnno is None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT):
             if (self.lastAnnotationClass==0):
                 menu = QMenu(self)
                 addmenu = menu.addMenu('Add annotation')
@@ -278,6 +257,10 @@ def releaseImage(self, event):
             GUIannotation.addCircleAnnotation(self, self.lastAnnotationClass, event)
         self.showImage()
 
+def removeLastPolygonPoint(self):
+    if (self.ui.annotationMode == 1):
+        self.ui.annotationsList.pop()           
+        self.showImage()
 
 
 def rightClickImage(self, event):
@@ -294,12 +277,6 @@ def rightClickImage(self, event):
 
     if (self.db.isOpen()):
 
-        annoFound=None
-        for annotation in self.annotationsArea:
-            if ((annotation[0]<=posx) & (annotation[2]>=posx) & 
-                (annotation[1]<=posy) & (annotation[3]>=posy)):
-                annoFound=annotation
-                break
 
         if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON):
             menu = QMenu(self)
@@ -308,63 +285,45 @@ def rightClickImage(self, event):
             for clsname in self.db.getAllClasses():
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event))
                 menuitems.append(act)
+            addmenu = menu.addAction('Remove last point', partial(self.removeLastPolygonPoint,self))
             addmenu = menu.addAction('Cancel', self.hitEscape)
 
             action = menu.exec_(self.mapToGlobal(event.pos()))
             return
 
-
-        for annotation in self.annotationsSpots:
-            dist = np.sqrt(np.square(annotation[0]-posx)+np.square(annotation[1]-posy))
-            if (dist < (annotation[2]+3)):
-                # We found a match!
-                annoFound=annotation
-
-                break
-
-        for annotation in self.annotationPolygons:
-            p = path.Path(annotation[0])
-            if (p.contains_point(self.screenToSlide((posx,posy)))):
-                annoFound=[0,0,0,0,annotation[1],annotation[2]]
-                break
-
-        for annotation in self.annotationsFlags:
-            dist = np.sqrt(np.square(annotation[0]-posx)+np.square(annotation[1]-posy))
-            if (dist < (annotation[2]+3)):
-                annoFound=annotation
-                annoIsFlag = True
-                break
+        mouseClickGlobal = self.screenToSlide((posx,posy))
+        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal)
 
 
         menuitems = list()
-        if (annoFound is None):
+        if (clickedAnno is None):
             addmenu = menu.addMenu('Add annotation')
             menuitems = list()
             for clsname in self.db.getAllClasses():
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.addSpotAnnotation,self,clsname[1], event))
                 menuitems.append(act)
         else:
-            labels=self.db.findAllAnnotationLabels(annoFound[5])
+            labels=self.db.findAllAnnotationLabels(clickedAnno.uid)
             if not (annoIsFlag):
                 for labelIdx in range(len(labels)):
                     label = labels[labelIdx]
                     addmenu = menu.addMenu('Change %s annotation' % self.numberToPosition(labelIdx))
                     for clsname in self.db.getAllClasses():
-                        act=addmenu.addAction(clsname[0],partial(self.changeAnnotation,clsname[1], event, label[2], annoFound[5]))
+                        act=addmenu.addAction(clsname[0],partial(self.changeAnnotation,clsname[1], event, label[2], clickedAnno.uid))
                         act.setCheckable(True)
                         if (clsname[1]==label[1]):
                             act.setChecked(True)
                         menuitems.append(act)
                     if (labelIdx>0):
-                        act = addmenu.addAction('-- remove --', partial(self.removeAnnotationLabel, label[2],annoFound[5]))
+                        act = addmenu.addAction('-- remove --', partial(self.removeAnnotationLabel, label[2],clickedAnno.uid))
                         menuitems.append(act)
 
                 addmenu = menu.addMenu('Add %s annotation' % self.numberToPosition((len(labels))))
                 for clsname in self.db.getAllClasses():
-                    act = addmenu.addAction(clsname[0], partial(self.addAnnotationLabel, clsname[1], event, annoFound[5]))
+                    act = addmenu.addAction(clsname[0], partial(self.addAnnotationLabel, clsname[1], event, clickedAnno.uid))
                     menuitems.append(act)
                 menuitems.append(act)
-            menu.addAction('Remove annotation', partial(self.removeAnnotation, annoFound[5]))
+            menu.addAction('Remove annotation', partial(self.removeAnnotation, clickedAnno.uid))
 
 
         menu.addSeparator()
