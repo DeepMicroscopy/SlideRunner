@@ -285,7 +285,7 @@ class SlideRunnerUI(QMainWindow):
 
     def receiveAnno(self, anno):
         self.pluginAnnos = anno
-        self.showImage()
+        self.showImage_part2(np.empty(shape=(1)), self.processingStep)
 
     def setProgressBar(self, number):
         if (number == -1):
@@ -308,6 +308,7 @@ class SlideRunnerUI(QMainWindow):
 
     def triggerPluginConfigChanged(self):
         self.overlayMap = None
+        self.pluginAnnos = list()
         self.showImage()
         for key in self.pluginSliderLabels.keys():
             self.pluginSliderLabels[key].setText('%.3f' % (self.pluginParameterSliders[key].value() / 1000.0 ))
@@ -416,6 +417,7 @@ QSlider::groove:horizontal {
 
         print('Active plugin is now ', self.activePlugin)
         self.overlayMap = None
+        self.pluginAnnos = list()
         self.showImage()
 
     """
@@ -787,6 +789,8 @@ QSlider::groove:horizontal {
     def pressOverviewImage(self,event):
         if (self.imageOpened):
             self.overlayMap=None
+            if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
+                self.pluginAnnos = list()
             self.relativeCoords=np.asarray([event.x()/self.thumbnail.size[0], event.y()/self.thumbnail.size[1]])
             if (self.relativeCoords[1]>1.0):
                 self.relativeCoords[1]=1.0
@@ -1100,6 +1104,8 @@ QSlider::groove:horizontal {
         """
         if (self.imageOpened):
             self.overlayMap=None
+            if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
+                self.pluginAnnos = list()
             self.relativeCoords[0] = (self.ui.horizontalScrollBar.value()/self.ui.hsteps)-0.5
             self.relativeCoords[1] = (self.ui.verticalScrollBar.value()/self.ui.vsteps)-0.5
             self.showImage()
@@ -1119,6 +1125,8 @@ QSlider::groove:horizontal {
         viewsize = self.mainImageSize * self.getZoomValue()
 
         self.overlayMap=None
+        if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
+            self.pluginAnnos = list()
         self.ui.horizontalScrollBar.setMaximum(0)
         self.ui.hsteps=int(10*self.slide.level_dimensions[0][0]/viewsize[0])
         self.ui.vsteps=int(10*self.slide.level_dimensions[0][1]/viewsize[1])
@@ -1168,6 +1176,8 @@ QSlider::groove:horizontal {
         """
         super().resizeEvent(event)
         self.overlayMap=None
+        if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
+            self.pluginAnnos = list()
         if (self.imageOpened):
             self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
             self.showImage()
@@ -1206,6 +1216,8 @@ QSlider::groove:horizontal {
             Sets the zoom of the current image.
         """
         self.overlayMap=None
+        if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
+            self.pluginAnnos = list()
         self.currentZoom = zoomValue
         if (self.currentZoom < 0.5):
             self.currentZoom = 0.5
@@ -1398,7 +1410,7 @@ QSlider::groove:horizontal {
         self.refreshTimer = Timer(1, self.updateImageCache)                
         self.refreshTimer.start()
 
-        if (self.activePlugin is not None) and (self.overlayMap is None):
+        if (self.activePlugin is not None) and (self.overlayMap is None) and (len(self.pluginAnnos)==0):
             from threading import Timer
             if (self.updateTimer is not None):
                 self.updateTimer.cancel()
@@ -1430,6 +1442,10 @@ QSlider::groove:horizontal {
         if (self.db.isOpen()):
             self.db.annotateImage(npi, self.region[0], self.region[0]+self.region[1], self.getZoomValue(), self.currentVP)
         
+        if (self.activePlugin):
+            for anno in self.pluginAnnos:
+                anno.draw(npi, self.region[0], self.getZoomValue(), 2, self.colors[0])
+
         # Show the current polygon (if in polygon annotation mode)
         if (self.db.isOpen()) & (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
             npi = self.showPolygon(npi, self.ui.annotationsList, color=[0,0,0,255])
@@ -1734,9 +1750,7 @@ QSlider::groove:horizontal {
             Callback function for when a slider was changed.
         """
         print('Slider changed')
-        self.overlayMap=None
         self.setZoomValue(self.sliderToZoomValue())
-        self.overlayMap=None
         self.showImage()
         self.updateScrollbars()
 

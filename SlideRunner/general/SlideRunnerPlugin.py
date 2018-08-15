@@ -12,6 +12,10 @@ class StatusInformation(enumerate):
       SET_CENTER = 3
       SET_ZOOM = 4
 
+class AnnotationUpdatePolicy(enumerate):
+      UPDATE_ON_SCROLL_CHANGE = 0,
+      UPDATE_ON_SLIDE_CHANGE = 1
+
 class PluginTypes(enumerate):
       IMAGE_PLUGIN = 0
       WHOLESLIDE_PLUGIN = 1
@@ -42,6 +46,9 @@ class rectangularAnnotation(annotation):
             xpos2=min(image.shape[1],int((self.x2-leftUpper[0])/zoomLevel))
             ypos2=min(image.shape[0],int((self.y2-leftUpper[1])/zoomLevel))
             image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=color, lineType=cv2.LINE_AA)
+      
+      def __str__(self):
+            return ('Rectangular annotation object: X1:%d, X2:%d, Y1:%d, Y2: %d ' % (self.x1,self.y1,self.x2,self.y2))
 
 class circleAnnotation(annotation):
 
@@ -106,6 +113,9 @@ class SlideRunnerPlugin:
             self.description = 'This is a sample plugin'
             self.statusQueue = statusQueue
       
+      def getAnnotationUpdatePolicy():
+            return AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE
+
       def __str__(self):
             return self.shortName
 
