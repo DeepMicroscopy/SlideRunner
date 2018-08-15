@@ -41,7 +41,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     updateTimer=0.1
     slideFilename = None
     annos = list()
-    configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Update HPF', ctype=SlideRunnerPlugin.PluginConfigurationType.PUSHBUTTON),))
+    configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Re-center HPF', ctype=SlideRunnerPlugin.PluginConfigurationType.PUSHBUTTON),))
     
     def __init__(self, statusQueue:Queue):
         self.statusQueue = statusQueue
