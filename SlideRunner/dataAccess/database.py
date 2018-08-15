@@ -12,7 +12,58 @@ import os
 import time
 import numpy as np
 import random
-    
+
+class DatabaseField(object):
+    def __init__(self, keyStr:str, typeStr:str, isNull:int=0, isUnique:bool=False, isAutoincrement:bool=False, defaultValue:str='', primaryKey:int=0):
+        self.key = keyStr
+        self.type = typeStr
+        self.isNull = isNull
+        self.isUnique = isUnique
+        self.isAutoincrement = isAutoincrement
+        self.defaultValue = defaultValue
+        self.isPrimaryKey = primaryKey
+
+    def creationString(self):
+        return ("`"+self.key+"` "+self.type+
+                ((" DEFAULT %s " % self.defaultValue) if not(self.defaultValue == "") else "") + 
+                (" PRIMARY KEY" if self.isPrimaryKey else "")+
+                (" AUTOINCREMENT" if self.isAutoincrement else "")+
+                (" UNIQUE" if self.isUnique else "") )
+
+class DatabaseTable(object):
+    def __init__(self, name:str):
+        self.entries = dict()
+        self.name = name
+
+    def add(self, field:DatabaseField):
+        self.entries[field.key] = field
+        return self
+
+    def getCreateStatement(self):
+        createStatement = "CREATE TABLE `%s` (" % self.name
+        cnt=0
+        for idx, entry in self.entries.items():
+            if cnt>0:
+                createStatement += ','
+            createStatement += entry.creationString()
+            cnt+=1
+        createStatement += ");"
+        return createStatement
+
+    def checkTableInfo(self, tableInfo):
+        if tableInfo is None:
+            return False
+        for entry in tableInfo:
+            idx,key,typeStr,isNull,defaultValue,PK = entry
+            if (key not in self.entries):
+                return False
+            if not (self.entries[key].type == typeStr):
+                return False
+        # OK, defaultValue, isNull are not important to be checked
+
+        return True
+
+
 from SlideRunner.dataAccess.annotations import *
 
 from typing import Dict
@@ -22,9 +73,14 @@ class Database(object):
 
     minCoords = np.empty(0)
     maxCoords = np.empty(0)
+
     def __init__(self):
         self.dbOpened = False
         self.VA = list()
+
+        self.databaseStructure = dict()
+
+        self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
 
     def isOpen(self):
         return self.dbOpened
@@ -98,13 +154,29 @@ class Database(object):
 
         self.generateMinMaxCoordsList()
 
+    def checkTableStructure(self, tableName):
+        self.dbcur.execute('PRAGMA table_info(%s)' % tableName)
+        ti = self.dbcur.fetchall()
+        return self.databaseStructure[tableName].checkTableInfo(ti)
+
     def open(self, dbfilename):
         if os.path.isfile(dbfilename):
             self.db = sqlite3.connect(dbfilename)
             self.dbcur = self.db.cursor()
+
+            # Check structure of database
+            if not self.checkTableStructure('Log'):
+                # add new log, no problemo.
+                self.dbcur.execute('DROP TABLE if exists `Log`')
+                self.dbcur.execute(self.databaseStructure['Log'].getCreateStatement())
+                self.db.commit()
+
             self.dbOpened = True
             self.dbfilename = dbfilename
             self.dbname = os.path.basename(dbfilename)
+
+
+
             return True
         else:
             return False
@@ -325,6 +397,9 @@ class Database(object):
         self.execute(q)
         self.commit()
 
+    def logLabel(self, labelId):
+        query = 'INSERT INTO Log (dateTime, labelId) VALUES (%d, %d)' % (time.time(), labelId)
+        self.execute(query)
 
     def addAnnotationLabel(self,classId,  person, annoId):
         query = ('INSERT INTO Annotations_label (person, class, annoId) VALUES (%d,%d,%d)'
@@ -333,6 +408,7 @@ class Database(object):
         query = 'SELECT last_insert_rowid()'
         self.execute(query)
         newid = self.fetchone()[0]
+        self.logLabel(newid)
         self.annotations[annoId].addLabel(AnnotationLabel(person, classId, newid))
         self.checkCommonAnnotation( annoId)
         self.commit()
