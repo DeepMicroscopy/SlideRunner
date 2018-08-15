@@ -148,7 +148,7 @@ def leftClickImage(self, event):
         
         mouseClickGlobal = self.screenToSlide((posx,posy))
 
-        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal)
+        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP)
         if (clickedAnno is not None):
             self.showDBEntry(clickedAnno)
         
@@ -292,7 +292,7 @@ def rightClickImage(self, event):
             return
 
         mouseClickGlobal = self.screenToSlide((posx,posy))
-        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal)
+        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP)
 
 
         menuitems = list()

@@ -1483,6 +1483,7 @@ QSlider::groove:horizontal {
                 items[item] = 1
 
         self.itemsSelected=items
+        self.currentVP.activeClasses = items
         self.showAnnotationsInOverview()
         self.showImage()
 
@@ -1709,6 +1710,7 @@ QSlider::groove:horizontal {
         model.itemChanged.connect(self.selectClasses)
 
         self.itemsSelected = np.ones(len(classes)+1)
+        self.currentVP.activeClasses = self.itemsSelected
         self.ui.categoryView.verticalHeader().setVisible(False)
         vheader = self.ui.categoryView.verticalHeader()
         vheader.setDefaultSectionSize(vheader.fontMetrics().height()+2)

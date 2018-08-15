@@ -21,6 +21,7 @@ class ViewingProfile(object):
                   [255,127,0,255],
                   [0,0,0,255],
                   [255,255,255,255]]
+    activeClasses = dict()
 
 
 

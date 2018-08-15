@@ -54,12 +54,14 @@ class Database(object):
         annos = self.getVisibleAnnotations(leftUpper, rightLower)
         self.VA = annos
         for idx,anno in annos.items():
-            anno.draw(img, leftUpper, zoomLevel, thickness=2, vp=vp)
+            if (vp.activeClasses[anno.agreedLabel()]):
+                anno.draw(img, leftUpper, zoomLevel, thickness=2, vp=vp)
         
-    def findClickAnnotation(self, clickPosition):
+    def findClickAnnotation(self, clickPosition, vp : ViewingProfile):
         for idx,anno in self.VA.items():
-            if (anno.positionInAnnotation(clickPosition )):
-                return anno
+            if (vp.activeClasses[anno.agreedLabel()]):
+                if (anno.positionInAnnotation(clickPosition )):
+                    return anno
         return None
 
     def loadIntoMemory(self, slideId):
