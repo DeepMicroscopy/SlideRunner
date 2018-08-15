@@ -41,18 +41,19 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     updateTimer=0.1
     slideFilename = None
     annos = list()
-    configurationList = list()
+    configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Update HPF', ctype=SlideRunnerPlugin.PluginConfigurationType.PUSHBUTTON),))
     
     def __init__(self, statusQueue:Queue):
         self.statusQueue = statusQueue
         self.p = Thread(target=self.queueWorker, daemon=True)
         self.p.start()
         
+        
         pass
 
     def getAnnotationUpdatePolicy():
           # This is important to tell SlideRunner that he needs to update for every change in position.
-          return SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE
+          return SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE
 
     def queueWorker(self):
 
@@ -92,7 +93,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                   int((job.coordinates[1]+0.5*job.coordinates[3])))
 
         self.annos = list()
-        myanno = SlideRunnerPlugin.rectangularAnnotation(center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2)
+        myanno = SlideRunnerPlugin.rectangularAnnotation(center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, 'High-Power Field')
         self.annos.append(myanno)
 
         self.updateAnnotations()

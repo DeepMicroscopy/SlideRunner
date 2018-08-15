@@ -34,11 +34,12 @@ class annotation():
 
 class rectangularAnnotation(annotation):
 
-      def __init__(self, x1, y1, x2, y2):
+      def __init__(self, x1, y1, x2, y2, text:str=''):
             self.x1 = x1
             self.y1 = y1
             self.x2 = x2
             self.y2 = y2
+            self.text = text
       
       def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, color:tuple):
             xpos1=max(0,int((self.x1-leftUpper[0])/zoomLevel))
@@ -46,6 +47,9 @@ class rectangularAnnotation(annotation):
             xpos2=min(image.shape[1],int((self.x2-leftUpper[0])/zoomLevel))
             ypos2=min(image.shape[0],int((self.y2-leftUpper[1])/zoomLevel))
             image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=color, lineType=cv2.LINE_AA)
+            if (len(self.text)>0):
+                  cv2.putText(image, self.text, (xpos1+3, ypos2+10), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+
       
       def __str__(self):
             return ('Rectangular annotation object: X1:%d, X2:%d, Y1:%d, Y2: %d ' % (self.x1,self.y1,self.x2,self.y2))
@@ -74,12 +78,16 @@ class pluginJob():
       configuration = list()
       
       def __init__(self, queueTuple):
-            self.jobDescription, self.currentImage, self.slideFilename, self.coordinates, self.configuration, self.annotations, self.procId = queueTuple
+            self.jobDescription, self.currentImage, self.slideFilename, self.coordinates, self.configuration, self.annotations, self.procId, self.trigger = queueTuple
 
       
 
-def jobToQueueTuple(description=JobDescription.PROCESS, currentImage=None, coordinates=None, configuration=list(), slideFilename=None, annotations=None, procId=None):
-      return (description, currentImage, slideFilename, coordinates, configuration, annotations, procId)
+def jobToQueueTuple(description=JobDescription.PROCESS, currentImage=None, coordinates=None, configuration=list(), slideFilename=None, annotations=None, procId=None, trigger=None):
+      return (description, currentImage, slideFilename, coordinates, configuration, annotations, procId, trigger)
+
+class PluginConfigurationType(enumerate):
+      SLIDER_WITH_FLOAT_VALUE = 0
+      PUSHBUTTON = 1
 
 class PluginConfigurationEntry():
       uid = 0
@@ -87,12 +95,14 @@ class PluginConfigurationEntry():
       minValue = 0
       initValue = 0.5
       maxValue = 1
-      def __init__(self,uid:int=0,name:str='' ,initValue:float=0.5, minValue:float=0.0, maxValue:float=1.0):
+      def __init__(self,uid:int=0,name:str='' ,initValue:float=0.5, minValue:float=0.0, maxValue:float=1.0, ctype=PluginConfigurationType.SLIDER_WITH_FLOAT_VALUE):
             self.uid=uid
             self.name=name
             self.minValue=minValue
             self.maxValue=maxValue
+            self.type=ctype
             self.initValue = initValue
+
 
 
 class SlideRunnerPlugin:

@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.15.0'
+version = '1.15.1'
 
 SLIDERUNNER_DEBUG = False
 
@@ -314,6 +314,12 @@ class SlideRunnerUI(QMainWindow):
             self.pluginSliderLabels[key].setText('%.3f' % (self.pluginParameterSliders[key].value() / 1000.0 ))
 
 
+    def pluginControlButtonHit(self, btn):
+        self.overlayMap = None
+        self.pluginAnnos = list()
+        self.triggerPlugin(self.cachedLastImage, trigger=btn)
+#        self.showImage()
+
     """
      Add configuration options of active plugin to sidebar
     """
@@ -326,45 +332,54 @@ class SlideRunnerUI(QMainWindow):
             sizePolicy.setHorizontalStretch(1.0)
             sizePolicy.setVerticalStretch(0)
             for pluginConfig in plugin.configurationList:
-                newLabel = QtWidgets.QLabel(self.ui.tab3widget)
-                newLabel.setText(pluginConfig.name)
-                newLabel.setSizePolicy(sizePolicy)
-                newLabel.setStyleSheet('font-size:8px')
-                self.ui.tab3Layout.addWidget(newLabel)
-                self.pluginTextLabels[pluginConfig.uid] = newLabel
-                sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Minimum)
-                sizePolicy.setHorizontalStretch(1.0)
-                sizePolicy.setVerticalStretch(0)
-                newSlider = QtWidgets.QSlider(self.ui.tab3widget)
-                newSlider.setMinimum(pluginConfig.minValue*1000)
-                newSlider.setMaximum(pluginConfig.maxValue*1000)
-                newSlider.setValue(pluginConfig.initValue*1000)
-                newSlider.setOrientation(QtCore.Qt.Horizontal)
-                newSlider.setSizePolicy(sizePolicy)
-                sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
-                sizePolicy.setHorizontalStretch(1.0)
-                sizePolicy.setVerticalStretch(0)
-                newSlider.valueChanged.connect(self.triggerPluginConfigChanged)
-                hLayout = QtWidgets.QHBoxLayout(self.ui.tab3widget)
-                hLayout.addWidget(newSlider)
-                valLabel = QtWidgets.QLabel(self.ui.tab3widget)
-                valLabel.setText('%.3f' % pluginConfig.initValue)
-                valLabel.setStyleSheet('font-size:8px')
-                sizePolicy.setHorizontalStretch(0.0)
-                valLabel.setSizePolicy(sizePolicy)
-                hLayout.addWidget(valLabel)
-                self.ui.tab3Layout.addLayout(hLayout)
-                self.pluginParameterSliders[pluginConfig.uid] = newSlider
-                self.pluginSliderLabels[pluginConfig.uid] = valLabel
-                newSlider.setStyleSheet("""
-QSlider:horizontal {
-    min-height: 10px;
-}
- 
-QSlider::groove:horizontal {
-    margin: 0px 0; /* decrease this size (make it more negative)—I changed mine from –2px to –8px. */
-}
-""")
+                if (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.PUSHBUTTON):
+                    newButton = QtWidgets.QPushButton(self.ui.tab3widget)
+                    newButton.setText(pluginConfig.name)
+                    newButton.setSizePolicy(sizePolicy)
+                    newButton.setStyleSheet('font-size:8px')
+                    newButton.clicked.connect(partial(self.pluginControlButtonHit, pluginConfig))
+                    self.ui.tab3Layout.addWidget(newButton)
+
+                elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.SLIDER_WITH_FLOAT_VALUE):
+                    newLabel = QtWidgets.QLabel(self.ui.tab3widget)
+                    newLabel.setText(pluginConfig.name)
+                    newLabel.setSizePolicy(sizePolicy)
+                    newLabel.setStyleSheet('font-size:8px')
+                    self.ui.tab3Layout.addWidget(newLabel)
+                    self.pluginTextLabels[pluginConfig.uid] = newLabel
+                    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Minimum)
+                    sizePolicy.setHorizontalStretch(1.0)
+                    sizePolicy.setVerticalStretch(0)
+                    newSlider = QtWidgets.QSlider(self.ui.tab3widget)
+                    newSlider.setMinimum(pluginConfig.minValue*1000)
+                    newSlider.setMaximum(pluginConfig.maxValue*1000)
+                    newSlider.setValue(pluginConfig.initValue*1000)
+                    newSlider.setOrientation(QtCore.Qt.Horizontal)
+                    newSlider.setSizePolicy(sizePolicy)
+                    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+                    sizePolicy.setHorizontalStretch(1.0)
+                    sizePolicy.setVerticalStretch(0)
+                    newSlider.valueChanged.connect(self.triggerPluginConfigChanged)
+                    hLayout = QtWidgets.QHBoxLayout(self.ui.tab3widget)
+                    hLayout.addWidget(newSlider)
+                    valLabel = QtWidgets.QLabel(self.ui.tab3widget)
+                    valLabel.setText('%.3f' % pluginConfig.initValue)
+                    valLabel.setStyleSheet('font-size:8px')
+                    sizePolicy.setHorizontalStretch(0.0)
+                    valLabel.setSizePolicy(sizePolicy)
+                    hLayout.addWidget(valLabel)
+                    self.ui.tab3Layout.addLayout(hLayout)
+                    self.pluginParameterSliders[pluginConfig.uid] = newSlider
+                    self.pluginSliderLabels[pluginConfig.uid] = valLabel
+                    newSlider.setStyleSheet("""
+    QSlider:horizontal {
+        min-height: 10px;
+    }
+    
+    QSlider::groove:horizontal {
+        margin: 0px 0; /* decrease this size (make it more negative)—I changed mine from –2px to –8px. */
+    }
+    """)
 
 
                 
@@ -441,10 +456,10 @@ QSlider::groove:horizontal {
     """
     Helper function to trigger the plugin
     """
-    def triggerPlugin(self,currentImage, annotations=None):
+    def triggerPlugin(self,currentImage, annotations=None, trigger=None):
         print('Plugin triggered...')
         if (self.activePlugin.plugin.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN):
-            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage,configuration=self.gatherPluginConfig(), annotations=annotations))
+            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage,configuration=self.gatherPluginConfig(), annotations=annotations, trigger=trigger))
         else:
             print('Putting wholeslide image into plugin ..')
 
@@ -459,7 +474,7 @@ QSlider::groove:horizontal {
             coordinates = (int(imgarea_p1[0]), int(imgarea_p1[1]), int(imgarea_w[0]), int(imgarea_w[1]))
 
 #            self.activePlugin.inQueue.put((self.slidepathname, (coordinates), currentImage.shape))
-            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, coordinates=coordinates, configuration=self.gatherPluginConfig(), annotations=annotations))
+            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, coordinates=coordinates, configuration=self.gatherPluginConfig(), annotations=annotations, trigger=trigger))
 
 
     """
