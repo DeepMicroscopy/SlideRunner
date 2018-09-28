@@ -51,7 +51,7 @@ class DatabaseTable(object):
         return createStatement
 
     def checkTableInfo(self, tableInfo):
-        if tableInfo is None:
+        if (tableInfo is None) or (len(tableInfo)==0):
             return False
         for entry in tableInfo:
             idx,key,typeStr,isNull,defaultValue,PK = entry
