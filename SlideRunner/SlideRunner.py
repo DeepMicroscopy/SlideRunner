@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.15.1'
+version = '1.15.2'
 
 SLIDERUNNER_DEBUG = False
 
@@ -59,7 +59,6 @@ splash = splashScreen.splashScreen(app, version)
 from SlideRunner.general.dependencies import *
 from SlideRunner.dataAccess.annotations import ViewingProfile
 from PyQt5.QtCore import QSettings
-
 
 # Thread for receiving images from the plugin
 class imageReceiverThread(threading.Thread):
@@ -152,7 +151,6 @@ class SlideRunnerUI(QMainWindow):
 
         # Default value initialization
         self.relativeCoords = np.asarray([0,0], np.float32)
-        self.colors = [[0,0,0,0],[0,0,255,255],[0,255,0,255],[255,255,0,255],[255,0,255,255],[0,127,0,255],[255,127,0,255],[0,0,0,255],[255,255,255,255]]
         self.lastAnnotationClass=0
         self.imageOpened=False # flag, if 
         self.annotator=0 # ID of current annotator
@@ -264,6 +262,13 @@ class SlideRunnerUI(QMainWindow):
         if (len(sys.argv)>2):
             if os.path.isfile(sys.argv[2]):
                 self.openDatabase(True, filename=sys.argv[2])
+
+    def get_color(self, idx):
+        colors = [[0,0,0,0],[0,0,255,255],[0,255,0,255],[255,255,0,255],[255,0,255,255],[0,127,0,255],[255,127,0,255],[127,127,0,255],[255,255,255,255],[10, 166, 168,255],[166, 10, 168,255],[166,168,10,255]]
+
+        return colors[idx % len(colors)]
+
+
 
     class NotImplementedException:
         pass
@@ -1037,7 +1042,7 @@ class SlideRunnerUI(QMainWindow):
 
         if (self.activePlugin):
             for anno in self.pluginAnnos:
-                anno.draw(image, leftUpper, zoomLevel, thickness, self.colors[0])
+                anno.draw(image, leftUpper, zoomLevel, thickness, self.get_color(0))
         else:
             pass
 
@@ -1071,9 +1076,9 @@ class SlideRunnerUI(QMainWindow):
                 xpos=int((annotation[0]-leftUpper[0])/zoomLevel)
                 ypos=int((annotation[1]-leftUpper[1])/zoomLevel)
                 if (thickness == 1 ):
-                    image[ypos,xpos,:] = self.colors[annotation[2]][0:3]
+                    image[ypos,xpos,:] = self.get_color(annotation[2])[0:3]
                 else:
-                    image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=radius, color=self.colors[annotation[2]], lineType=cv2.LINE_AA)
+                    image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=radius, color=self.get_color(annotation[2]), lineType=cv2.LINE_AA)
 
                 if (adjustList):
                     self.annotationsSpots.append([xpos,ypos,int(25/zoomLevel),0,annotation[2], annotation[4] ])
@@ -1092,13 +1097,13 @@ class SlideRunnerUI(QMainWindow):
                     if (radius<0):
                         print('Error with data set / Radius <0:', xpos1,ypos1,xpos2,ypos2,circCenter,radius)
                     else:
-                        image = cv2.circle(image, thickness=thickness, center=circCenter, radius=radius,color=self.colors[annotation[4]], lineType=cv2.LINE_AA)
+                        image = cv2.circle(image, thickness=thickness, center=circCenter, radius=radius,color=self.get_color(annotation[4]), lineType=cv2.LINE_AA)
                 else:
                     xpos1=max(0,int((annotation[0]-leftUpper[0])/zoomLevel))
                     ypos1=max(0,int((annotation[1]-leftUpper[1])/zoomLevel))
                     xpos2=min(image.shape[1],int((annotation[2]-leftUpper[0])/zoomLevel))
                     ypos2=min(image.shape[0],int((annotation[3]-leftUpper[1])/zoomLevel))
-                    image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.colors[annotation[4]], lineType=cv2.LINE_AA)
+                    image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.get_color(annotation[4]), lineType=cv2.LINE_AA)
                 if (adjustList):
                     self.annotationsArea.append([xpos1,ypos1,xpos2,ypos2,annotation[4], annotation[5], annotation[6] ])
 
@@ -1106,7 +1111,7 @@ class SlideRunnerUI(QMainWindow):
         # finally: find polygons
         annotationPolygons = self.db.findPolygonAnnotatinos(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
         for poly in annotationPolygons:
-            image = self.showPolygon(tempimage=image, polygon=poly[0], color=self.colors[poly[1]])
+            image = self.showPolygon(tempimage=image, polygon=poly[0], color=self.get_colors(poly[1]))
 
         if (adjustList):
             self.annotationPolygons = annotationPolygons
@@ -1459,7 +1464,7 @@ class SlideRunnerUI(QMainWindow):
         
         if (self.activePlugin):
             for anno in self.pluginAnnos:
-                anno.draw(npi, self.region[0], self.getZoomValue(), 2, self.colors[0])
+                anno.draw(npi, self.region[0], self.getZoomValue(), 2, self.get_color(0))
 
         # Show the current polygon (if in polygon annotation mode)
         if (self.db.isOpen()) & (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
@@ -1652,9 +1657,9 @@ class SlideRunnerUI(QMainWindow):
             btn = self.classButtons[k]
             if (k+1==self.lastAnnotationClass):
                 btn.setText('active')
-                style = 'background:#%x%x%x' % (int(self.colors[k+1][0]/16),
-                                                int(self.colors[k+1][1]/16),
-                                                int(self.colors[k+1][2]/16))
+                style = 'background:#%x%x%x' % (int(self.get_color(k+1)[0]/16),
+                                                int(self.get_color(k+1)[1]/16),
+                                                int(self.get_color(k+1)[2]/16))
                 btn.setStyleSheet(style)
             else:
                 btn.setText('')
@@ -1703,9 +1708,9 @@ class SlideRunnerUI(QMainWindow):
         self.ui.categoryView.setColumnCount(4)
         item = QTableWidgetItem('unknown')
         pixmap = QPixmap(10,10)
-        pixmap.fill(QColor.fromRgb(self.colors[0][0],self.colors[0][1],self.colors[0][2]))
+        pixmap.fill(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
         itemcol = QTableWidgetItem('')
-        itemcol.setBackground(QColor.fromRgb(self.colors[0][0],self.colors[0][1],self.colors[0][2]))
+        itemcol.setBackground(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
         checkbx = QCheckBox()
         checkbx.setChecked(True)
         checkbx.stateChanged.connect(self.selectClasses)
@@ -1721,7 +1726,7 @@ class SlideRunnerUI(QMainWindow):
             clsname = classes[clsid]
             item = QTableWidgetItem(clsname[0])
             pixmap = QPixmap(10,10)
-            pixmap.fill(QColor.fromRgb(self.colors[clsid+1][0],self.colors[clsid+1][1],self.colors[clsid+1][2]))
+            pixmap.fill(QColor.fromRgb(self.get_color(clsid+1)[0],self.get_color(clsid+1)[1],self.get_color(clsid+1)[2]))
             btn = QPushButton('')
 
             btn.clicked.connect(partial(self.clickAnnoclass, clsid+1))
@@ -1729,7 +1734,7 @@ class SlideRunnerUI(QMainWindow):
             itemcol = QTableWidgetItem('')
             checkbx = QCheckBox()
             checkbx.setChecked(True)
-            itemcol.setBackground(QColor.fromRgb(self.colors[clsid+1][0],self.colors[clsid+1][1],self.colors[clsid+1][2]))
+            itemcol.setBackground(QColor.fromRgb(self.get_color(clsid+1)[0],self.get_color(clsid+1)[1],self.get_color(clsid+1)[2]))
             self.modelItems.append(checkbx)
             self.ui.categoryView.setItem(clsid+1,2, item)
             self.ui.categoryView.setItem(clsid+1,1, itemcol)

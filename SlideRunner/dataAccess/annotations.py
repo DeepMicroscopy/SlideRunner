@@ -19,8 +19,11 @@ class ViewingProfile(object):
                   [255,0,255,255],
                   [0,127,0,255],
                   [255,127,0,255],
-                  [0,0,0,255],
-                  [255,255,255,255]]
+                  [127,127,0,255],
+                  [255,255,255,255],
+                  [10, 166, 168,255],
+                  [166, 10, 168,255],
+                  [166,168,10,255]]
     activeClasses = dict()
 
 
@@ -114,9 +117,9 @@ class annotation():
         
       def getColor(self, vp : ViewingProfile):
           if (vp.blindMode):
-            return vp.COLORS_CLASSES[self.labelBy(vp.annotator)]
+            return vp.COLORS_CLASSES[self.labelBy(vp.annotator) % len(vp.COLORS_CLASSES)]
           else:
-            return vp.COLORS_CLASSES[self.agreedLabel()]
+            return vp.COLORS_CLASSES[self.agreedLabel() % len(vp.COLORS_CLASSES)]
       
       def minCoordinates(self) -> annoCoordinate:
             print('Whopsy... you need to overload this.')
