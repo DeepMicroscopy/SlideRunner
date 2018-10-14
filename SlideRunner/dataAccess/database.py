@@ -676,7 +676,10 @@ class Database(object):
         self.db = tempdb
         self.dbcur = self.db.cursor()
         self.dbfilename = dbfilename
+        self.dbcur.execute(self.databaseStructure['Log'].getCreateStatement())
+        self.annotations = dict()
         self.dbname = os.path.basename(dbfilename)
         self.dbOpened=True
+        self.generateMinMaxCoordsList()
 
         return True
