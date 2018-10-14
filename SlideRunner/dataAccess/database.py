@@ -535,7 +535,11 @@ class Database(object):
     
     def getAnnotatorByID(self, id):
         self.execute('SELECT name FROM Persons WHERE uid == %d' % id)
-        return self.fetchone()[0]
+        fo = self.fetchone()
+        if (fo is not None):
+            return self.fetchone()[0]
+        else:
+            return ''
 
     def getClassByID(self, id):
         self.execute('SELECT name FROM Classes WHERE uid == %d' % id)
