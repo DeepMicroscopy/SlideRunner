@@ -1111,7 +1111,7 @@ class SlideRunnerUI(QMainWindow):
         # finally: find polygons
         annotationPolygons = self.db.findPolygonAnnotatinos(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
         for poly in annotationPolygons:
-            image = self.showPolygon(tempimage=image, polygon=poly[0], color=self.get_colors(poly[1]))
+            image = self.showPolygon(tempimage=image, polygon=poly[0], color=self.get_color(poly[1]))
 
         if (adjustList):
             self.annotationPolygons = annotationPolygons
