@@ -29,9 +29,15 @@ def test_database():
     assert((classes[1][0]=='Crap'))
     assert((classes[1][1]==2))
 
-    DB.insertNewSlide('BLA.tiff')
+    DB.insertNewSlide('BLA.tiff','blub/BLA.tiff')
+    DB.insertNewSlide('BLU.tiff','blub/BLU.tiff')
+    DB.insertNewSlide('BLU.tiff','blow/BLU.tiff')
 
-    assert(DB.findSlideWithFilename('BLA.tiff')==1)
+    assert(DB.findSlideWithFilename('BLA.tiff','blub/BLA.tiff')==1)
+    assert(DB.findSlideWithFilename('BLA.tiff','blas/BLA.tiff')==1)
+
+    assert(DB.findSlideWithFilename('BLU.tiff','blub/BLU.tiff')==2)
+    assert(DB.findSlideWithFilename('BLU.tiff','blow/BLU.tiff')==3)
 
     spotannos = DB.findSpotAnnotations(leftUpper=(0,0), rightLower=(10,10), slideUID=1, blinded = False, currentAnnotator=1)
     assert(len(spotannos)==0)
