@@ -53,15 +53,36 @@ class DatabaseTable(object):
     def checkTableInfo(self, tableInfo):
         if (tableInfo is None) or (len(tableInfo)==0):
             return False
+        allKeys=list()
         for entry in tableInfo:
             idx,key,typeStr,isNull,defaultValue,PK = entry
             if (key not in self.entries):
                 return False
             if not (self.entries[key].type == typeStr):
                 return False
+            allKeys += [key]
+        for entry in self.entries:
+            if entry not in allKeys:
+                return False
         # OK, defaultValue, isNull are not important to be checked
 
         return True
+
+
+    def addMissingTableInfo(self, tableInfo, tableName):
+        returnStr = list()
+        if (tableInfo is None) or (len(tableInfo)==0):
+            return False
+        allKeys=list()
+        for entry in tableInfo:
+            idx,key,typeStr,isNull,defaultValue,PK = entry
+            allKeys += [key]
+
+        for entry in self.entries.keys():
+            if entry not in allKeys:
+                returnStr.append('ALTER TABLE %s ADD COLUMN %s' % (tableName, self.entries[entry].creationString()))
+
+        return returnStr
 
 
 from SlideRunner.dataAccess.annotations import *
@@ -81,6 +102,7 @@ class Database(object):
         self.databaseStructure = dict()
 
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
+        self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT'))
 
     def isOpen(self):
         return self.dbOpened
@@ -154,17 +176,26 @@ class Database(object):
 
         self.generateMinMaxCoordsList()
 
-    def checkTableStructure(self, tableName):
+    def checkTableStructure(self, tableName, action='check'):
         self.dbcur.execute('PRAGMA table_info(%s)' % tableName)
         ti = self.dbcur.fetchall()
-        return self.databaseStructure[tableName].checkTableInfo(ti)
+        if (action=='check'):
+            return self.databaseStructure[tableName].checkTableInfo(ti)
+        elif (action=='ammend'):
+            return self.databaseStructure[tableName].addMissingTableInfo(ti, tableName)
 
     def open(self, dbfilename):
         if os.path.isfile(dbfilename):
             self.db = sqlite3.connect(dbfilename)
             self.dbcur = self.db.cursor()
 
-            # Check structure of database
+            # Check structure of database and ammend if not proper
+            if not self.checkTableStructure('Slides'):
+                sql_statements = self.checkTableStructure('Slides','ammend')
+                for sql in sql_statements:
+                    self.dbcur.execute(sql)
+                self.db.commit()
+
             if not self.checkTableStructure('Log'):
                 # add new log, no problemo.
                 self.dbcur.execute('DROP TABLE if exists `Log`')
@@ -357,16 +388,21 @@ class Database(object):
                 reply.append([allAnnos[entry][0],allAnnos[entry][1],allAnnos[entry+1][0],allAnnos[entry+1][1],farr[entryOuter][0],farr[entryOuter][1],farr[entryOuter][2]])
             # tuple: x1,y1,x2,y2,class,annoId ID, type
         return reply
-#        return self.fetchall()
 
 
-    def findSlideWithFilename(self,slidename):
-            self.execute('SELECT uid from Slides WHERE filename == "'+slidename+'"')
-            ret = self.fetchone()
-            if (ret is None):
-                return None
+    def findSlideWithFilename(self,slidename,slidepath):
+        directory = slidepath.split(os.sep)[-2]
+        self.execute('SELECT uid,directory from Slides WHERE filename == "'+slidename+'"')
+        ret = self.fetchall()
+        secondBest=None
+        for (uid,slidedir) in ret:
+            if slidedir is None:
+                secondBest=uid
+            elif (slidedir.upper() == directory.upper()):
+                return uid
             else:
-                return ret[0]
+                secondBest=uid
+        return secondBest
     
     def insertAnnotator(self, name):
         self.execute('INSERT INTO Persons (name) VALUES ("%s")' % (name))
@@ -504,8 +540,9 @@ class Database(object):
             self.commit()
             
 
-    def insertNewSlide(self,slidename):
-            self.execute('INSERT INTO Slides (filename) VALUES ("' + slidename +'")')
+    def insertNewSlide(self,slidename,slidepath):
+            directory = slidepath.split(os.sep)[-2]
+            self.execute('INSERT INTO Slides (filename,directory) VALUES ("%s","%s")' % (slidename,directory))
             self.commit()
 
 
@@ -669,7 +706,8 @@ class Database(object):
             '`uid`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,'
             '`filename`	TEXT,'
             '`width`	INTEGER,'
-            '`height`	INTEGER'
+            '`height`	INTEGER,'
+            '`directory` TEXT'
             ');')
 
         tempdb.commit()

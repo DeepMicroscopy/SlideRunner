@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.15.2'
+version = '1.15.3'
 
 SLIDERUNNER_DEBUG = False
 
@@ -1167,7 +1167,7 @@ class SlideRunnerUI(QMainWindow):
             Find slide in the database. If not found, ask if it should be added
         """
         if (self.db.isOpen()) and (self.imageOpened):
-            slideUID = self.db.findSlideWithFilename(self.slidename)
+            slideUID = self.db.findSlideWithFilename(self.slidename,self.slidepathname)
 
             if (slideUID is None):
                 msg = "Slide is not in database. Do you wish to add it?"
@@ -1175,7 +1175,7 @@ class SlideRunnerUI(QMainWindow):
                                                        msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
 
                 if reply == QtWidgets.QMessageBox.Yes:
-                    self.db.insertNewSlide(self.slidename)
+                    self.db.insertNewSlide(self.slidename,self.slidepathname)
                     self.findSlideUID()
                     return
                 else:
