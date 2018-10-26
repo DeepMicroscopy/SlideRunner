@@ -1886,8 +1886,9 @@ class SlideRunnerUI(QMainWindow):
             lastslideslist.remove(filename)
 
         lastslideslist.append(filename)
-        lastslideslist = lastslideslist[0:10]
+        lastslideslist = lastslideslist[-11:]
         self.settings.setValue('LastSlides', lastslideslist)
+        menu.updateOpenRecentSlide(self)
 
 
 

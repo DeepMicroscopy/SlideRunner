@@ -132,16 +132,24 @@ def definePluginMenu(self):
                 self.ui.pluginItems.append(menuItem)
         self.pluginList = SlideRunner.general.pluginFinder.pluginList
 
+def updateOpenRecentSlide(self):
+        lastOpenList = self.settings.value('LastSlides', type=list)
+        lastOpenList.reverse()
+        for action in self.openrecentactions:
+                self.openrecent.removeAction(action)
+        self.openrecentactions=list()
+        if len(lastOpenList) > 0:
+                for idx,item in enumerate(lastOpenList):
+                        self.openrecentactions += [self.openrecent.addAction('%d: %s' % (idx+1, os.path.basename(item)), partial(self.openSlide,item))]
+
 
 def defineOpenRecent(self):
         openrecent = self.ui.menuFile.addMenu('Open recent')
         openrecent.setEnabled(True)
+        self.openrecentactions = list()
+        self.openrecent = openrecent
+        updateOpenRecentSlide(self)
 
-        lastOpenList = self.settings.value('LastSlides', type=list)
-        lastOpenList.reverse()
-        if len(lastOpenList) > 0:
-                for idx,item in enumerate(lastOpenList):
-                        openrecent.addAction('%d: %s' % (idx+1, os.path.basename(item)), partial(self.openSlide,item))
 
 
 def defineOpenRecentDatabase(self):
