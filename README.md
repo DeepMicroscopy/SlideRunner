@@ -16,11 +16,12 @@ Please find the authors webpage at: https://www5.cs.fau.de/~aubreville/
 
 ## Download and Installation 
 
-For Windows 10, we provide a binary file, that you can download here:
+For Windows 10 and Mac OS X, we provide a binary file, that you can download here:
 
 | Operating System | Version | Download link|
 |---|---|---|
 | Windows 10 | V. 1.15.3 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.exe) |
+|Mac OS X (10.14) | V 1.15.3 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.app.zip)|
 
 ## Installation - Source
 
