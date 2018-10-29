@@ -145,6 +145,9 @@ class Database(object):
     def loadIntoMemory(self, slideId):
         self.annotations = dict()
 
+        if (slideId is None):
+            return
+
         self.dbcur.execute('SELECT uid, type FROM Annotations WHERE slide == %d'% slideId)
         allAnnos = self.dbcur.fetchall()
         print('Loading DB into memory ...')

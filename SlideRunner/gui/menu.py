@@ -143,6 +143,17 @@ def updateOpenRecentSlide(self):
                         self.openrecentactions += [self.openrecent.addAction('%d: %s' % (idx+1, os.path.basename(item)), partial(self.openSlide,item))]
 
 
+def updateOpenRecentDatabase(self):
+        lastOpenList = self.settings.value('lastDatabases', type=list)
+        for action in self.openrecentdbactions:
+                self.openrecentdb.removeAction(action)
+
+        lastOpenList.reverse()
+        self.openrecentdbactions = list()
+        if len(lastOpenList) > 0:
+                for idx,item in enumerate(lastOpenList):
+                        self.openrecentdbactions += [self.openrecentdb.addAction('%d: %s' % (idx+1, os.path.basename(item)), partial(self.openDatabase, False, item))]
+
 def defineOpenRecent(self):
         openrecent = self.ui.menuFile.addMenu('Open recent')
         openrecent.setEnabled(True)
@@ -155,12 +166,10 @@ def defineOpenRecent(self):
 def defineOpenRecentDatabase(self):
         openrecent = self.ui.menuDatabase.addMenu('Open recent')
         openrecent.setEnabled(True)
+        self.openrecentdbactions = list()
 
-        lastOpenList = self.settings.value('lastDatabases', type=list)
-        lastOpenList.reverse()
-        if len(lastOpenList) > 0:
-                for idx,item in enumerate(lastOpenList):
-                        openrecent.addAction('%d: %s' % (idx+1, os.path.basename(item)), partial(self.openDatabase, False, item))
+        self.openrecentdb = openrecent
+        updateOpenRecentDatabase(self)
 
         
 def defineAnnotationMenu(self):

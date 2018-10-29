@@ -1564,6 +1564,8 @@ class SlideRunnerUI(QMainWindow):
             lastdatabaseslist = lastdatabaseslist[0:10]
             self.settings.setValue('lastDatabases', lastdatabaseslist)
 
+            menu.updateOpenRecentDatabase(self)
+
 
             self.showDatabaseUIelements()
             self.showAnnotationsInOverview()
