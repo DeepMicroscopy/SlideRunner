@@ -394,7 +394,10 @@ class Database(object):
 
 
     def findSlideWithFilename(self,slidename,slidepath):
-        directory = slidepath.split(os.sep)[-2]
+        if (len(slidepath.split(os.sep))>1):
+            directory = slidepath.split(os.sep)[-2]
+        else:
+            directory = ''
         self.execute('SELECT uid,directory from Slides WHERE filename == "'+slidename+'"')
         ret = self.fetchall()
         secondBest=None
