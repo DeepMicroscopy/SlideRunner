@@ -547,7 +547,10 @@ class Database(object):
             
 
     def insertNewSlide(self,slidename,slidepath):
-            directory = slidepath.split(os.sep)[-2]
+            if (len(slidepath.split(os.sep))>1):
+                directory = slidepath.split(os.sep)[-2]
+            else:
+                directory = ''
             self.execute('INSERT INTO Slides (filename,directory) VALUES ("%s","%s")' % (slidename,directory))
             self.commit()
 
@@ -577,10 +580,12 @@ class Database(object):
             return ''
     
     def getAnnotatorByID(self, id):
+        if (id is None):
+            return ''
         self.execute('SELECT name FROM Persons WHERE uid == %d' % id)
         fo = self.fetchone()
         if (fo is not None):
-            return self.fetchone()[0]
+            return fo[0]
         else:
             return ''
 
