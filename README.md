@@ -14,7 +14,15 @@ If you use the software for research purposes, please cite our paper:
 Please find the authors webpage at: https://www5.cs.fau.de/~aubreville/
 
 
-## Installation
+## Download and Installation 
+
+For Windows 10, we provide a binary file, that you can download here:
+
+| Operating System | Version | Download link|
+|---|---|---|
+| Windows 10 | V. 1.15.3 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.exe) |
+
+## Installation - Source
 
 SlideRunner is written in Python 3, so you will need a Python 3 distribution like e.g. Anaconda (https://www.anaconda.com/download/) to run it. Further, you need to install
 OpenSlide (http://openslide.org/download/).
