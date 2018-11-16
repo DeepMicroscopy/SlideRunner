@@ -100,6 +100,7 @@ class Database(object):
         self.VA = list()
 
         self.databaseStructure = dict()
+        self.annotations = dict()       
 
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
         self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT'))
@@ -178,6 +179,9 @@ class Database(object):
             self.annotations[annoId].addLabel(AnnotationLabel(person, classId, uid))
 
         self.generateMinMaxCoordsList()
+
+            
+    
 
     def checkTableStructure(self, tableName, action='check'):
         self.dbcur.execute('PRAGMA table_info(%s)' % tableName)
@@ -392,6 +396,13 @@ class Database(object):
             # tuple: x1,y1,x2,y2,class,annoId ID, type
         return reply
 
+
+    def setSlideDimensions(self,slideuid,dimensions):
+        if dimensions is None:
+            return
+        print('Setting dimensions of slide ',slideuid,'to',dimensions)
+        self.execute('UPDATE Slides set width=%d, height=%d WHERE uid=%d' % (dimensions[0],dimensions[1],slideuid))
+        self.db.commit()
 
     def findSlideWithFilename(self,slidename,slidepath):
         if (len(slidepath.split(os.sep))>1):
@@ -610,7 +621,7 @@ class Database(object):
         self.dbcur.execute('SELECT Classes.uid, COUNT(*), name FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass GROUP BY Classes.uid')
         allClasses = self.dbcur.fetchall()
 
-        statistics = np.zeros((2,len(allClasses)))
+        statistics = np.zeros((2,1+len(allClasses)))
     
         names=list()
         classids = np.zeros(len(allClasses))        
@@ -624,10 +635,10 @@ class Database(object):
                     classids[idx] = 0
 
         if (slideID is not None):
-            for idx, classId in enumerate(classids):
-                self.dbcur.execute('SELECT COUNT(*) FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass WHERE Annotations.slide == %d AND Classes.uid == %d' % (slideID,classId) )
-                allClasses = self.dbcur.fetchone()
-                statistics[0,idx] = allClasses[0]
+
+            for annoId in self.annotations.keys():
+                statistics[0,self.annotations[annoId].majorityLabel()] += 1
+
 
 
         return (names, statistics)

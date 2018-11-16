@@ -1162,7 +1162,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.horizontalScrollBar.valueChanged.connect(self.changeScrollbars)
         self.ui.verticalScrollBar.valueChanged.connect(self.changeScrollbars)
 
-    def findSlideUID(self):
+    def findSlideUID(self, dimensions = None):
         """
             Find slide in the database. If not found, ask if it should be added
         """
@@ -1176,7 +1176,8 @@ class SlideRunnerUI(QMainWindow):
 
                 if reply == QtWidgets.QMessageBox.Yes:
                     self.db.insertNewSlide(self.slidename,self.slidepathname)
-                    self.findSlideUID()
+                    self.findSlideUID(dimensions)
+                    self.db.setSlideDimensions(slideUID, dimensions)
                     return
                 else:
                     slname = self.openSlideDialog()
@@ -1185,7 +1186,7 @@ class SlideRunnerUI(QMainWindow):
                         self.showImage()
             else:
                 self.slideUID = slideUID
-
+                self.db.setSlideDimensions(slideUID, dimensions)
             self.showDBstatistics()
         else:
             self.slideUID = None
@@ -1556,7 +1557,7 @@ class SlideRunnerUI(QMainWindow):
                 lastdatabaseslist.remove(filename)
             
             if (self.imageOpened):
-                self.findSlideUID()
+                self.findSlideUID(self.slide.dimensions)
                 self.db.loadIntoMemory(self.slideUID)
 
 
@@ -1759,7 +1760,10 @@ class SlideRunnerUI(QMainWindow):
         self.ui.categoryView.setColumnWidth(3, 50)
         self.ui.categoryView.setShowGrid(False)
 
-        self.findSlideUID()
+        if (self.imageOpened):
+            self.findSlideUID(self.slide.dimensions)
+        else:
+            self.findSlideUID()
 
         self.ui.annotatorComboBox.setModel(self.annotatorsModel)
 
@@ -1850,7 +1854,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.statusbar.showMessage(filename+': '+str(self.slide.dimensions))
 
         if (self.db.isOpen()):
-            self.findSlideUID()
+            self.findSlideUID(self.slide.dimensions)
             t = time.time()
             self.db.loadIntoMemory(self.slideUID)
             print('Took: ',time.time()-t)
