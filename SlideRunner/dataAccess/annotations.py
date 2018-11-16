@@ -24,6 +24,7 @@ class ViewingProfile(object):
                   [10, 166, 168,255],
                   [166, 10, 168,255],
                   [166,168,10,255]]
+    majorityClassVote = True
     activeClasses = dict()
 
 
@@ -95,6 +96,34 @@ class annotation():
               if (self.labels[label].uid == uid):
                   self.labels[label] = AnnotationLabel(annotatorId, classId, uid)
       
+      def maxLabelClass(self):
+          retVal=0
+          for label in range(len(self.labels)):
+              if (self.labels[label].classId > retVal):
+                  retVal=self.labels[label].classId
+          return retVal
+
+
+      """
+            Returns the majority label for an annotation
+      """
+      def majorityLabel(self):
+          if len(self.labels)==0:
+              return 0
+
+          histo = np.zeros(self.maxLabelClass()+1)
+
+          for label in np.arange(0, len(self.labels)):
+               histo[self.labels[label].classId] += 1
+
+          if np.sum(histo == np.max(histo))>1:
+              # no clear maximum, return 0
+              return 0
+          else:   
+              # a clear winner. Return it.
+              return np.argmax(histo)
+
+
       """
             Returns the agreed (common) label for an annotation
       """
@@ -103,9 +132,11 @@ class annotation():
               return 0
 
           agreed = self.labels[0].classId
-          for label in np.arange(1, len(self.labels)):
-              if not (self.labels[label].classId == agreed):
-                  agreed = 0
+
+          for label in np.arange(0, len(self.labels)):
+         
+            if not (self.labels[label].classId == agreed):
+                agreed = 0
         
           return agreed
       
@@ -118,6 +149,8 @@ class annotation():
       def getColor(self, vp : ViewingProfile):
           if (vp.blindMode):
             return vp.COLORS_CLASSES[self.labelBy(vp.annotator) % len(vp.COLORS_CLASSES)]
+          elif (vp.majorityClassVote):
+            return vp.COLORS_CLASSES[self.majorityLabel() % len(vp.COLORS_CLASSES)]
           else:
             return vp.COLORS_CLASSES[self.agreedLabel() % len(vp.COLORS_CLASSES)]
       
