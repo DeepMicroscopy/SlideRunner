@@ -25,6 +25,7 @@ import numpy as np
 import matplotlib.path as path
 import cv2
 from SlideRunner.gui import annotation as GUIannotation
+from SlideRunner.general import SlideRunnerPlugin
 
 def doubleClick(self, event):
     """
@@ -288,6 +289,7 @@ def rightClickImage(self, event):
             addmenu = menu.addAction('Remove last point', partial(self.removeLastPolygonPoint,self))
             addmenu = menu.addAction('Cancel', self.hitEscape)
 
+
             action = menu.exec_(self.mapToGlobal(event.pos()))
             return
 
@@ -324,6 +326,12 @@ def rightClickImage(self, event):
                     menuitems.append(act)
                 menuitems.append(act)
             menu.addAction('Remove annotation', partial(self.removeAnnotation, clickedAnno.uid))
+
+            if (self.activePlugin is not None):
+                pluginActionMenu = menu.addMenu('Plugin:'+self.activePlugin.plugin.shortName)
+                for pluginConfig in self.activePlugin.plugin.configurationList:
+                    if (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.ANNOTATIONACTION):
+                        pluginActionMenu.addAction(pluginConfig.name, partial(self.sendAnnoToPlugin, clickedAnno, pluginConfig.uid))                        
 
 
         menu.addSeparator()
