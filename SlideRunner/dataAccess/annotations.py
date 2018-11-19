@@ -164,7 +164,6 @@ class annotation():
 
 
 class rectangularAnnotation(annotation):
-      annotationType = AnnotationType.AREA
       def __init__(self, uid, x1, y1, x2, y2):
             super().__init__()
             self.uid = uid
@@ -172,6 +171,7 @@ class rectangularAnnotation(annotation):
             self.y1 = y1
             self.x2 = x2
             self.y2 = y2
+            self.annotationType = AnnotationType.AREA
       
       def minCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1, self.y1)
@@ -194,10 +194,10 @@ class rectangularAnnotation(annotation):
             image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.getColor(vp), lineType=cv2.LINE_AA)
 
 class polygonAnnotation(annotation):
-    annotationType = AnnotationType.POLYGON
     def __init__(self, uid:int, coordinates: np.ndarray = None):
         super().__init__()
         self.uid = uid
+        self.annotationType = AnnotationType.POLYGON
         if (coordinates is not None):
             self.coordinates = coordinates
 
@@ -251,10 +251,10 @@ class polygonAnnotation(annotation):
 
 
 class circleAnnotation(annotation):
-      annotationType = AnnotationType.CIRCLE
       
       def __init__(self, uid, x1, y1, x2, y2):
             super().__init__()
+            self.annotationType = AnnotationType.CIRCLE
             self.uid = uid
             self.x1 = int(0.5*(x1+x2))
             self.y1 = int(0.5*(y1+y2))
@@ -281,11 +281,11 @@ class circleAnnotation(annotation):
                   image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=self.getColor(vp), lineType=cv2.LINE_AA)
 
 class spotAnnotation(annotation):
-      annotationType = AnnotationType.SPOT
 
       def __init__(self, uid, x1, y1, isSpecialSpot : bool = False):
             super().__init__()
             self.uid = uid
+            self.annotationType = AnnotationType.SPOT
             self.x1 = x1
             self.y1 = y1
             if (isSpecialSpot):

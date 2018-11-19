@@ -30,6 +30,14 @@ class DatabaseField(object):
                 (" AUTOINCREMENT" if self.isAutoincrement else "")+
                 (" UNIQUE" if self.isUnique else "") )
 
+
+def isActiveClass(label, activeClasses):
+        if (label<len(activeClasses)):
+            return activeClasses[label]
+        else:
+            print('Warning: Assigned label is: ',label,' while class list is: ',activeClasses)
+            return 0
+
 class DatabaseTable(object):
     def __init__(self, name:str):
         self.entries = dict()
@@ -129,11 +137,12 @@ class Database(object):
         ids = self.maxCoords[potentiallyVisible,2]
         return dict(filter(lambda i:i[0] in ids, self.annotations.items()))
 
+
     def annotateImage(self, img: np.ndarray, leftUpper: list, rightLower:list, zoomLevel:float, vp : ViewingProfile):
         annos = self.getVisibleAnnotations(leftUpper, rightLower)
         self.VA = annos
         for idx,anno in annos.items():
-            if (vp.activeClasses[anno.agreedLabel()]):
+            if (isActiveClass(activeClasses=vp.activeClasses,label=anno.agreedLabel())):
                 anno.draw(img, leftUpper, zoomLevel, thickness=2, vp=vp)
         
     def findClickAnnotation(self, clickPosition, vp : ViewingProfile):
@@ -399,6 +408,12 @@ class Database(object):
 
     def setSlideDimensions(self,slideuid,dimensions):
         if dimensions is None:
+            return
+        if (slideuid is None):
+            return
+        if (dimensions[0] is None):
+            return
+        if (dimensions[1] is None):
             return
         print('Setting dimensions of slide ',slideuid,'to',dimensions)
         self.execute('UPDATE Slides set width=%d, height=%d WHERE uid=%d' % (dimensions[0],dimensions[1],slideuid))

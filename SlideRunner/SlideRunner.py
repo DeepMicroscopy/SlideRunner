@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.15.3'
+version = '1.16.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -455,31 +455,27 @@ class SlideRunnerUI(QMainWindow):
         Send annotation to plugin
     """
 
-    def sendAnnoToPlugin(self, anno ):
-        self.triggerPlugin(self.rawImage, (self.db.annoDetails(anno),))
+    def sendAnnoToPlugin(self, anno, actionUID = None ):
+        self.triggerPlugin(self.rawImage, (anno,), actionUID=actionUID)
+#        self.triggerPlugin(self.rawImage, (self.db.annoDetails(anno),))
 
     """
     Helper function to trigger the plugin
     """
-    def triggerPlugin(self,currentImage, annotations=None, trigger=None):
+    def triggerPlugin(self,currentImage, annotations=None, trigger=None, actionUID=None):
+
         print('Plugin triggered...')
-        if (self.activePlugin.plugin.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN):
-            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage,configuration=self.gatherPluginConfig(), annotations=annotations, trigger=trigger))
-        else:
-            print('Putting wholeslide image into plugin ..')
+        image_dims=self.slide.level_dimensions[0]
+        actual_downsample = self.getZoomValue()
+        visualarea = self.mainImageSize
+        slidecenter = np.asarray(self.slide.level_dimensions[0])/2
 
-            image_dims=self.slide.level_dimensions[0]
-            actual_downsample = self.getZoomValue()
-            visualarea = self.mainImageSize
-            slidecenter = np.asarray(self.slide.level_dimensions[0])/2
+        imgarea_p1 = slidecenter - visualarea * actual_downsample / 2 + self.relativeCoords*slidecenter*2
+        imgarea_w =  visualarea * actual_downsample
 
-            imgarea_p1 = slidecenter - visualarea * actual_downsample / 2 + self.relativeCoords*slidecenter*2
-            imgarea_w =  visualarea * actual_downsample
+        coordinates = (int(imgarea_p1[0]), int(imgarea_p1[1]), int(imgarea_w[0]), int(imgarea_w[1]))
 
-            coordinates = (int(imgarea_p1[0]), int(imgarea_p1[1]), int(imgarea_w[0]), int(imgarea_w[1]))
-
-#            self.activePlugin.inQueue.put((self.slidepathname, (coordinates), currentImage.shape))
-            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, coordinates=coordinates, configuration=self.gatherPluginConfig(), annotations=annotations, trigger=trigger))
+        self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, configuration=self.gatherPluginConfig(), annotations=annotations, trigger=trigger,coordinates=coordinates, actionUID=actionUID))
 
 
     """
@@ -1562,8 +1558,9 @@ class SlideRunnerUI(QMainWindow):
 
 
             lastdatabaseslist.append(filename)
-            lastdatabaseslist = lastdatabaseslist[0:10]
+            lastdatabaseslist = lastdatabaseslist[-11:]
             self.settings.setValue('lastDatabases', lastdatabaseslist)
+            print('Last databases list is now: ',lastdatabaseslist)
 
             menu.updateOpenRecentDatabase(self)
 
