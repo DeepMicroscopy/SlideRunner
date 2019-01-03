@@ -41,7 +41,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     updateTimer=0.1
     slideFilename = None
     annos = list()
-    configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Re-center HPF', ctype=SlideRunnerPlugin.PluginConfigurationType.PUSHBUTTON),))
+    configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Re-center HPF', ctype=SlideRunnerPlugin.PluginConfigurationType.PUSHBUTTON),
+                              SlideRunnerPlugin.PluginConfigurationEntry(uid=1, name='Number of HPFs', initValue=1.00, minValue=1.0, maxValue=10.0)))
     
     def __init__(self, statusQueue:Queue):
         self.statusQueue = statusQueue
@@ -86,14 +87,17 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
         micronsPerPixel = self.slide.properties[openslide.PROPERTY_NAME_MPP_X]
 
-        W_hpf = int(W_hpf_microns / float(micronsPerPixel))  
-        H_hpf = int(H_hpf_microns / float(micronsPerPixel))
+        W_hpf = int(W_hpf_microns / float(micronsPerPixel)) * np.sqrt(float(int(job.configuration[1]))) 
+        H_hpf = int(H_hpf_microns / float(micronsPerPixel)) * np.sqrt(float(int(job.configuration[1])))
 
         center = (int((job.coordinates[0]+0.5*job.coordinates[2])),
                   int((job.coordinates[1]+0.5*job.coordinates[3])))
 
         self.annos = list()
-        myanno = SlideRunnerPlugin.rectangularAnnotation(center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, 'High-Power Field')
+        if (int(job.configuration[1])==1):
+            myanno = SlideRunnerPlugin.rectangularAnnotation(center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, 'High-Power Field')
+        else:
+            myanno = SlideRunnerPlugin.rectangularAnnotation(center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, '%d High-Power Fields' %  int(job.configuration[1]))
         self.annos.append(myanno)
 
         self.updateAnnotations()
