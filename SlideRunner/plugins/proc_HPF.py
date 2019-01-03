@@ -42,7 +42,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     slideFilename = None
     annos = list()
     configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Re-center HPF', ctype=SlideRunnerPlugin.PluginConfigurationType.PUSHBUTTON),
-                              SlideRunnerPlugin.PluginConfigurationEntry(uid=1, name='Number of HPFs', initValue=1.00, minValue=1.0, maxValue=10.0)))
+                              SlideRunnerPlugin.PluginConfigurationEntry(uid=1, name='Number of HPFs', initValue=1.00, minValue=1.0, maxValue=10.0),
+                              SlideRunnerPlugin.PluginConfigurationEntry(uid=2, name='Size of HPF (mm2)', initValue=0.237, minValue=0.25, maxValue=0.5),)) #0.237
     
     def __init__(self, statusQueue:Queue):
         self.statusQueue = statusQueue
@@ -81,7 +82,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
 
         # 1 HPF = 0.237 mm^2 
-        A = 0.237 # mm^2 
+        A = job.configuration[2] # mm^2 
         W_hpf_microns = np.sqrt(A*4/3) * 1000 # in microns
         H_hpf_microns = np.sqrt(A*3/4) * 1000 # in microns
 
