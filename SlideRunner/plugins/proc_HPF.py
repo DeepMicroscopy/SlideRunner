@@ -43,7 +43,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     annos = list()
     configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Re-center HPF', ctype=SlideRunnerPlugin.PluginConfigurationType.PUSHBUTTON),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid=1, name='Number of HPFs', initValue=1.00, minValue=1.0, maxValue=10.0),
-                              SlideRunnerPlugin.PluginConfigurationEntry(uid=2, name='Size of HPF (mm2)', initValue=0.237, minValue=0.25, maxValue=0.5),)) #0.237
+                              SlideRunnerPlugin.PluginConfigurationEntry(uid=2, name='Size of HPF (mm2)', initValue=0.237, minValue=0.20, maxValue=0.3),)) #0.237
     
     def __init__(self, statusQueue:Queue):
         self.statusQueue = statusQueue
