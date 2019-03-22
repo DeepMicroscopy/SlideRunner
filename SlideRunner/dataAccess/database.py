@@ -109,7 +109,7 @@ class Database(object):
 
         self.databaseStructure = dict()
         self.annotations = dict()       
-
+        self.annotationsSlide = None
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
         self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT'))
 
@@ -154,6 +154,7 @@ class Database(object):
 
     def loadIntoMemory(self, slideId):
         self.annotations = dict()
+        self.annotationsSlide = slideId
 
         if (slideId is None):
             return
@@ -650,9 +651,11 @@ class Database(object):
                     classids[idx] = 0
 
         if (slideID is not None):
-
+            if (self.annotationsSlide is not slideID):
+                self.loadIntoMemory(slideId=slideID)
             for annoId in self.annotations.keys():
-                statistics[0,self.annotations[annoId].majorityLabel()] += 1
+                print('+1 for ',self.annotations[annoId].majorityLabel())
+                statistics[0,self.annotations[annoId].majorityLabel()-1] += 1
 
 
 
