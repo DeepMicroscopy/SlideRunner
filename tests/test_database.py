@@ -85,16 +85,18 @@ def test_database():
     assert(areaannos[1][6] == 2)
 
 
-
     # test statistics
+    
     (names,stats) = DB.countEntryPerClass(slideID=2)
     
     assert(names[0]=='Cell')
     assert(names[1]=='Crap')
 
+    # first column: This slide
     assert(stats[0,0]==0)
     assert(stats[0,1]==1)
 
+    # second column: all slides
     assert(stats[1,0]==3)
     assert(stats[1,1]==4)
 
