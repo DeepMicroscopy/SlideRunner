@@ -60,6 +60,7 @@ def check_all_dependencies():
                 ('threading','threading',None),
                 ('queue','queue', None),
                 ('logging','logging','0.5'),
+                ('signal','signal', None),
                 ('matplotlib.path','path',None),
                 ('time','time',None),
                 ('functools','functools',None),
