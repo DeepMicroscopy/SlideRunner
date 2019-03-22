@@ -54,3 +54,8 @@ def defineMenuShortcuts(self):
     self.ui.actionAdd_cell_class.triggered.connect(self.addCellClass)
     self.ui.action_Quit.setShortcut('Ctrl+Q')
     self.ui.action_Quit.triggered.connect(self.close)
+    self.menuItemAnnotateOutline.setShortcut('P')
+    self.menuItemAnnotateCenter.setShortcut('S')
+    self.menuItemAnnotateCircle.setShortcut('C')
+    self.menuItemAnnotateArea.setShortcut('R')
+    self.menuItemAnnotateFlag.setShortcut('F')
