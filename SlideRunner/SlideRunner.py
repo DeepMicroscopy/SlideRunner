@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.16.0'
+version = '1.17.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -114,6 +114,10 @@ class PluginStatusReceiver(threading.Thread):
                 self.selfObj.setZoomReceived.emit(value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.SET_CENTER):
                 self.selfObj.setCenterReceived.emit(value)
+            elif (msgId == SlideRunnerPlugin.StatusInformation.POPUP_MESSAGEBOX):
+                self.selfObj.pluginPopupMessageReceived.emit(value)
+            elif (msgId == SlideRunnerPlugin.StatusInformation.UPDATE_CONFIG):
+                self.selfObj.updatePluginConfig.emit(value)
 
 
 class SlideRunnerUI(QMainWindow):
@@ -125,6 +129,8 @@ class SlideRunnerUI(QMainWindow):
     updatedCacheAvailable = pyqtSignal(dict)
     setZoomReceived = pyqtSignal(float)
     setCenterReceived = pyqtSignal(tuple)
+    updatePluginConfig = pyqtSignal(SlideRunnerPlugin.PluginConfigUpdate)
+    pluginPopupMessageReceived = pyqtSignal(str)
     annotator = bool # ID of curent annotator
     db = Database()
     receiverThread = None
@@ -191,10 +197,12 @@ class SlideRunnerUI(QMainWindow):
         self.statusViewChanged.connect(self.setStatusView)
         self.showImageRequest.connect(self.showImage_part2)
         self.annotationReceived.connect(self.receiveAnno)
+        self.updatePluginConfig.connect(self.updatePluginConfiguration)
         self.updatedCacheAvailable.connect(self.updateCache)
         self.setZoomReceived.connect(self.setZoom)
         self.setCenterReceived.connect(self.setCenter)
         self.readRegionCompleted.connect(self.showImage_part2)
+        self.pluginPopupMessageReceived.connect(self.popupmessage)
 
         self.pluginStatusReceiver = PluginStatusReceiver(self.progressBarQueue, self)
         self.pluginStatusReceiver.setDaemon(True)
@@ -287,6 +295,15 @@ class SlideRunnerUI(QMainWindow):
     """
     Signal that we accept drag&drop for files, and show the link icon.
     """
+
+    def popupmessage(self, msg):
+        reply = QtWidgets.QMessageBox.about(self, "Plugin says", msg)
+    
+    def updatePluginConfiguration(self, newConfig:SlideRunnerPlugin.PluginConfigUpdate):
+        for entry in newConfig.updateList:
+            if (entry.getType()==SlideRunnerPlugin.PluginConfigurationType.SLIDER_WITH_FLOAT_VALUE):
+                self.pluginParameterSliders[entry.uid].setValue(1000*entry.value)
+        self.triggerPluginConfigChanged()
 
     def receiveAnno(self, anno):
         self.pluginAnnos = anno
@@ -1804,7 +1821,7 @@ class SlideRunnerUI(QMainWindow):
         """
             Callback function to select a slide
         """
-        filename = QFileDialog.getOpenFileName(filter='OpenSlide files (*.svs *.tif *.bif *.svslide *.mrxs *.scn *.vms *.vmu *.ndpi *.tiff *.bmp);;Aperio SVS format (*.svs);;All files (*.*)')[0]
+        filename = QFileDialog.getOpenFileName(filter='OpenSlide files (*.svs *.tif *.png *.bif *.svslide *.mrxs *.scn *.vms *.vmu *.ndpi *.tiff *.bmp);;Aperio SVS format (*.svs);;All files (*.*)')[0]
         if (len(filename)==0):
             return ''
         self.openSlide(filename)
