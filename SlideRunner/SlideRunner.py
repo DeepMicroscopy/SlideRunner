@@ -492,7 +492,7 @@ class SlideRunnerUI(QMainWindow):
 
         coordinates = (int(imgarea_p1[0]), int(imgarea_p1[1]), int(imgarea_w[0]), int(imgarea_w[1]))
 
-        self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, configuration=self.gatherPluginConfig(), annotations=annotations, trigger=trigger,coordinates=coordinates, actionUID=actionUID))
+        self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, configuration=self.gatherPluginConfig(), annotations=annotations, trigger=trigger,coordinates=coordinates, actionUID=actionUID, openedDatabase=self.db))
 
 
     """
