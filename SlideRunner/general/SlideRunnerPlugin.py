@@ -26,6 +26,7 @@ class PluginTypes(enumerate):
 class PluginOutputType(enumerate):
       BINARY_MASK = 0
       RGB_IMAGE = 1
+      NO_OVERLAY = 2
 
 class JobDescription(enumerate):
       PROCESS = 0

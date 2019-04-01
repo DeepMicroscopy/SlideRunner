@@ -355,6 +355,7 @@ class SlideRunnerUI(QMainWindow):
             self.pluginParameterSliders=dict()
             self.pluginSliderLabels=dict()
             self.pluginTextLabels = dict()
+            self.pluginPushbuttons = dict()
             sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
             sizePolicy.setHorizontalStretch(1.0)
             sizePolicy.setVerticalStretch(0)
@@ -366,7 +367,7 @@ class SlideRunnerUI(QMainWindow):
                     newButton.setStyleSheet('font-size:8px')
                     newButton.clicked.connect(partial(self.pluginControlButtonHit, pluginConfig))
                     self.ui.tab3Layout.addWidget(newButton)
-
+                    self.pluginPushbuttons[pluginConfig.uid] = newButton
                 elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.SLIDER_WITH_FLOAT_VALUE):
                     newLabel = QtWidgets.QLabel(self.ui.tab3widget)
                     newLabel.setText(pluginConfig.name)
@@ -433,10 +434,15 @@ class SlideRunnerUI(QMainWindow):
             for label in self.pluginTextLabels.keys():
                 self.ui.tab3Layout.removeWidget(self.pluginTextLabels[label])
                 self.pluginTextLabels[label].deleteLater()
+            for btn in self.pluginPushbuttons.keys():
+                self.ui.tab3Layout.removeWidget(self.pluginPushbuttons[btn])
+                self.pluginPushbuttons[btn].deleteLater()
+
 
             self.pluginParameterSliders = dict()
             self.pluginSliderLabels = dict()
             self.pluginTextLabels = dict()
+            self.pluginPushbuttons = dict()
 
         if (plugin.receiverThread is None):
             plugin.receiverThread = imageReceiverThread(plugin.outQueue, self)
@@ -444,12 +450,20 @@ class SlideRunnerUI(QMainWindow):
             plugin.receiverThread.start()
 
         if (active):
+            if (self.activePlugin is not plugin):
+                    self.overlayMap=None
+                    self.overlayExtremes=None
+
             self.activePlugin = plugin
             self.addActivePluginToSidebar(plugin.plugin)
-            self.ui.opacitySlider.setValue(int(plugin.plugin.initialOpacity*100))
-            self.ui.opacitySlider.setHidden(False)
-            self.ui.opacitySlider.setEnabled(True)
-            self.ui.opacityLabel.setHidden(False)
+            if (plugin.plugin.outputType != SlideRunnerPlugin.PluginOutputType.NO_OVERLAY):
+                self.ui.opacitySlider.setValue(int(plugin.plugin.initialOpacity*100))
+                self.ui.opacitySlider.setHidden(False)
+                self.ui.opacitySlider.setEnabled(True)
+                self.ui.opacityLabel.setHidden(False)
+            else:
+                self.ui.opacityLabel.setHidden(True)
+                self.ui.opacitySlider.setHidden(True)
         else:
             self.activePlugin = None
             self.ui.opacityLabel.setHidden(True)
