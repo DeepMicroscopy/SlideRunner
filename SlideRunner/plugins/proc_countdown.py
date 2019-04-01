@@ -12,6 +12,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     outQueue = Queue()
     updateTimer=0.5
     description = 'Count database objects down to zero'
+    outputType = SlideRunnerPlugin.PluginOutputType.NO_OVERLAY
     pluginType = SlideRunnerPlugin.PluginTypes.WHOLESLIDE_PLUGIN
     configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Count down from', initValue=300., minValue=0.0, maxValue=1200.0),))
     
