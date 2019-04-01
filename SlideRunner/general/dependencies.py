@@ -106,5 +106,6 @@ from SlideRunner.gui.types import *
 from SlideRunner.gui.sidebar import *
 from SlideRunner.general.types import pluginEntry
 
+import matplotlib.cm 
 partial = functools.partial
 path = path.path
