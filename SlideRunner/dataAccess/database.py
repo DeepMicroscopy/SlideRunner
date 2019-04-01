@@ -161,7 +161,6 @@ class Database(object):
 
         self.dbcur.execute('SELECT uid, type FROM Annotations WHERE slide == %d'% slideId)
         allAnnos = self.dbcur.fetchall()
-        print('Loading DB into memory ...')
 
         self.dbcur.execute('SELECT coordinateX, coordinateY,annoid FROM Annotations_coordinates where annoId IN (SELECT uid FROM Annotations WHERE slide == %d) ORDER BY orderIdx' % (slideId))
         allCoords = np.asarray(self.dbcur.fetchall())
