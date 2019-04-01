@@ -90,12 +90,13 @@ class pluginJob():
       currentImage = None
       annotations = None
       procId = None
+      openedDatabase = None
       configuration = list()
       
       actionUID = None
       
       def __init__(self, queueTuple):
-            self.jobDescription, self.currentImage, self.slideFilename, self.coordinates, self.configuration, self.annotations, self.procId, self.trigger, self.actionUID = queueTuple
+            self.jobDescription, self.currentImage, self.slideFilename, self.coordinates, self.configuration, self.annotations, self.procId, self.trigger, self.actionUID, self.openedDatabase = queueTuple
 
       def __str__(self):
             return """<SlideRunner.general.SlideRunnerPlugin.pluginJob object>
@@ -106,8 +107,8 @@ class pluginJob():
             annotations = %s""" % (self.slideFilename, str(self.coordinates),str(self.actionUID), str(self.trigger), str(self.annotations))
       
 
-def jobToQueueTuple(description=JobDescription.PROCESS, currentImage=None, coordinates=None, configuration=list(), slideFilename=None, annotations=None, procId=None, trigger=None, actionUID=None):
-      return (description, currentImage, slideFilename, coordinates, configuration, annotations, procId, trigger, actionUID)
+def jobToQueueTuple(description=JobDescription.PROCESS, currentImage=None, coordinates=None, configuration=list(), slideFilename=None, annotations=None, procId=None, trigger=None, actionUID=None, openedDatabase=None):
+      return (description, currentImage, slideFilename, coordinates, configuration, annotations, procId, trigger, actionUID, openedDatabase)
 
 class PluginConfigurationType(enumerate):
       SLIDER_WITH_FLOAT_VALUE = 0
