@@ -653,7 +653,6 @@ class Database(object):
             if (self.annotationsSlide is not slideID):
                 self.loadIntoMemory(slideId=slideID)
             for annoId in self.annotations.keys():
-                print('+1 for ',self.annotations[annoId].majorityLabel())
                 statistics[0,self.annotations[annoId].majorityLabel()-1] += 1
 
 
