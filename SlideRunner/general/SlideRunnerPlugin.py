@@ -187,7 +187,7 @@ class SlideRunnerPlugin:
       version = '0.0'
       outQueue = None
       updateTimer = 5
-      initialOpacity = 0.3
+      initialOpacity = 0.5
       statusQueue = None
       outputType = PluginOutputType.BINARY_MASK
       pluginType = PluginTypes.IMAGE_PLUGIN

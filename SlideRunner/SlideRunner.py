@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.17.0'
+version = '1.18.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -119,7 +119,6 @@ class PluginStatusReceiver(threading.Thread):
             elif (msgId == SlideRunnerPlugin.StatusInformation.UPDATE_CONFIG):
                 self.selfObj.updatePluginConfig.emit(value)
 
-
 class SlideRunnerUI(QMainWindow):
     progressBarChanged = pyqtSignal(int)
     showImageRequest = pyqtSignal(np. ndarray, int)
@@ -179,12 +178,13 @@ class SlideRunnerUI(QMainWindow):
         self.classButtons = list()
         self.updateTimer = None
         self.displayedImage = None
+        self.overlayExtremes = None
         self.overviewOverlayHeatmap = False
         self.annotationPolygons=[]
         self.ui.MainImage.installEventFilter(self)
         self.ui.horizontalScrollBar.valueChanged.connect(self.changeScrollbars)
         self.ui.verticalScrollBar.valueChanged.connect(self.changeScrollbars)
-        self.ui.opacitySlider.setValue(40)
+        self.ui.opacitySlider.setValue(50)
         self.ui.opacitySlider.valueChanged.connect(self.changeOpacity)
         self.ui.progressBar.setHidden(True)
 
@@ -221,7 +221,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.MainImage.mouseMoveEvent = partial(mouseEvents.moveImage,self)
         self.ui.MainImage.mouseDoubleClickEvent = partial(mouseEvents.doubleClick,self)
         self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(127*np.ones((200,200,3),np.uint8)))
-        self.opacity = 0.4
+        self.opacity = 1.0
         self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
         self.ui.OverviewLabel.mousePressEvent = self.pressOverviewImage
 
@@ -232,6 +232,8 @@ class SlideRunnerUI(QMainWindow):
         menu.defineAnnotationMenu(self)
 
         shortcuts.defineMenuShortcuts(self)
+
+        self.checkSettings()
 
 
         if (SLIDERUNNER_DEBUG):
@@ -277,6 +279,9 @@ class SlideRunnerUI(QMainWindow):
         return colors[idx % len(colors)]
 
 
+    def checkSettings(self):
+        if (self.settings.value('OverlayColorMap') == None):
+            self.settings.setValue('OverlayColorMap', 'Greens')
 
     class NotImplementedException:
         pass
@@ -1454,17 +1459,24 @@ class SlideRunnerUI(QMainWindow):
         if (self.overlayMap is not None) and (self.activePlugin is not None):
                 if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.BINARY_MASK):
                     olm = self.overlayMap
-                    thres=1
                     if ((len(olm.shape)==2) or ((len(olm.shape)==3) and (olm.shape[2]==1))) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
+                        self.overlayExtremes = [np.min(olm), np.max(olm)+np.finfo(np.float32).eps]
+                        # Normalize overlay
                         olm = cv2.resize(self.overlayMap, dsize=(npi.shape[1],npi.shape[0]))
-                        npi[:,:,0] = np.uint8(np.clip(np.float32(npi[:,:,0])*(1) - 255.0 * self.opacity * (olm * 5.0 * thres),0,255))
-                        npi[:,:,1] = np.uint8(np.clip(np.float32(npi[:,:,1])*(1) + 255.0 * self.opacity * (olm * 5.0 * thres),0,255))
-                        npi[:,:,2] = np.uint8(np.clip(np.float32(npi[:,:,2])*(1) - 255.0 * self.opacity * (olm * 5.0 * thres),0,255))
+                        olm = (olm - self.overlayExtremes[0]) / (np.diff(np.array(self.overlayExtremes)))
+                        
+                        cm = matplotlib.cm.get_cmap(self.settings.value('OverlayColorMap'))
+
+                        colorMap = cm(olm)
+                        # alpha blend
+                        npi = np.uint8(npi * (1-self.opacity) + colorMap * 255 * (self.opacity))
+
                     else:
                         print('Overlay map shape not proper')
                         print('OLM shape: ', olm.shape, 'NPI shape: ', npi.shape)
                 elif (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE):
                     olm = self.overlayMap
+                    self.overlayExtremes = None
                     if (len(olm.shape)==3) and (olm.shape[2]==3) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
                         for c in range(3):
                             npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
@@ -1516,6 +1528,30 @@ class SlideRunnerUI(QMainWindow):
         npi[positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:] = np.clip(npi[positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:]*0.2,0,255)
         
         cv2.putText(npi, '%d microns' % legendMicrons, (positionLegendX, positionLegendY+15), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+
+        if (self.overlayExtremes is not None):
+            # Add legend for colour code
+            positionColorLegendX = npi.shape[1]-80
+            positionColorLegendY = npi.shape[0]-200
+            colorLegendWidth = 20
+            colorLegendHeight = 150
+
+
+            opacity = np.zeros((colorLegendHeight,colorLegendWidth,3))
+            cm = matplotlib.cm.get_cmap(self.settings.value('OverlayColorMap'))
+            color = cm((np.linspace(1,0,colorLegendHeight)).reshape(-1,1) * np.ones((1,colorLegendWidth)))
+            cv2.rectangle(img=npi, pt1=(positionColorLegendX,positionColorLegendY),
+                          pt2=(positionColorLegendX+colorLegendWidth, positionColorLegendY+colorLegendHeight), color=[0,0,0,0])
+
+            npi[positionColorLegendY:positionColorLegendY+colorLegendHeight,positionColorLegendX:positionColorLegendX+colorLegendWidth] = color*255
+            
+            _tsize = cv2.getTextSize( '%.2f' % np.max(np.abs(self.overlayExtremes[1])),cv2.FONT_HERSHEY_PLAIN , 0.7,1)
+            npi[positionColorLegendY+colorLegendHeight-_tsize[0][1]-5:positionColorLegendY+colorLegendHeight+5,positionColorLegendX+colorLegendWidth+5:positionColorLegendX+colorLegendWidth+_tsize[0][0]+15,:] = np.clip(npi[positionColorLegendY+colorLegendHeight-_tsize[0][1]-5:positionColorLegendY+colorLegendHeight+5,positionColorLegendX+colorLegendWidth+5:positionColorLegendX+colorLegendWidth+_tsize[0][0]+15,:]*0.5+127,0,255)
+            npi[positionColorLegendY-_tsize[0][1]:positionColorLegendY+10,positionColorLegendX+colorLegendWidth+5:positionColorLegendX+colorLegendWidth+_tsize[0][0]+15,:] = np.clip(npi[positionColorLegendY-_tsize[0][1]:positionColorLegendY+10,positionColorLegendX+colorLegendWidth+5:positionColorLegendX+colorLegendWidth+_tsize[0][0]+15,:]*0.5+127,0,255)
+            cv2.putText(npi, '%.2f' % self.overlayExtremes[1], (positionColorLegendX+colorLegendWidth+10, positionColorLegendY+5),cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+            cv2.putText(npi, '%.2f' % self.overlayExtremes[0], (positionColorLegendX+colorLegendWidth+10, positionColorLegendY+colorLegendHeight),cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+
+
 
         # Display image in GUI
         self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.displayedImage)))
