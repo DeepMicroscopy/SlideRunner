@@ -26,6 +26,7 @@ class PluginTypes(enumerate):
 class PluginOutputType(enumerate):
       BINARY_MASK = 0
       RGB_IMAGE = 1
+      NO_OVERLAY = 2
 
 class JobDescription(enumerate):
       PROCESS = 0
@@ -187,7 +188,7 @@ class SlideRunnerPlugin:
       version = '0.0'
       outQueue = None
       updateTimer = 5
-      initialOpacity = 0.3
+      initialOpacity = 0.5
       statusQueue = None
       outputType = PluginOutputType.BINARY_MASK
       pluginType = PluginTypes.IMAGE_PLUGIN
