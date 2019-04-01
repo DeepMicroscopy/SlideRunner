@@ -75,6 +75,8 @@ def defineMenu(self, MainWindow):
         self.actionCreate_new.setObjectName("actionCreate_new")
         self.actionAbout = QtWidgets.QAction(MainWindow)
         self.actionAbout.setObjectName("actionAbout")
+        self.actionSettings = QtWidgets.QAction(MainWindow)
+        self.actionSettings.setObjectName("actionSettings")
         self.menuDatabase.addAction(self.actionCreate_new)
         self.menuDatabase.addAction(self.action_Open)
         self.menuDatabase.addAction(self.actionOpen_custom)
@@ -88,6 +90,7 @@ def defineMenu(self, MainWindow):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.action_Quit)
         self.menuHelp.addAction(self.actionAbout)
+        self.menuHelp.addAction(self.actionSettings)
         self.menubar.addAction(self.menuDatabase.menuAction())
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuAnnotation.menuAction())
@@ -108,12 +111,15 @@ def defineMenu(self, MainWindow):
         self.actionAdd_cell_class.setText(("Add annotation class"))
         self.actionCreate_new.setText(("Create new"))
         self.actionAbout.setText(("About"))
+        self.actionSettings.setText(("Settings"))
 
         self.menuItemView = self.menuAnnotation.addAction('Find by ID', MainWindow.findAnnoByID)
 
         self.saveto = self.menuDatabase.addAction('Copy To ...')
         self.saveto.setEnabled(False)
         self.saveto.triggered.connect(MainWindow.saveDBto)
+
+        self.actionSettings.triggered.connect(MainWindow.settingsDialog)
 
 
 
