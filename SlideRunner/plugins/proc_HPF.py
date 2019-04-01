@@ -36,7 +36,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     outQueue = Queue()
     description = 'Display size of 1 HPF'
     pluginType = SlideRunnerPlugin.PluginTypes.WHOLESLIDE_PLUGIN
-    outputType = SlideRunnerPlugin.PluginOutputType.BINARY_MASK
+    outputType = SlideRunnerPlugin.PluginOutputType.NO_OVERLAY
     modelInitialized=False
     updateTimer=0.1
     slideFilename = None
