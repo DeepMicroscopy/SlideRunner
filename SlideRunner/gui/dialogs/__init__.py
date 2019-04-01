@@ -15,4 +15,4 @@
 """
 
 
-__all__ = ['about']
+__all__ = ['about', 'settings']

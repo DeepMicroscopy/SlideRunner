@@ -98,6 +98,7 @@ from PyQt5.QtWidgets import QDialog, QWidget, QFileDialog, QMenu,QInputDialog, Q
 # internal imports
 from SlideRunner.gui.SlideRunner_ui import Ui_MainWindow
 from SlideRunner.gui.dialogs.about import aboutDialog
+from SlideRunner.gui.dialogs.settings import settingsDialog
 from SlideRunner.gui import shortcuts, toolbar, mouseEvents, annotation
 from SlideRunner.dataAccess.database import Database
 from SlideRunner.processing import screening, thumbnail
