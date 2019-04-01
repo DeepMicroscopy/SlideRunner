@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.18.0'
+version = '1.19.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -1888,6 +1888,9 @@ class SlideRunnerUI(QMainWindow):
         if filename is not None and len(filename)>0:
             self.db.saveTo(filename)
 
+    def settingsDialog(self):
+        settingsDialog(self.settings)
+        self.showImage()
 
     def openSlide(self, filename):
         """
