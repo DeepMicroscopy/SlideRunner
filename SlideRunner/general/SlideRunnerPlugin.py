@@ -116,6 +116,12 @@ class PluginConfigurationType(enumerate):
       PUSHBUTTON = 1
       COMBOBOX = 2
       ANNOTATIONACTION = 3
+      FILEPICKER = 4
+
+class FilePickerDialogType(enumerate):
+      OPEN_FILE = 0
+      SAVE_FILE = 1
+      OPEN_DIRECTORY = 2
 
 
 class PluginConfigUpdateEntry():
@@ -147,6 +153,17 @@ class PluginConfigurationEntry():
             self.maxValue=maxValue
             self.type=ctype
             self.initValue = initValue
+
+class FilePickerConfigurationEntry(PluginConfigurationEntry):
+      def __init__(self,uid:int=0,name:str='' ,mask='*.jpg', title='Choose a file', dialogType:FilePickerDialogType=FilePickerDialogType.OPEN_FILE ):
+            self.uid=uid
+            self.name=name
+            self.mask = mask
+            self.dialogType=dialogType
+            self.title=title
+            self.type=PluginConfigurationType.FILEPICKER
+
+
 
 class SliderPluginConfigurationEntry(PluginConfigurationEntry):
       def __init__(self,uid:int=0,name:str='' ,initValue:float=0.5, minValue:float=0.0, maxValue:float=1.0):
