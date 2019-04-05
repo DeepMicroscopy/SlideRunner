@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.19.0'
+version = '1.20.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -187,6 +187,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.opacitySlider.setValue(50)
         self.ui.opacitySlider.valueChanged.connect(self.changeOpacity)
         self.ui.progressBar.setHidden(True)
+        self.cachedLastImage = None
 
         self.removeLastPolygonPoint = mouseEvents.removeLastPolygonPoint #redirect
         self.disableStatusView()
@@ -234,6 +235,7 @@ class SlideRunnerUI(QMainWindow):
         shortcuts.defineMenuShortcuts(self)
 
         self.checkSettings()
+        self.currentVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
 
 
         if (SLIDERUNNER_DEBUG):
@@ -282,6 +284,9 @@ class SlideRunnerUI(QMainWindow):
     def checkSettings(self):
         if (self.settings.value('OverlayColorMap') == None):
             self.settings.setValue('OverlayColorMap', 'Greens')
+        if (self.settings.value('SpotCircleRadius') == None):
+            self.settings.setValue('SpotCircleRadius', 25)
+
 
     class NotImplementedException:
         pass
@@ -337,9 +342,24 @@ class SlideRunnerUI(QMainWindow):
         self.overlayMap = None
         self.pluginAnnos = list()
         self.showImage()
-        for key in self.pluginSliderLabels.keys():
-            self.pluginSliderLabels[key].setText('%.3f' % (self.pluginParameterSliders[key].value() / 1000.0 ))
+        for key in self.pluginConfigLabels.keys():
+            self.pluginConfigLabels[key].setText('%.3f' % (self.pluginParameterSliders[key].value() / 1000.0 ))
 
+    def pluginFilePickerButtonHit(self, config: SlideRunnerPlugin.FilePickerConfigurationEntry, labelObj:QtWidgets.QLabel):
+        self.overlayMap = None
+        self.pluginAnnos = list()
+        if (config.dialogType == SlideRunnerPlugin.FilePickerDialogType.OPEN_FILE):
+            ret,err = QFileDialog.getOpenFileName(self,config.title, "",config.mask)
+
+        elif (config.dialogType == SlideRunnerPlugin.FilePickerDialogType.SAVE_FILE):
+            ret,err = QFileDialog.getSaveFileName(self,config.title, "",config.mask)
+        
+        elif (config.dialogType == SlideRunnerPlugin.FilePickerDialogType.OPEN_DIRECTORY):
+            ret,err = QFileDialog.getExistingDirectory(self,config.title, "",config.mask)
+        
+        labelObj.setText(ret)
+        if (ret is not None) and (self.imageOpened):
+            self.triggerPlugin(self.cachedLastImage, trigger=config)
 
     def pluginControlButtonHit(self, btn):
         self.overlayMap = None
@@ -353,9 +373,10 @@ class SlideRunnerUI(QMainWindow):
     def addActivePluginToSidebar(self, plugin:SlideRunnerPlugin):
         if len(plugin.configurationList)>0:
             self.pluginParameterSliders=dict()
-            self.pluginSliderLabels=dict()
+            self.pluginConfigLabels=dict()
             self.pluginTextLabels = dict()
             self.pluginPushbuttons = dict()
+            self.pluginFilepickers = dict()
             sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
             sizePolicy.setHorizontalStretch(1.0)
             sizePolicy.setVerticalStretch(0)
@@ -368,6 +389,24 @@ class SlideRunnerUI(QMainWindow):
                     newButton.clicked.connect(partial(self.pluginControlButtonHit, pluginConfig))
                     self.ui.tab3Layout.addWidget(newButton)
                     self.pluginPushbuttons[pluginConfig.uid] = newButton
+                elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.FILEPICKER):
+                    hLayout = QtWidgets.QHBoxLayout(self.ui.tab3widget)
+                    newButton = QtWidgets.QPushButton(self.ui.tab3widget)
+                    newButton.setText(pluginConfig.name)
+                    newButton.setSizePolicy(sizePolicy)
+                    newButton.setStyleSheet('font-size:8px')
+                    self.ui.tab3Layout.addWidget(newButton)
+                    newLabel = QtWidgets.QLabel(self.ui.tab3widget)
+                    newLabel.setText('None')
+                    newLabel.setSizePolicy(sizePolicy)
+                    newLabel.setStyleSheet('font-size:8px')
+                    hLayout.addWidget(newButton)
+                    hLayout.addWidget(newLabel)
+                    newButton.clicked.connect(partial(self.pluginFilePickerButtonHit, pluginConfig, newLabel))
+                    self.ui.tab3Layout.addLayout(hLayout)
+                    self.pluginFilepickers[pluginConfig.uid] = {'button' : newButton, 'label' : newLabel}
+                    print('Added new filepicker')
+                    
                 elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.SLIDER_WITH_FLOAT_VALUE):
                     newLabel = QtWidgets.QLabel(self.ui.tab3widget)
                     newLabel.setText(pluginConfig.name)
@@ -398,7 +437,7 @@ class SlideRunnerUI(QMainWindow):
                     hLayout.addWidget(valLabel)
                     self.ui.tab3Layout.addLayout(hLayout)
                     self.pluginParameterSliders[pluginConfig.uid] = newSlider
-                    self.pluginSliderLabels[pluginConfig.uid] = valLabel
+                    self.pluginConfigLabels[pluginConfig.uid] = valLabel
                     newSlider.setStyleSheet("""
     QSlider:horizontal {
         min-height: 10px;
@@ -428,21 +467,28 @@ class SlideRunnerUI(QMainWindow):
             for slider in self.pluginParameterSliders.keys():
                 self.ui.tab3Layout.removeWidget(self.pluginParameterSliders[slider])
                 self.pluginParameterSliders[slider].deleteLater()
-            for label in self.pluginSliderLabels.keys():
-                self.ui.tab3Layout.removeWidget(self.pluginSliderLabels[label])
-                self.pluginSliderLabels[label].deleteLater()
+            for label in self.pluginConfigLabels.keys():
+                self.ui.tab3Layout.removeWidget(self.pluginConfigLabels[label])
+                self.pluginConfigLabels[label].deleteLater()
             for label in self.pluginTextLabels.keys():
                 self.ui.tab3Layout.removeWidget(self.pluginTextLabels[label])
                 self.pluginTextLabels[label].deleteLater()
             for btn in self.pluginPushbuttons.keys():
                 self.ui.tab3Layout.removeWidget(self.pluginPushbuttons[btn])
                 self.pluginPushbuttons[btn].deleteLater()
+            for uid in self.pluginFilepickers.keys():
+                self.ui.tab3Layout.removeWidget(self.pluginFilepickers[uid]['button'])
+                self.ui.tab3Layout.removeWidget(self.pluginFilepickers[uid]['label'])
+                self.pluginFilepickers[uid]['label'].deleteLater()
+                self.pluginFilepickers[uid]['button'].deleteLater()
+
 
 
             self.pluginParameterSliders = dict()
-            self.pluginSliderLabels = dict()
+            self.pluginConfigLabels = dict()
             self.pluginTextLabels = dict()
             self.pluginPushbuttons = dict()
+            self.pluginFilepickers = dict()
 
         if (plugin.receiverThread is None):
             plugin.receiverThread = imageReceiverThread(plugin.outQueue, self)
@@ -484,6 +530,8 @@ class SlideRunnerUI(QMainWindow):
         config = dict()
         for key in self.pluginParameterSliders.keys():
             config[key] = self.pluginParameterSliders[key].value()/1000.0
+        for key in self.pluginFilepickers.keys():
+            config[key] = self.pluginFilepickers[key]['label'].text()
         return config
 
 
@@ -1602,8 +1650,10 @@ class SlideRunnerUI(QMainWindow):
         SLIDE_DIRNAME = os.path.expanduser("~") + os.sep    
 
         if (filename is None):
-            filename = SLIDE_DIRNAME+'Slides.sqlite'
-
+            filename = self.settings.value('DefaultDatabase')
+            if (filename is None):
+                filename = SLIDE_DIRNAME + os.sep + 'Slides.sqlite'
+                self.settings.setValue('DefaultDatabase', filename)
         success = self.db.open(filename)
         
         if not success:
@@ -1890,6 +1940,7 @@ class SlideRunnerUI(QMainWindow):
 
     def settingsDialog(self):
         settingsDialog(self.settings)
+        self.currentVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
         self.showImage()
 
     def openSlide(self, filename):
