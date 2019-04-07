@@ -32,57 +32,6 @@ class JobDescription(enumerate):
       PROCESS = 0
       QUIT_PLUGIN_THREAD = 99
 
-class annotation():
-      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, color:tuple):
-            return
-
-class rectangularAnnotation(annotation):
-
-      def __init__(self, x1, y1, x2, y2, text:str=''):
-            self.x1 = x1
-            self.y1 = y1
-            self.x2 = x2
-            self.y2 = y2
-            self.text = text
-      
-      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, color:tuple):
-            xpos1=max(0,int((self.x1-leftUpper[0])/zoomLevel))
-            ypos1=max(0,int((self.y1-leftUpper[1])/zoomLevel))
-            xpos2=min(image.shape[1],int((self.x2-leftUpper[0])/zoomLevel))
-            ypos2=min(image.shape[0],int((self.y2-leftUpper[1])/zoomLevel))
-            image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=color, lineType=cv2.LINE_AA)
-            if (len(self.text)>0):
-                  cv2.putText(image, self.text, (xpos1+3, ypos2+10), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
-
-      
-      def __str__(self):
-            return ('Rectangular annotation object: X1:%d, X2:%d, Y1:%d, Y2: %d ' % (self.x1,self.y1,self.x2,self.y2))
-
-class circleAnnotation(annotation):
-
-      def __init__(self, x1, y1, r, text:str=''):
-            self.x1 = int(x1)
-            self.y1 = int(y1)
-            self.r = int(r)
-            self.text = text
-      
-      def __str__(self):
-            return 'SlideRunner.circleAnnotation @ (%s,%s,%s): %s' % (str(self.x1),str(self.y1),str(self.r),str(self.text))
-      
-      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, color:tuple):
-            xpos1=int((self.x1-leftUpper[0])/zoomLevel)
-            ypos1=int((self.y1-leftUpper[1])/zoomLevel)
-            radius = int(self.r/zoomLevel)
-            if (radius>=0):
-                  image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=color, lineType=cv2.LINE_AA)
-            if (len(self.text)>0) and (radius>5): # only show text if available and annotation not too small
-                  font=cv2.FONT_HERSHEY_PLAIN 
-                  fontsize=1.0
-                  textsize = cv2.getTextSize(self.text, font, fontsize, 2)[0]
-                  xcoord = int(xpos1-textsize[0]*0.5)
-                  ycoord = int(ypos1+radius)
-                  cv2.rectangle(image, pt1=(xcoord-2, ycoord-2), pt2=(xcoord+textsize[0]+2, ycoord+textsize[1]+2), color=[0,0,0], thickness=-1)
-                  cv2.putText(image, self.text, (int(xcoord), int(ycoord+textsize[1])), font, fontsize,color=[255,255,255,255],thickness=2,lineType=cv2.LINE_AA)
 
 class pluginJob():
       jobDescription = None
@@ -122,6 +71,29 @@ class FilePickerDialogType(enumerate):
       OPEN_FILE = 0
       SAVE_FILE = 1
       OPEN_DIRECTORY = 2
+
+class PluginAnnotationLabel():
+
+      def __set_color(self, color:tuple):
+            if len(color) != 3:
+                  raise ValueError('Color needs to be a tuple of three integer values.')
+            elif all([isinstance(x,int) for x in color]):
+                  self.__color = color
+            elif all([isinstance(x,float) for x in color]):
+                  self.__color = [int(x*255) for x in color]
+            else:
+                  raise ValueError('Color needs to be a tuple of three integer values (<255) or three float values (=<1)')
+      
+      def __get_color(self):
+            return self.__color
+
+      color = property(__get_color, __set_color)
+                  
+      def __init__(self, uid: int, name: str, color: tuple):
+            self.uid = uid
+            self.name = name
+            self.color = color
+
 
 
 class PluginConfigUpdateEntry():
@@ -254,6 +226,20 @@ class SlideRunnerPlugin:
 
       def updateAnnotations(self):
             self.statusQueue.put((StatusInformation.ANNOTATIONS, self.getAnnotations()))
+
+      def findClickAnnotation(self, clickPosition, pluginVP):
+            labels = self.getAnnotationLabels()
+            annoKeys=np.array([x.uid for x in labels])[np.where(pluginVP.activeClasses)[0]].tolist()
+            for idx,anno in enumerate(self.getAnnotations()):
+                  if (anno.pluginAnnotationLabel is None) or (anno.pluginAnnotationLabel.uid in annoKeys):
+                        if (anno.positionInAnnotation(clickPosition )):
+                              return anno
+            return None
+
+
+      def getAnnotationLabels(self):
+            # sending default annotation labels
+            return [PluginAnnotationLabel(0,'annotation', [0,0,0])]
 
       def getAnnotations(self):
             print('Sent empty annotation list.')
