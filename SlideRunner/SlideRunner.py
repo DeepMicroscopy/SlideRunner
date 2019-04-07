@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.20.0'
+version = '1.21.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -141,11 +141,15 @@ class SlideRunnerUI(QMainWindow):
     slideMicronsPerPixel = 20
     pluginAnnos = list()
     cachedLevel = None
+    pluginFilepickers = dict()
     currentVP = ViewingProfile()
+    currentPluginVP = ViewingProfile()
     lastReadRequest = None
     cachedLocation = None
     pluginTextLabels = dict()
     cachedImage = None
+    selectedPluginAnno = None
+    selectedAnno = None
     pluginParameterSliders = dict()
     refreshTimer = None
     settings = QSettings('Pattern Recognition Lab, FAU Erlangen Nuernberg', 'SlideRunner')
@@ -236,6 +240,7 @@ class SlideRunnerUI(QMainWindow):
 
         self.checkSettings()
         self.currentVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
+        self.currentPluginVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
 
 
         if (SLIDERUNNER_DEBUG):
@@ -501,6 +506,8 @@ class SlideRunnerUI(QMainWindow):
                     self.overlayExtremes=None
 
             self.activePlugin = plugin
+            self.pluginItemsSelected = None
+            self.showDatabaseUIelements()
             self.addActivePluginToSidebar(plugin.plugin)
             if (plugin.plugin.outputType != SlideRunnerPlugin.PluginOutputType.NO_OVERLAY):
                 self.ui.opacitySlider.setValue(int(plugin.plugin.initialOpacity*100))
@@ -1120,81 +1127,76 @@ class SlideRunnerUI(QMainWindow):
         if (zoomLevel is None):
             zoomLevel = self.getZoomValue()
 
-        if (self.activePlugin):
-            for anno in self.pluginAnnos:
-                anno.draw(image, leftUpper, zoomLevel, thickness, self.get_color(0))
-        else:
-            pass
 
-        if (self.db.isOpen() == False):
-            return image
-        rightLower = region[0] + region[1]
-        if (adjustList):
-            self.annotationsSpots=list()
-            self.annotationsFlags = list()
-            self.annotationsArea=list()
-            self.annotationsCircle=list()
-        radius=int(25/zoomLevel)
-        if (thickness==1): # thumbnail annotation
-            radius = 1
+        if (self.db.isOpen() == True):
+            rightLower = region[0] + region[1]
+            if (adjustList):
+                self.annotationsSpots=list()
+                self.annotationsFlags = list()
+                self.annotationsArea=list()
+                self.annotationsCircle=list()
+            radius=int(25/zoomLevel)
+            if (thickness==1): # thumbnail annotation
+                radius = 1
 
-        allAnnotations = self.db.findSpotAnnotations(leftUpper, rightLower, self.slideUID, self.blindedMode, self.annotator)      
+            allAnnotations = self.db.findSpotAnnotations(leftUpper, rightLower, self.slideUID, self.blindedMode, self.annotator)      
 
-        for annotation in allAnnotations:
-            if (adjustList) and (annotation[5]==4): # flag annotation
+            for annotation in allAnnotations:
+                if (adjustList) and (annotation[5]==4): # flag annotation
+                        xpos=int((annotation[0]-leftUpper[0])/zoomLevel)
+                        ypos=int((annotation[1]-leftUpper[1])/zoomLevel)
+                        image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=14, color=[0, 0, 0], lineType=cv2.LINE_AA)
+                        image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=13, color=[255, 255, 255,255], lineType=cv2.LINE_AA)
+                        image = cv2.line(img=image, pt1=(xpos-10,ypos-10), pt2=(xpos+10,ypos+10), color=[0, 0, 0], lineType=cv2.LINE_AA)
+                        image = cv2.line(img=image, pt1=(xpos-10,ypos+10), pt2=(xpos+10,ypos-10), color=[0, 0, 0], lineType=cv2.LINE_AA)
+                        
+                        self.annotationsFlags.append([xpos,ypos,14,0,annotation[2], annotation[4] ])
+
+                elif (self.itemsSelected[annotation[2]]):
+                    # Normal spot annotations (e.g. cells)
                     xpos=int((annotation[0]-leftUpper[0])/zoomLevel)
                     ypos=int((annotation[1]-leftUpper[1])/zoomLevel)
-                    image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=14, color=[0, 0, 0], lineType=cv2.LINE_AA)
-                    image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=13, color=[255, 255, 255,255], lineType=cv2.LINE_AA)
-                    image = cv2.line(img=image, pt1=(xpos-10,ypos-10), pt2=(xpos+10,ypos+10), color=[0, 0, 0], lineType=cv2.LINE_AA)
-                    image = cv2.line(img=image, pt1=(xpos-10,ypos+10), pt2=(xpos+10,ypos-10), color=[0, 0, 0], lineType=cv2.LINE_AA)
-                    
-                    self.annotationsFlags.append([xpos,ypos,14,0,annotation[2], annotation[4] ])
-
-            elif (self.itemsSelected[annotation[2]]):
-                # Normal spot annotations (e.g. cells)
-                xpos=int((annotation[0]-leftUpper[0])/zoomLevel)
-                ypos=int((annotation[1]-leftUpper[1])/zoomLevel)
-                if (thickness == 1 ):
-                    image[ypos,xpos,:] = self.get_color(annotation[2])[0:3]
-                else:
-                    image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=radius, color=self.get_color(annotation[2]), lineType=cv2.LINE_AA)
-
-                if (adjustList):
-                    self.annotationsSpots.append([xpos,ypos,int(25/zoomLevel),0,annotation[2], annotation[4] ])
-
-        # 2nd job: Find area annotations
-        allAnnotations = self.db.findAreaAnnotations(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
-        for annotation in allAnnotations:
-            if (self.itemsSelected[annotation[4]]):
-                if (annotation[6]==5): # circular type
-                    xpos1=((annotation[0]-leftUpper[0])/zoomLevel)
-                    ypos1=((annotation[1]-leftUpper[1])/zoomLevel)
-                    xpos2=((annotation[2]-leftUpper[0])/zoomLevel)
-                    ypos2=((annotation[3]-leftUpper[1])/zoomLevel)
-                    circCenter = (int(0.5*(xpos1+xpos2)), int(0.5*(ypos1+ypos2)))
-                    radius = int((xpos2-xpos1)*0.5)
-                    if (radius<0):
-                        print('Error with data set / Radius <0:', xpos1,ypos1,xpos2,ypos2,circCenter,radius)
+                    if (thickness == 1 ):
+                        image[ypos,xpos,:] = self.get_color(annotation[2])[0:3]
                     else:
-                        image = cv2.circle(image, thickness=thickness, center=circCenter, radius=radius,color=self.get_color(annotation[4]), lineType=cv2.LINE_AA)
-                else:
-                    xpos1=max(0,int((annotation[0]-leftUpper[0])/zoomLevel))
-                    ypos1=max(0,int((annotation[1]-leftUpper[1])/zoomLevel))
-                    xpos2=min(image.shape[1],int((annotation[2]-leftUpper[0])/zoomLevel))
-                    ypos2=min(image.shape[0],int((annotation[3]-leftUpper[1])/zoomLevel))
-                    image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.get_color(annotation[4]), lineType=cv2.LINE_AA)
-                if (adjustList):
-                    self.annotationsArea.append([xpos1,ypos1,xpos2,ypos2,annotation[4], annotation[5], annotation[6] ])
+                        image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=radius, color=self.get_color(annotation[2]), lineType=cv2.LINE_AA)
+
+                    if (adjustList):
+                        self.annotationsSpots.append([xpos,ypos,int(25/zoomLevel),0,annotation[2], annotation[4] ])
+
+            # 2nd job: Find area annotations
+            allAnnotations = self.db.findAreaAnnotations(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
+            for annotation in allAnnotations:
+                if (self.itemsSelected[annotation[4]]):
+                    if (annotation[6]==5): # circular type
+                        xpos1=((annotation[0]-leftUpper[0])/zoomLevel)
+                        ypos1=((annotation[1]-leftUpper[1])/zoomLevel)
+                        xpos2=((annotation[2]-leftUpper[0])/zoomLevel)
+                        ypos2=((annotation[3]-leftUpper[1])/zoomLevel)
+                        circCenter = (int(0.5*(xpos1+xpos2)), int(0.5*(ypos1+ypos2)))
+                        radius = int((xpos2-xpos1)*0.5)
+                        if (radius<0):
+                            print('Error with data set / Radius <0:', xpos1,ypos1,xpos2,ypos2,circCenter,radius)
+                        else:
+                            image = cv2.circle(image, thickness=thickness, center=circCenter, radius=radius,color=self.get_color(annotation[4]), lineType=cv2.LINE_AA)
+                    else:
+                        xpos1=max(0,int((annotation[0]-leftUpper[0])/zoomLevel))
+                        ypos1=max(0,int((annotation[1]-leftUpper[1])/zoomLevel))
+                        xpos2=min(image.shape[1],int((annotation[2]-leftUpper[0])/zoomLevel))
+                        ypos2=min(image.shape[0],int((annotation[3]-leftUpper[1])/zoomLevel))
+                        image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.get_color(annotation[4]), lineType=cv2.LINE_AA)
+                    if (adjustList):
+                        self.annotationsArea.append([xpos1,ypos1,xpos2,ypos2,annotation[4], annotation[5], annotation[6] ])
 
 
-        # finally: find polygons
-        annotationPolygons = self.db.findPolygonAnnotatinos(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
-        for poly in annotationPolygons:
-            image = self.showPolygon(tempimage=image, polygon=poly[0], color=self.get_color(poly[1]))
+            # finally: find polygons
+            annotationPolygons = self.db.findPolygonAnnotatinos(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
+            for poly in annotationPolygons:
+                image = self.showPolygon(tempimage=image, polygon=poly[0], color=self.get_color(poly[1]))
 
-        if (adjustList):
-            self.annotationPolygons = annotationPolygons
+            if (adjustList):
+                self.annotationPolygons = annotationPolygons
+
 
         return image
 
@@ -1545,14 +1547,19 @@ class SlideRunnerUI(QMainWindow):
                     
 
 
-        # Overlay Annotations by the user
-        #npi = self.overlayAnnotations(npi)
-        if (self.db.isOpen()):
-            self.db.annotateImage(npi, self.region[0], self.region[0]+self.region[1], self.getZoomValue(), self.currentVP)
-        
-        if (self.activePlugin):
+        # Draw annotations by the plugin
+        if (self.activePlugin is not None):
+            labels = self.activePlugin.instance.getAnnotationLabels()
+            annoKeys=np.array([x.uid for x in labels])[np.where(self.pluginItemsSelected)[0]].tolist()
             for anno in self.pluginAnnos:
-                anno.draw(npi, self.region[0], self.getZoomValue(), 2, self.get_color(0))
+                if (anno.pluginAnnotationLabel is None) or (anno.pluginAnnotationLabel.uid in annoKeys):
+                    anno.draw(image=npi, leftUpper=self.region[0], 
+                              zoomLevel=self.getZoomValue(), thickness=2, vp=self.currentPluginVP,
+                              selected=(self.selectedPluginAnno==anno.uid))
+
+        # Overlay Annotations by the user
+        if (self.db.isOpen()):
+            self.db.annotateImage(npi, self.region[0], self.region[0]+self.region[1], self.getZoomValue(), self.currentVP, self.selectedAnno)
 
         # Show the current polygon (if in polygon annotation mode)
         if (self.db.isOpen()) & (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
@@ -1633,6 +1640,21 @@ class SlideRunnerUI(QMainWindow):
         self.itemsSelected=items
         self.currentVP.activeClasses = items
         self.showAnnotationsInOverview()
+        self.showImage()
+
+    def selectPluginClasses(self,event):
+        """
+            Helper function to select classes for enabling/disabling display of plugin annotations
+
+        """
+
+        items=np.zeros(len(self.pluginModelItems))
+        for item in range(len(self.pluginModelItems)):
+            if (self.pluginModelItems[item].checkState()):
+                items[item] = 1
+
+        self.pluginItemsSelected=items
+        self.currentPluginVP.activeClasses = items
         self.showImage()
 
 
@@ -1792,97 +1814,130 @@ class SlideRunnerUI(QMainWindow):
             self.showAnnoclass()
 
 
+
+
+
     def showDatabaseUIelements(self):
         """
             Show and update UI controls related to the database
         """
-        self.ui.actionAdd_annotator.setEnabled(True)
-        self.ui.actionAdd_cell_class.setEnabled(True)
-        self.ui.inspectorTableView.setVisible(True)
-        self.ui.categoryView.setVisible(True)
-        self.ui.annotatorComboBox.setVisible(True)
+        if (self.db.isOpen()):
+            self.ui.actionAdd_annotator.setEnabled(True)
+            self.ui.actionAdd_cell_class.setEnabled(True)
+            self.ui.annotatorComboBox.setVisible(True)
 
-        self.showDBentryCount()
+            self.showDBentryCount()
+            persons = self.db.getAllPersons()
+            personList=[]
+            for person in persons:
+                personList.append(person[0])
+            self.annotatorsModel.setStringList(personList)
+            self.ui.annotatorComboBox.setVisible(True)
+            self.ui.annotatorComboBox.setEnabled(True)
+            self.ui.annotatorComboBox.currentIndexChanged.connect(self.changeAnnotator)
 
-        persons = self.db.getAllPersons()
-        personList=[]
-        for person in persons:
-            personList.append(person[0])
+        if (self.db.isOpen() or (self.activePlugin is not None)):
+            self.ui.inspectorTableView.setVisible(True)
+            self.ui.categoryView.setVisible(True)
 
-        self.annotatorsModel.setStringList(personList)
-        self.ui.annotatorComboBox.setVisible(True)
-        self.ui.annotatorComboBox.setEnabled(True)
-        model = QStandardItemModel()
-        
-        self.ui.annotatorComboBox.currentIndexChanged.connect(self.changeAnnotator)
 
-        model = QStandardItemModel()
+            model = QStandardItemModel()
+            
+            self.modelItems = list()
+            self.pluginModelItems = list()
+            classes =   self.db.getAllClasses() if self.db.isOpen() else []
+            self.classButtons = list()
+            if (self.activePlugin is None):
+                self.ui.categoryView.setRowCount(len(classes)+1)
+            else:
+                self.ui.categoryView.setRowCount(len(classes)+1+len(self.activePlugin.instance.getAnnotationLabels()))
 
-        self.modelItems = list()
-        classes =   self.db.getAllClasses()
-        self.classButtons = list()
-        self.ui.categoryView.setRowCount(len(classes)+1)
-        self.ui.categoryView.setColumnCount(4)
-        item = QTableWidgetItem('unknown')
-        pixmap = QPixmap(10,10)
-        pixmap.fill(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
-        itemcol = QTableWidgetItem('')
-        itemcol.setBackground(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
-        checkbx = QCheckBox()
-        checkbx.setChecked(True)
-        checkbx.stateChanged.connect(self.selectClasses)
-        self.ui.categoryView.setItem(0,2, item)
-        self.ui.categoryView.setItem(0,1, itemcol)
-        self.ui.categoryView.setCellWidget(0,0, checkbx)
-        self.modelItems.append(checkbx)
-
-        # For all classes in the database, make an entry in the table with
-        # a class button and respective correct color
-        
-        for clsid in range(len(classes)):
-            clsname = classes[clsid]
-            item = QTableWidgetItem(clsname[0])
+            self.ui.categoryView.setColumnCount(4)
+            item = QTableWidgetItem('unknown')
             pixmap = QPixmap(10,10)
-            pixmap.fill(QColor.fromRgb(self.get_color(clsid+1)[0],self.get_color(clsid+1)[1],self.get_color(clsid+1)[2]))
-            btn = QPushButton('')
-
-            btn.clicked.connect(partial(self.clickAnnoclass, clsid+1))
-            self.classButtons.append(btn)
+            pixmap.fill(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
             itemcol = QTableWidgetItem('')
+            itemcol.setBackground(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
             checkbx = QCheckBox()
             checkbx.setChecked(True)
-            itemcol.setBackground(QColor.fromRgb(self.get_color(clsid+1)[0],self.get_color(clsid+1)[1],self.get_color(clsid+1)[2]))
-            self.modelItems.append(checkbx)
-            self.ui.categoryView.setItem(clsid+1,2, item)
-            self.ui.categoryView.setItem(clsid+1,1, itemcol)
-            self.ui.categoryView.setCellWidget(clsid+1,0, checkbx)
-            self.ui.categoryView.setCellWidget(clsid+1,3, btn)
             checkbx.stateChanged.connect(self.selectClasses)
+            self.ui.categoryView.setItem(0,2, item)
+            self.ui.categoryView.setItem(0,1, itemcol)
+            self.ui.categoryView.setCellWidget(0,0, checkbx)
+            if (self.db.isOpen()):
+                self.modelItems.append(checkbx)
+
+            # For all classes in the database, make an entry in the table with
+            # a class button and respective correct color
             
+            for clsid in range(len(classes)):
+                clsname = classes[clsid]
+                item = QTableWidgetItem(clsname[0])
+                pixmap = QPixmap(10,10)
+                pixmap.fill(QColor.fromRgb(self.get_color(clsid+1)[0],self.get_color(clsid+1)[1],self.get_color(clsid+1)[2]))
+                btn = QPushButton('')
 
-        model.itemChanged.connect(self.selectClasses)
+                btn.clicked.connect(partial(self.clickAnnoclass, clsid+1))
+                self.classButtons.append(btn)
+                itemcol = QTableWidgetItem('')
+                checkbx = QCheckBox()
+                checkbx.setChecked(True)
+                itemcol.setBackground(QColor.fromRgb(self.get_color(clsid+1)[0],self.get_color(clsid+1)[1],self.get_color(clsid+1)[2]))
+                self.modelItems.append(checkbx)
+                self.ui.categoryView.setItem(clsid+1,2, item)
+                self.ui.categoryView.setItem(clsid+1,1, itemcol)
+                self.ui.categoryView.setCellWidget(clsid+1,0, checkbx)
+                self.ui.categoryView.setCellWidget(clsid+1,3, btn)
+                checkbx.stateChanged.connect(self.selectClasses)
+            
+            rowIdx =   len(self.db.getAllClasses())+1 if self.db.isOpen() else 0
+            self.itemsSelected = np.ones(rowIdx+1)
 
-        self.itemsSelected = np.ones(len(classes)+1)
-        self.currentVP.activeClasses = self.itemsSelected
-        self.ui.categoryView.verticalHeader().setVisible(False)
-        vheader = self.ui.categoryView.verticalHeader()
-        vheader.setDefaultSectionSize(vheader.fontMetrics().height()+2)
-        self.ui.categoryView.horizontalHeader().setVisible(False)
-        self.ui.categoryView.setColumnWidth(0, 20)
-        self.ui.categoryView.setColumnWidth(1, 20)
-        self.ui.categoryView.setColumnWidth(2, 120)
-        self.ui.categoryView.setColumnWidth(3, 50)
-        self.ui.categoryView.setShowGrid(False)
+            if (self.activePlugin is not None):
+                annoLabels = self.activePlugin.plugin.getAnnotationLabels(self.activePlugin.plugin)
 
-        if (self.imageOpened):
-            self.findSlideUID(self.slide.dimensions)
-        else:
-            self.findSlideUID()
+                for label in annoLabels:
+                    item = QTableWidgetItem('plugin:'+label.name)
+                    pixmap = QPixmap(10,10)
+                    pixmap.fill(QColor.fromRgb(label.color[0], label.color[1], label.color[2]))
+                    
+                    itemcol = QTableWidgetItem('')
+                    checkbx = QCheckBox()
+                    checkbx.setChecked(True)
+                    itemcol.setBackground(QColor.fromRgb(label.color[0], label.color[1], label.color[2]))
+                    self.pluginModelItems.append(checkbx)
+                    self.ui.categoryView.setItem(rowIdx,2, item)
+                    self.ui.categoryView.setItem(rowIdx,1, itemcol)
+                    self.ui.categoryView.setCellWidget(rowIdx,0, checkbx)
+                    checkbx.stateChanged.connect(self.selectPluginClasses)
+                    rowIdx+=1
 
-        self.ui.annotatorComboBox.setModel(self.annotatorsModel)
+                self.pluginItemsSelected = np.ones(len(annoLabels))
 
-        if (self.imageOpened):
-            self.showImage()
+            model.itemChanged.connect(self.selectClasses)
+
+            self.currentVP.activeClasses = self.itemsSelected
+            if (self.activePlugin is not None):
+                self.currentPluginVP.activeClasses = self.pluginItemsSelected
+            self.ui.categoryView.verticalHeader().setVisible(False)
+            vheader = self.ui.categoryView.verticalHeader()
+            vheader.setDefaultSectionSize(vheader.fontMetrics().height()+2)
+            self.ui.categoryView.horizontalHeader().setVisible(False)
+            self.ui.categoryView.setColumnWidth(0, 20)
+            self.ui.categoryView.setColumnWidth(1, 20)
+            self.ui.categoryView.setColumnWidth(2, 120)
+            self.ui.categoryView.setColumnWidth(3, 50)
+            self.ui.categoryView.setShowGrid(False)
+
+            if (self.imageOpened) and (self.db.isOpen()):
+                self.findSlideUID(self.slide.dimensions)
+            elif (self.db.isOpen()):
+                self.findSlideUID()
+
+            self.ui.annotatorComboBox.setModel(self.annotatorsModel)
+
+            if (self.imageOpened):
+                self.showImage()
 
 
     def sliderChanged(self):

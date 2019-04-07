@@ -105,7 +105,7 @@ class Database(object):
 
     def __init__(self):
         self.dbOpened = False
-        self.VA = list()
+        self.VA = dict()
 
         self.databaseStructure = dict()
         self.annotations = dict()       
@@ -138,15 +138,18 @@ class Database(object):
         return dict(filter(lambda i:i[0] in ids, self.annotations.items()))
 
 
-    def annotateImage(self, img: np.ndarray, leftUpper: list, rightLower:list, zoomLevel:float, vp : ViewingProfile):
+    def annotateImage(self, img: np.ndarray, leftUpper: list, rightLower:list, zoomLevel:float, vp : ViewingProfile, selectedAnnoID:int):
         annos = self.getVisibleAnnotations(leftUpper, rightLower)
         self.VA = annos
         for idx,anno in annos.items():
             if (isActiveClass(activeClasses=vp.activeClasses,label=anno.agreedLabel())):
-                anno.draw(img, leftUpper, zoomLevel, thickness=2, vp=vp)
-        
-    def findClickAnnotation(self, clickPosition, vp : ViewingProfile):
-        for idx,anno in self.VA.items():
+                anno.draw(img, leftUpper, zoomLevel, thickness=2, vp=vp, selected=(selectedAnnoID==anno.uid))
+    
+
+    def findClickAnnotation(self, clickPosition, vp : ViewingProfile, database=None):
+        if (database is None):
+            database = self.VA            
+        for idx,anno in database.items():
             if (vp.activeClasses[anno.agreedLabel()]):
                 if (anno.positionInAnnotation(clickPosition )):
                     return anno
@@ -499,6 +502,19 @@ class Database(object):
         self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId)
 
         self.commit()
+
+    def addAnnotationToDatabase(self, anno:annotation, slideUID:int, classID:int, annotatorID:int):
+        if (anno.annotationType == AnnotationType.AREA):
+            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID)
+        elif (anno.annotationType == AnnotationType.POLYGON):
+            self.insertNewPolygonAnnotation(anno.coordinates, slideUID, classID, annotatorID)
+        elif (anno.annotationType == AnnotationType.CIRCLE):
+            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID, typeId=5)
+        elif (anno.annotationType == AnnotationType.SPOT):
+            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID)
+        elif (anno.annotationType == AnnotationType.SPECIAL_SPOT):
+            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, type=4)
+        
 
 
     def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2):

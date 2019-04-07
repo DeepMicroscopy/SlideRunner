@@ -1,6 +1,7 @@
 import cv2
 import matplotlib.path as path
 import numpy as np
+import SlideRunner.general.SlideRunnerPlugin as SlideRunnerPlugin
 class AnnotationType(enumerate):
     SPOT = 1
     AREA = 2
@@ -52,12 +53,19 @@ class annoCoordinate(object):
 
 class annotation():
 
-      def __init__(self):
+      def __init__(self, uid=0, text='',pluginAnnotationLabel=None):
           self.annotationType = AnnotationType.UNKNOWN
           self.labels = list()
-          self.uid = 0
+          self.uid = uid
+          self.text = text
+          self.pluginAnnotationLabel = None
+          if (pluginAnnotationLabel is not None):
+              if (isinstance(pluginAnnotationLabel, SlideRunnerPlugin.PluginAnnotationLabel)):
+                  self.pluginAnnotationLabel = pluginAnnotationLabel
+              else:
+                  raise ValueError('pluginAnnotationLabel needs to be of class SlideRunnerPlugin.PluginAnnotationLabel')
 
-      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int = 1, vp: ViewingProfile = ViewingProfile()):
+      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int = 1, vp: ViewingProfile = ViewingProfile(), selected=False):
             return
     
       def positionInAnnotation(self, position: list) -> bool:
@@ -72,7 +80,10 @@ class annotation():
            return retval
 
       def getDescription(self, db) -> list:
-            return self.getAnnotationsDescription(db)
+            if (self.pluginAnnotationLabel is None):
+                return self.getAnnotationsDescription(db)
+            else:
+                return [['Plugin Anno',self.pluginAnnotationLabel.name],]
 
       def addLabel(self, label:AnnotationLabel):
           self.labels.append(label)
@@ -148,6 +159,8 @@ class annotation():
           return 0
         
       def getColor(self, vp : ViewingProfile):
+          if (self.pluginAnnotationLabel is not None):
+              return self.pluginAnnotationLabel.color
           if (vp.blindMode):
             return vp.COLORS_CLASSES[self.labelBy(vp.annotator) % len(vp.COLORS_CLASSES)]
           elif (vp.majorityClassVote):
@@ -165,9 +178,8 @@ class annotation():
 
 
 class rectangularAnnotation(annotation):
-      def __init__(self, uid, x1, y1, x2, y2):
-            super().__init__()
-            self.uid = uid
+      def __init__(self, uid, x1, y1, x2, y2, text='', pluginAnnotationLabel=None):
+            super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
             self.x1 = x1
             self.y1 = y1
             self.x2 = x2
@@ -187,17 +199,20 @@ class rectangularAnnotation(annotation):
             return ((position[0]>self.x1) and (position[0]<self.x2) and 
                    (position[1]>self.y1) and (position[1]<self.y2))
 
-      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile):
+      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected = False):
             xpos1=max(0,int((self.x1-leftUpper[0])/zoomLevel))
             ypos1=max(0,int((self.y1-leftUpper[1])/zoomLevel))
             xpos2=min(image.shape[1],int((self.x2-leftUpper[0])/zoomLevel))
             ypos2=min(image.shape[0],int((self.y2-leftUpper[1])/zoomLevel))
+
             image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.getColor(vp), lineType=cv2.LINE_AA)
 
+            if (len(self.text)>0):
+                  cv2.putText(image, self.text, (xpos1+3, ypos2+10), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+
 class polygonAnnotation(annotation):
-    def __init__(self, uid:int, coordinates: np.ndarray = None):
-        super().__init__()
-        self.uid = uid
+    def __init__(self, uid:int, coordinates: np.ndarray = None, text='', pluginAnnotationLabel=None):
+        super().__init__(uid=uid, pluginAnnotationLabel=pluginAnnotationLabel, text=text)
         self.annotationType = AnnotationType.POLYGON
         if (coordinates is not None):
             self.coordinates = coordinates
@@ -213,7 +228,7 @@ class polygonAnnotation(annotation):
 
         return p.contains_point(position)
 
-    def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile):
+    def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected=False):
         def slideToScreen(pos):
             """
                 convert slide coordinates to screen coordinates
@@ -234,29 +249,38 @@ class polygonAnnotation(annotation):
             anno = slideToScreen(self.coordinates[listIdx])
             cv2.line(img=image, pt1=anno, pt2=slideToScreen(self.coordinates[listIdx+1]), thickness=2, color=self.getColor(vp), lineType=cv2.LINE_AA)       
 
+            if (selected):
+                pt1_rect = (max(0,anno[0]-markersize),
+                            max(0,anno[1]-markersize))
+                pt2_rect = (min(image.shape[1],anno[0]+markersize),
+                            min(image.shape[0],anno[1]+markersize))
+                cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=[255,255,255,255], thickness=2)
+                cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=self.getColor(vp), thickness=1)
+
+
+        listIdx+=1
+        anno = slideToScreen(self.coordinates[listIdx])
+        if (selected):
             pt1_rect = (max(0,anno[0]-markersize),
                         max(0,anno[1]-markersize))
             pt2_rect = (min(image.shape[1],anno[0]+markersize),
                         min(image.shape[0],anno[1]+markersize))
             cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=[255,255,255,255], thickness=2)
-            cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=self.getColor(vp), thickness=1)
-        listIdx+=1
-        anno = slideToScreen(self.coordinates[listIdx])
-        pt1_rect = (max(0,anno[0]-markersize),
-                    max(0,anno[1]-markersize))
-        pt2_rect = (min(image.shape[1],anno[0]+markersize),
-                    min(image.shape[0],anno[1]+markersize))
-        cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=[255,255,255,255], thickness=2)
-        cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=[0,0,0,255], thickness=1)
+            cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=[0,0,0,255], thickness=1)
         cv2.line(img=image, pt1=anno, pt2=slideToScreen(self.coordinates[0]), thickness=2, color=self.getColor(vp), lineType=cv2.LINE_AA)       
+
+        if (len(self.text)>0):
+                xpos1=int(0.5*(np.max(self.coordinates[:,0])+np.min(self.coordinates[:,0]) ))
+                ypos1=int(0.5*(np.max(self.coordinates[:,1])+np.min(self.coordinates[:,1])))
+                cv2.putText(image, self.text, slideToScreen((xpos1+3, ypos1+10)), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+
 
 
 class circleAnnotation(annotation):
       
-      def __init__(self, uid, x1, y1, x2, y2):
-            super().__init__()
+      def __init__(self, uid, x1, y1, x2, y2, text='', pluginAnnotationLabel=None):
+            super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
             self.annotationType = AnnotationType.CIRCLE
-            self.uid = uid
             self.x1 = int(0.5*(x1+x2))
             self.y1 = int(0.5*(y1+y2))
             self.r = int((x2-x1)*0.5)
@@ -274,7 +298,7 @@ class circleAnnotation(annotation):
           dist = np.sqrt(np.square(position[0]-self.x1)+np.square(position[1]-self.y1))
           return (dist<=self.r)
 
-      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile):
+      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected=False):
             xpos1=int((self.x1-leftUpper[0])/zoomLevel)
             ypos1=int((self.y1-leftUpper[1])/zoomLevel)
             radius = int(self.r/zoomLevel)
@@ -283,9 +307,8 @@ class circleAnnotation(annotation):
 
 class spotAnnotation(annotation):
 
-      def __init__(self, uid, x1, y1, isSpecialSpot : bool = False):
-            super().__init__()
-            self.uid = uid
+      def __init__(self, uid, x1, y1, isSpecialSpot : bool = False,text='', pluginAnnotationLabel=None):
+            super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
             self.annotationType = AnnotationType.SPOT
             self.x1 = x1
             self.y1 = y1
@@ -298,7 +321,7 @@ class spotAnnotation(annotation):
       def maxCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1+50, self.y1+50)
 
-      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile):
+      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected=False):
             xpos1=int((self.x1-leftUpper[0])/zoomLevel)
             ypos1=int((self.y1-leftUpper[1])/zoomLevel)
             radius=int(vp.spotCircleRadius/zoomLevel)

@@ -100,7 +100,7 @@ from SlideRunner.gui.SlideRunner_ui import Ui_MainWindow
 from SlideRunner.gui.dialogs.about import aboutDialog
 from SlideRunner.gui.dialogs.settings import settingsDialog
 from SlideRunner.gui import shortcuts, toolbar, mouseEvents, annotation
-from SlideRunner.dataAccess.database import Database
+from SlideRunner.dataAccess.database import Database, annotation
 from SlideRunner.processing import screening, thumbnail
 from SlideRunner.general import SlideRunnerPlugin
 from SlideRunner.gui.types import *

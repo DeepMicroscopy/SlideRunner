@@ -138,21 +138,34 @@ def leftClickImage(self, event):
         self.ui.clickToMove = False
         # Move image if shift+left click
         modifiers = QtWidgets.QApplication.keyboardModifiers()
-        if (modifiers == Qt.ShiftModifier) or (self.db.isOpen() == False):
+        if (modifiers == Qt.ShiftModifier) or ((self.db.isOpen() == False) and (self.activePlugin == False)):
             self.ui.clickToMove = True
             self.ui.anno_pt1 = (posx,posy)
             self.setCursor(Qt.ClosedHandCursor)
             return
 
-        if not (self.db.isOpen()):
-            return
-        
         mouseClickGlobal = self.screenToSlide((posx,posy))
 
-        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP)
-        if (clickedAnno is not None):
-            self.showDBEntry(clickedAnno)
-        
+        if (self.activePlugin is not None):
+            clickedAnno = self.activePlugin.instance.findClickAnnotation( clickPosition=mouseClickGlobal, pluginVP=self.currentPluginVP)
+            if (clickedAnno is not None):
+                self.showDBEntry(clickedAnno)
+                self.selectedPluginAnno = clickedAnno.uid
+            else:
+                self.selectedPluginAnno = None
+            
+
+        clickedAnno = None
+        if (self.db.isOpen()):
+            clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP)
+            if (clickedAnno is not None):
+                self.showDBEntry(clickedAnno)
+                self.selectedAnno = clickedAnno.uid
+            else:
+                self.selectedAnno = None
+
+
+
         if clickedAnno is not None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT):
             # fast annotation on previous anno
             # check: did I annotate this item already?
@@ -170,8 +183,6 @@ def leftClickImage(self, event):
                 self.saveLastViewport()                
                 if (self.discoveryMode):
                     self.discoverUnclassified()
-                else:
-                    self.showImage()
 
         if clickedAnno is None and (self.ui.mode==UIMainMode.MODE_VIEW):
             # Move image
@@ -210,7 +221,7 @@ def leftClickImage(self, event):
                 self.ui.annotationMode=1
                 self.ui.moveDots=0
             self.ui.annotationsList.append(self.screenToSlide(getMouseEventPosition(self,event)))            
-            self.showImage()
+        self.showImage()
 
 def getMouseEventPosition(self,event):
     """
@@ -275,8 +286,26 @@ def rightClickImage(self, event):
     posx,posy = getMouseEventPosition(self, event)
 
     annoIsFlag=False
+            
+    mouseClickGlobal = self.screenToSlide((posx,posy))
 
     if (self.db.isOpen()):
+
+        if (self.activePlugin is not None):
+            clickedAnno = self.activePlugin.instance.findClickAnnotation( clickPosition=mouseClickGlobal, pluginVP=self.currentPluginVP)
+            if (clickedAnno is not None):
+                self.selectedPluginAnno = clickedAnno.uid
+                self.showImage()
+                menu = QMenu(self)
+                addmenu = menu.addMenu('Copy to current database as:')
+                menuitems = list()
+                for clsname in self.db.getAllClasses():
+                    act=addmenu.addAction(clsname[0],partial(GUIannotation.copyAnnotation,self,clickedAnno, clsname[1], event))
+                    menuitems.append(act)
+
+                addmenu = menu.addAction('Cancel', self.hitEscape)
+                action = menu.exec_(self.mapToGlobal(event.pos()))
+                return
 
 
         if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON):
@@ -293,7 +322,6 @@ def rightClickImage(self, event):
             action = menu.exec_(self.mapToGlobal(event.pos()))
             return
 
-        mouseClickGlobal = self.screenToSlide((posx,posy))
         clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP)
 
 
@@ -305,6 +333,8 @@ def rightClickImage(self, event):
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.addSpotAnnotation,self,clsname[1], event))
                 menuitems.append(act)
         else:
+            self.selectedAnno = clickedAnno.uid
+            self.showImage()
             labels=self.db.findAllAnnotationLabels(clickedAnno.uid)
             if not (annoIsFlag):
                 for labelIdx in range(len(labels)):
@@ -328,8 +358,8 @@ def rightClickImage(self, event):
             menu.addAction('Remove annotation', partial(self.removeAnnotation, clickedAnno.uid))
 
             if (self.activePlugin is not None):
-                pluginActionMenu = menu.addMenu('Plugin:'+self.activePlugin.plugin.shortName)
-                for pluginConfig in self.activePlugin.plugin.configurationList:
+                pluginActionMenu = menu.addMenu('Plugin:'+self.activePlugin.instance.shortName)
+                for pluginConfig in self.activePlugin.instance.configurationList:
                     if (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.ANNOTATIONACTION):
                         pluginActionMenu.addAction(pluginConfig.name, partial(self.sendAnnoToPlugin, clickedAnno, pluginConfig.uid))                        
 
