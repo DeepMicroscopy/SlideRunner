@@ -27,6 +27,7 @@ import threading
 import openslide
 import numpy as np
 from threading import Thread
+import SlideRunner.dataAccess.annotations as annotations 
 
 
 class Plugin(SlideRunnerPlugin.SlideRunnerPlugin): 
@@ -96,9 +97,9 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
         self.annos = list()
         if (int(job.configuration[1])==1):
-            myanno = SlideRunnerPlugin.rectangularAnnotation(center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, 'High-Power Field')
+            myanno = annotations.rectangularAnnotation(0, center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, 'High-Power Field')
         else:
-            myanno = SlideRunnerPlugin.rectangularAnnotation(center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, '%d High-Power Fields' %  int(job.configuration[1]))
+            myanno = annotations.rectangularAnnotation(0, center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, '%d High-Power Fields' %  int(job.configuration[1]))
         self.annos.append(myanno)
 
         self.updateAnnotations()

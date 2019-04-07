@@ -38,6 +38,11 @@ def addSpotAnnotation(self, classID, event, typeAnno=1):
 
     self.showAnnotationsInOverview()
 
+def copyAnnotation(self,pluginAnno, classID,event):
+    self.db.addAnnotationToDatabase(pluginAnno, slideUID=self.slideUID, classID=classID, annotatorID=self.retrieveAnnotator(event))
+    self.db.loadIntoMemory(slideId=self.slideUID)
+    self.showImage()
+
 def addPolygonAnnotation(self,classID,event):
     """
         Polygon annotation is ready. Add to database.
