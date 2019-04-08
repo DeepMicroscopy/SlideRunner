@@ -126,7 +126,6 @@ def moveImage(self, event):
         self.showImage()
 
 
-
 def leftClickImage(self, event):
         """
             Callback function for a left click in the main image
@@ -380,6 +379,8 @@ def rightClickImage(self, event):
         
 
     action = menu.exec_(self.mapToGlobal(event.pos()))
+    if (self.db.isOpen()):
+        self.showDBentryCount()
 
 def pressImage(self, event):
     """
