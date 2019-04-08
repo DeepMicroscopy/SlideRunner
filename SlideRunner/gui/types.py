@@ -26,4 +26,12 @@ class UIMainMode (enumerate):
     MODE_ANNOTATE_FLAG = 5
     MODE_ANNOTATE_CIRCLE = 6
     
+class ClassRowItemId (enumerate):
+    ITEM_DATABASE = 0
+    ITEM_PLUGIN = 1
+
+class ClassRowItem(object):
+    def __init__(self, itemID: ClassRowItemId, classID):
+        self.itemID = itemID
+        self.classID = classID
 

@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.21.0'
+version = '1.22.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -168,7 +168,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         # Add sidebar
-        self.ui = addSidebar(self.ui)
+        self.ui = addSidebar(self.ui, self)
         self.ui.moveDots=0
         self.currentZoom = 1
         self.annotationsSpots=list()
@@ -410,7 +410,6 @@ class SlideRunnerUI(QMainWindow):
                     newButton.clicked.connect(partial(self.pluginFilePickerButtonHit, pluginConfig, newLabel))
                     self.ui.tab3Layout.addLayout(hLayout)
                     self.pluginFilepickers[pluginConfig.uid] = {'button' : newButton, 'label' : newLabel}
-                    print('Added new filepicker')
                     
                 elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.SLIDER_WITH_FLOAT_VALUE):
                     newLabel = QtWidgets.QLabel(self.ui.tab3widget)
@@ -510,24 +509,26 @@ class SlideRunnerUI(QMainWindow):
             self.showDatabaseUIelements()
             self.addActivePluginToSidebar(plugin.plugin)
             if (plugin.plugin.outputType != SlideRunnerPlugin.PluginOutputType.NO_OVERLAY):
+                self.ui.opacitySlider.valueChanged.disconnect(self.changeOpacity)                
                 self.ui.opacitySlider.setValue(int(plugin.plugin.initialOpacity*100))
+                self.ui.opacitySlider.valueChanged.connect(self.changeOpacity)
                 self.ui.opacitySlider.setHidden(False)
                 self.ui.opacitySlider.setEnabled(True)
                 self.ui.opacityLabel.setHidden(False)
             else:
                 self.ui.opacityLabel.setHidden(True)
                 self.ui.opacitySlider.setHidden(True)
+            self.triggerPlugin(self.rawImage)
         else:
             self.activePlugin = None
             self.ui.opacityLabel.setHidden(True)
             self.ui.opacitySlider.setHidden(True)
 
-
-
         print('Active plugin is now ', self.activePlugin)
         self.overlayMap = None
         self.pluginAnnos = list()
-        self.showImage()
+        if not active:
+            self.showImage()
 
     """
         Aggregate plugin configuration alltogether
@@ -555,7 +556,7 @@ class SlideRunnerUI(QMainWindow):
     """
     def triggerPlugin(self,currentImage, annotations=None, trigger=None, actionUID=None):
 
-        print('Plugin triggered...')
+        print('Plugin triggered...',self.gatherPluginConfig())
         image_dims=self.slide.level_dimensions[0]
         actual_downsample = self.getZoomValue()
         visualarea = self.mainImageSize
@@ -620,7 +621,6 @@ class SlideRunnerUI(QMainWindow):
 
         if (self.screeningIndex+len(self.screeningHistory)<=0):
             self.ui.iconPreviousScreen.setEnabled(False)
-
         self.showImage()
         return
 
@@ -640,6 +640,7 @@ class SlideRunnerUI(QMainWindow):
             self.setCenterTo(self.screeningHistory[self.screeningIndex-1][0],self.screeningHistory[self.screeningIndex-1][1])
             self.showImage()
             return
+            self.ui.iconPreviousScreen.setEnabled(True)
 
 
         relOffset_x = self.mainImageSize[0] / self.slide.level_dimensions[0][0]
@@ -697,6 +698,7 @@ class SlideRunnerUI(QMainWindow):
             return
         self.screeningMode = self.ui.iconScreening.isChecked()
         self.ui.iconNextScreen.setEnabled(self.screeningMode)
+        self.ui.iconPreviousScreen.setEnabled(False)
 
         if (self.screeningMode):
             self.setZoomValue(1.0) # no magnification
@@ -1278,6 +1280,10 @@ class SlideRunnerUI(QMainWindow):
             Resize event, used as callback function when the application is resized.
         """
         super().resizeEvent(event)
+        if (event.oldSize() == event.size()):
+            return
+        
+
         self.overlayMap=None
         if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
             self.pluginAnnos = list()
@@ -1422,7 +1428,6 @@ class SlideRunnerUI(QMainWindow):
 
             It's also being called a lot, basically after every change in the UI.
         """
-
         if (not self.imageOpened):
             return
         
@@ -1513,7 +1518,9 @@ class SlideRunnerUI(QMainWindow):
         self.refreshTimer = Timer(1, self.updateImageCache)                
         self.refreshTimer.start()
 
-        if (self.activePlugin is not None) and (self.overlayMap is None) and (len(self.pluginAnnos)==0):
+        if ((self.activePlugin is not None) and (self.overlayMap is None) and 
+           ((self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE ) or 
+            self.activePlugin.instance.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN) and (len(self.pluginAnnos)==0)):
             from threading import Timer
             if (self.updateTimer is not None):
                 self.updateTimer.cancel()
@@ -1699,7 +1706,6 @@ class SlideRunnerUI(QMainWindow):
             lastdatabaseslist.append(filename)
             lastdatabaseslist = lastdatabaseslist[-11:]
             self.settings.setValue('lastDatabases', lastdatabaseslist)
-            print('Last databases list is now: ',lastdatabaseslist)
 
             menu.updateOpenRecentDatabase(self)
 
@@ -1736,7 +1742,6 @@ class SlideRunnerUI(QMainWindow):
         num = self.db.countEntries()
         dbinfo = '<html>'+self.db.getDBname()+'(%d entries)' % (num) +'<br><html>'
         self.ui.databaseLabel.setText(dbinfo)
-
         self.showDBstatistics()
 
     def findAnnoByID(self):
@@ -1813,8 +1818,9 @@ class SlideRunnerUI(QMainWindow):
             self.lastAnnotationClass=classid
             self.showAnnoclass()
 
-
-
+    def deleteCurrentSelection(self):
+        if (self.selectedAnno is not None):
+            self.removeAnnotation(self.selectedAnno)
 
 
     def showDatabaseUIelements(self):
@@ -1841,6 +1847,7 @@ class SlideRunnerUI(QMainWindow):
             self.ui.categoryView.setVisible(True)
 
 
+            tableRows = dict()
             model = QStandardItemModel()
             
             self.modelItems = list()
@@ -1860,6 +1867,7 @@ class SlideRunnerUI(QMainWindow):
             itemcol.setBackground(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
             checkbx = QCheckBox()
             checkbx.setChecked(True)
+            tableRows[0] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, 0)
             checkbx.stateChanged.connect(self.selectClasses)
             self.ui.categoryView.setItem(0,2, item)
             self.ui.categoryView.setItem(0,1, itemcol)
@@ -1889,6 +1897,8 @@ class SlideRunnerUI(QMainWindow):
                 self.ui.categoryView.setCellWidget(clsid+1,0, checkbx)
                 self.ui.categoryView.setCellWidget(clsid+1,3, btn)
                 checkbx.stateChanged.connect(self.selectClasses)
+
+                tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid)
             
             rowIdx =   len(self.db.getAllClasses())+1 if self.db.isOpen() else 0
             self.itemsSelected = np.ones(rowIdx+1)
@@ -1910,9 +1920,16 @@ class SlideRunnerUI(QMainWindow):
                     self.ui.categoryView.setItem(rowIdx,1, itemcol)
                     self.ui.categoryView.setCellWidget(rowIdx,0, checkbx)
                     checkbx.stateChanged.connect(self.selectPluginClasses)
+
+                    tableRows[rowIdx] = ClassRowItem(ClassRowItemId.ITEM_PLUGIN, label)
+
                     rowIdx+=1
 
+                    
+
                 self.pluginItemsSelected = np.ones(len(annoLabels))
+
+            self.classList = tableRows
 
             model.itemChanged.connect(self.selectClasses)
 
@@ -1936,8 +1953,8 @@ class SlideRunnerUI(QMainWindow):
 
             self.ui.annotatorComboBox.setModel(self.annotatorsModel)
 
-            if (self.imageOpened):
-                self.showImage()
+            #if (self.imageOpened):
+            #    self.showImage()
 
 
     def sliderChanged(self):
@@ -2047,7 +2064,6 @@ class SlideRunnerUI(QMainWindow):
         # Initialize a new screening map
         self.screeningMap = screening.screeningMap(overview, self.mainImageSize, self.slide.level_dimensions, self.thumbnail.size)
 
-        self.resizeEvent(None)
         self.initZoomSlider()
         self.imageCenter=[0,0]
         self.setZoomValue(self.getMaxZoom())
