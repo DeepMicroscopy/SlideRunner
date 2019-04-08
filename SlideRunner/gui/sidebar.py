@@ -1,8 +1,37 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5.QtWidgets import QMenu
+from PyQt5.QtWidgets import QTableWidget
+from SlideRunner.gui.types import *
+from SlideRunner.gui import annotation as GUIannotation
+from functools import partial
+
+class ClassSelectTableWidget(QTableWidget):
+    def __init__(self, parent = None, parentObject = None):
+        QTableWidget.__init__(self, parent)
+        self.parentObject = parentObject
+    
+    def contextMenuEvent(self, event):
+        rowId = self.rowAt(event.pos().y())
+        menu = QMenu(self)
+        if (self.parentObject.db.isOpen()):
+                addAction = menu.addAction('Add new class')
+                addAction.triggered.connect(self.parentObject.addCellClass)
+                if (rowId > 0):
+                        if (self.parentObject.classList[rowId].itemID == ClassRowItemId.ITEM_DATABASE):
+                                removeAction = menu.addAction('Remove class')                
+
+                if (self.parentObject.activePlugin is not None) and (rowId > 0):
+                        if (self.parentObject.classList[rowId].itemID == ClassRowItemId.ITEM_PLUGIN):
+                                addmenu = menu.addMenu('Copy all items to database as:')
+                                menuitems = list()
+                                for clsname in self.parentObject.db.getAllClasses():
+                                        act=addmenu.addAction(clsname[0],partial(GUIannotation.copyAllAnnotations,self.parentObject,self.parentObject.classList[rowId].classID, clsname[1], event))
+                                        menuitems.append(act)
+
+        action = menu.exec_(self.mapToGlobal(event.pos()))
 
 
-
-def addSidebar(self):
+def addSidebar(self, parentObject):
 
         self.tabView = QtWidgets.QTabWidget()
 
@@ -40,7 +69,7 @@ def addSidebar(self):
 
 
 
-        self.categoryView = QtWidgets.QTableWidget(self.centralwidget)
+        self.categoryView = ClassSelectTableWidget(self.centralwidget, parentObject)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)

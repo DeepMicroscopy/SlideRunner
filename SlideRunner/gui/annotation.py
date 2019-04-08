@@ -16,6 +16,7 @@
 
 import numpy as np
 from SlideRunner.gui import mouseEvents as mouseEvents
+from PyQt5 import QtWidgets
 
 
 def addSpotAnnotation(self, classID, event, typeAnno=1):
@@ -38,10 +39,29 @@ def addSpotAnnotation(self, classID, event, typeAnno=1):
 
     self.showAnnotationsInOverview()
 
+def copyAllAnnotations(self, pluginAnnoClass, classID, event = None):
+    if not (self.db.isOpen()) or (self.activePlugin == None):
+        return
+    
+    annos = self.activePlugin.instance.getAnnotationsOfLabel(pluginAnnoClass)
+
+    reply = QtWidgets.QMessageBox.question(self, 'Question',
+                                    'Do you really wish to copy %d annotation items of this class to the database?' % len(annos), QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+    if reply == QtWidgets.QMessageBox.No:
+        return
+    
+    for pluginAnno in annos:
+        self.db.addAnnotationToDatabase(pluginAnno, slideUID=self.slideUID, classID=classID, annotatorID=self.retrieveAnnotator(event))
+    
+    self.showImage()
+
+
 def copyAnnotation(self,pluginAnno, classID,event):
     self.db.addAnnotationToDatabase(pluginAnno, slideUID=self.slideUID, classID=classID, annotatorID=self.retrieveAnnotator(event))
     self.db.loadIntoMemory(slideId=self.slideUID)
     self.showImage()
+    self.showDBentryCount()
 
 def addPolygonAnnotation(self,classID,event):
     """
@@ -54,6 +74,7 @@ def addPolygonAnnotation(self,classID,event):
     self.showImage()
     self.showAnnotationsInOverview()
     self.writeDebug('added polygon annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))
+    self.showDBentryCount()
     
 
 def addCircleAnnotation(self, classID, event):
@@ -117,4 +138,5 @@ def addAreaAnnotation(self, classID, event):
     self.showDBentryCount()
     self.showImage()
     self.showAnnotationsInOverview()
+    self.showDBentryCount()
     self.writeDebug('added area annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))

@@ -51,6 +51,20 @@ class annoCoordinate(object):
     def tolist(self):
         return [self.x, self.y]
 
+class AnnotationHandle(object):
+    pt1 = None
+    pt2 = None
+
+    def __init__(self, pt1:annoCoordinate, pt2:annoCoordinate):
+        self.pt1 = pt1
+        self.pt2 = pt2
+
+    def positionWithinRectangle(position:tuple):
+        return ((position[0]>self.pt1.x) and (position[1]>self.pt1.y) and
+                (position[0]<self.pt2.x) and (position[1]<self.pt2.y))
+
+
+
 class annotation():
 
       def __init__(self, uid=0, text='',pluginAnnotationLabel=None):
@@ -78,7 +92,11 @@ class annotation():
                className = db.getClassByID(label.classId)
                retval.append(['Anno %d' % (idx+1), '%s (%s)' % (className,annotatorName)])
            return retval
+          
 
+      def positionInAnnotationHandle(self, position: tuple) -> int:
+          return None
+          
       def getDescription(self, db) -> list:
             if (self.pluginAnnotationLabel is None):
                 return self.getAnnotationsDescription(db)
@@ -87,7 +105,16 @@ class annotation():
 
       def addLabel(self, label:AnnotationLabel):
           self.labels.append(label)
-        
+
+      def _create_annohandle(self, image:np.ndarray, coord:tuple, markersize:int, color:tuple) -> AnnotationHandle:
+            pt1_rect = (max(0,coord[0]-markersize),
+                        max(0,coord[1]-markersize))
+            pt2_rect = (min(image.shape[1],coord[0]+markersize),
+                        min(image.shape[0],coord[1]+markersize))
+            cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=[255,255,255,255], thickness=2)
+            cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=color, thickness=1)
+            return AnnotationHandle(annoCoordinate(pt1_rect[0],pt1_rect[1]), annoCoordinate(pt2_rect[0],pt2_rect[1]))
+
       def getDimensions(self) -> (int, int):
           minC = self.minCoordinates()
           maxC = self.maxCoordinates()
@@ -214,8 +241,15 @@ class polygonAnnotation(annotation):
     def __init__(self, uid:int, coordinates: np.ndarray = None, text='', pluginAnnotationLabel=None):
         super().__init__(uid=uid, pluginAnnotationLabel=pluginAnnotationLabel, text=text)
         self.annotationType = AnnotationType.POLYGON
+        self.annoHandles = list()
         if (coordinates is not None):
             self.coordinates = coordinates
+    
+    def positionInAnnotationHandle(self, position: tuple) -> int:
+        for key,annoHandle in enumerate(self.annoHandles):
+             if (annoHandle.positionWithinRectangle(position)):
+                 return key
+        return None
 
     def minCoordinates(self) -> annoCoordinate:
         return annoCoordinate(self.coordinates[:,0].min(), self.coordinates[:,1].min())
@@ -238,8 +272,10 @@ class polygonAnnotation(annotation):
             cx = int((xpos - p1[0]) / zoomLevel)
             cy = int((ypos - p1[1]) / zoomLevel)
             return (cx,cy)        
-        markersize = int(5/zoomLevel)
+        markersize = int(3/zoomLevel)
         listIdx=-1
+
+        self.annoHandles=list()
 
         # small assertion to fix bug #12
         if (self.coordinates.shape[1]==0):
@@ -250,23 +286,14 @@ class polygonAnnotation(annotation):
             cv2.line(img=image, pt1=anno, pt2=slideToScreen(self.coordinates[listIdx+1]), thickness=2, color=self.getColor(vp), lineType=cv2.LINE_AA)       
 
             if (selected):
-                pt1_rect = (max(0,anno[0]-markersize),
-                            max(0,anno[1]-markersize))
-                pt2_rect = (min(image.shape[1],anno[0]+markersize),
-                            min(image.shape[0],anno[1]+markersize))
-                cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=[255,255,255,255], thickness=2)
-                cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=self.getColor(vp), thickness=1)
+                self.annoHandles.append(self._create_annohandle(image, anno, markersize, self.getColor(vp)))
 
 
         listIdx+=1
         anno = slideToScreen(self.coordinates[listIdx])
         if (selected):
-            pt1_rect = (max(0,anno[0]-markersize),
-                        max(0,anno[1]-markersize))
-            pt2_rect = (min(image.shape[1],anno[0]+markersize),
-                        min(image.shape[0],anno[1]+markersize))
-            cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=[255,255,255,255], thickness=2)
-            cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=[0,0,0,255], thickness=1)
+                self.annoHandles.append(self._create_annohandle(image, anno, markersize, self.getColor(vp)))
+
         cv2.line(img=image, pt1=anno, pt2=slideToScreen(self.coordinates[0]), thickness=2, color=self.getColor(vp), lineType=cv2.LINE_AA)       
 
         if (len(self.text)>0):
@@ -278,12 +305,18 @@ class polygonAnnotation(annotation):
 
 class circleAnnotation(annotation):
       
-      def __init__(self, uid, x1, y1, x2, y2, text='', pluginAnnotationLabel=None):
+      def __init__(self, uid, x1, y1, x2 = None, y2 = None, r = None, text='', pluginAnnotationLabel=None):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
             self.annotationType = AnnotationType.CIRCLE
-            self.x1 = int(0.5*(x1+x2))
-            self.y1 = int(0.5*(y1+y2))
-            self.r = int((x2-x1)*0.5)
+
+            if (r is None):
+                self.x1 = int(0.5*(x1+x2))
+                self.y1 = int(0.5*(y1+y2))
+                self.r = int((x2-x1)*0.5)
+            else:
+                self.x1 = int(x1)
+                self.y1 = int(y1)
+                self.r = int(r)
 
       def minCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1-self.r, self.y1-self.r)
