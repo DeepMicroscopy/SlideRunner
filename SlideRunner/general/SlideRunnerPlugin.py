@@ -75,14 +75,14 @@ class FilePickerDialogType(enumerate):
 class PluginAnnotationLabel():
 
       def __set_color(self, color:tuple):
-            if len(color) != 3:
-                  raise ValueError('Color needs to be a tuple of three integer values.')
+            if len(color) != 4:
+                  raise ValueError('Color needs to be a tuple of four integer values.')
             elif all([isinstance(x,int) for x in color]):
                   self.__color = color
             elif all([isinstance(x,float) for x in color]):
                   self.__color = [int(x*255) for x in color]
             else:
-                  raise ValueError('Color needs to be a tuple of three integer values (<255) or three float values (=<1)')
+                  raise ValueError('Color needs to be a tuple of four integer values (<255) or three float values (=<1)')
       
       def __get_color(self):
             return self.__color
@@ -236,10 +236,20 @@ class SlideRunnerPlugin:
                               return anno
             return None
 
+      def getAnnotationsOfLabel(self, annoLabel:PluginAnnotationLabel):
+            labels = self.getAnnotationLabels()
+            annoList=list()
+            for idx,anno in enumerate(self.getAnnotations()):
+                  if (anno.pluginAnnotationLabel is not None) and (anno.pluginAnnotationLabel.uid == annoLabel.uid):
+                        annoList.append(anno)
+            
+            return annoList
+
+
 
       def getAnnotationLabels(self):
             # sending default annotation labels
-            return [PluginAnnotationLabel(0,'annotation', [0,0,0])]
+            return [PluginAnnotationLabel(0,'annotation', [0,0,0,0])]
 
       def getAnnotations(self):
             print('Sent empty annotation list.')

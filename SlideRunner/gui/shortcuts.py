@@ -40,6 +40,14 @@ def defineShortcuts(self):
     shortcutN.activated.connect(self.nextScreeningStep)
     shortcuts.append(shortcutN)
 
+    shortcut = QShortcut(QKeySequence.Delete, self)
+    shortcut.activated.connect(self.deleteCurrentSelection)
+    shortcuts.append(shortcut)
+    shortcut = QShortcut(QKeySequence.Backspace, self)
+    shortcut.activated.connect(self.deleteCurrentSelection)
+    shortcuts.append(shortcut)
+
+
     return shortcuts
 
 def defineMenuShortcuts(self):
