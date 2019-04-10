@@ -97,7 +97,7 @@ class annotation():
       def positionInAnnotationHandle(self, position: tuple) -> int:
           return None
           
-      def getDescription(self, db) -> list:
+      def getDescription(self, db, micronsPerPixel=None) -> list:
             if (self.pluginAnnotationLabel is None):
                 return self.getAnnotationsDescription(db)
             else:
@@ -216,7 +216,7 @@ class rectangularAnnotation(annotation):
       def minCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1, self.y1)
       
-      def getDescription(self,db) -> list:
+      def getDescription(self,db, micronsPerPixel=None) -> list:
           return [['Position', 'x1=%d, y1=%d, x2=%d, y2=%d' % (self.x1,self.y1,self.x2,self.y2)]] + self.getAnnotationsDescription(db)
 
       def maxCoordinates(self) -> annoCoordinate:
@@ -256,6 +256,16 @@ class polygonAnnotation(annotation):
 
     def maxCoordinates(self) -> annoCoordinate:
         return annoCoordinate(self.coordinates[:,0].max(), self.coordinates[:,1].max())
+    
+    def area_px(self) -> float:
+        return cv2.contourArea(self.coordinates)
+
+    def getDescription(self,db, micronsPerPixel=None) -> list:
+        mc = annoCoordinate(self.coordinates[:,0].mean(), self.coordinates[:,1].mean())
+        area_px = self.area_px()
+        area = '%d px^2' % area_px if micronsPerPixel == 1E-6 else '%.2f µm^2' % (area_px*micronsPerPixel*micronsPerPixel)
+        return [['Position', 'x1=%d, y1=%d' % (mc.x,mc.y)], ['Area', area]] + self.getAnnotationsDescription(db)
+
 
     def positionInAnnotation(self, position: list) -> bool:
         p = path.Path(self.coordinates)
@@ -324,7 +334,7 @@ class circleAnnotation(annotation):
       def maxCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1+self.r, self.y1+self.r)
 
-      def getDescription(self,db) -> list:
+      def getDescription(self,db, micronsPerPixel=None) -> list:
           return [['Position', 'x1=%d, y1=%d' % (self.x1, self.y1)]] + self.getAnnotationsDescription(db)
 
       def positionInAnnotation(self, position: list) -> bool:
@@ -361,7 +371,7 @@ class spotAnnotation(annotation):
             if (radius>=0):
                   image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=self.getColor(vp), lineType=cv2.LINE_AA)
 
-      def getDescription(self,db) -> list:
+      def getDescription(self,db, micronsPerPixel=None) -> list:
           return [['Position', 'x1=%d, y1=%d' % (self.x1, self.y1)]] + self.getAnnotationsDescription(db)
 
       def positionInAnnotation(self, position: list) -> bool:

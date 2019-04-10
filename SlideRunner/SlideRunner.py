@@ -978,7 +978,7 @@ class SlideRunnerUI(QMainWindow):
         item = QStandardItem(str(entry.uid))
         table_model.appendRow([lab1,item])
 
-        getdesc = entry.getDescription(self.db)
+        getdesc = entry.getDescription(self.db,micronsPerPixel=self.slideMicronsPerPixel)
         for (label, item) in getdesc:
             lab1 = QStandardItem(label)
             itemi = QStandardItem(item)
@@ -1867,7 +1867,7 @@ class SlideRunnerUI(QMainWindow):
             itemcol.setBackground(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
             checkbx = QCheckBox()
             checkbx.setChecked(True)
-            tableRows[0] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, 0)
+            tableRows[0] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, 0, uid=0)
             checkbx.stateChanged.connect(self.selectClasses)
             self.ui.categoryView.setItem(0,2, item)
             self.ui.categoryView.setItem(0,1, itemcol)
@@ -1898,7 +1898,7 @@ class SlideRunnerUI(QMainWindow):
                 self.ui.categoryView.setCellWidget(clsid+1,3, btn)
                 checkbx.stateChanged.connect(self.selectClasses)
 
-                tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid)
+                tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid, clsname[1])
             
             rowIdx =   len(self.db.getAllClasses())+1 if self.db.isOpen() else 0
             self.itemsSelected = np.ones(rowIdx+1)
@@ -1956,6 +1956,13 @@ class SlideRunnerUI(QMainWindow):
             #if (self.imageOpened):
             #    self.showImage()
 
+
+    def toggleAnnoclass(self, id):
+        if (id<len(self.classList)):
+            if (self.pluginModelItems[item].checkState()):
+                self.pluginModelItems[item].setChecked(False)       
+            else: 
+                self.pluginModelItems[item].setChecked(True)       
 
     def sliderChanged(self):
         """
