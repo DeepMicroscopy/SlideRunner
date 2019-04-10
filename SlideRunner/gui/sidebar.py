@@ -20,6 +20,9 @@ class ClassSelectTableWidget(QTableWidget):
                         if (self.parentObject.classList[rowId].itemID == ClassRowItemId.ITEM_DATABASE):
                                 removeAction = menu.addAction('Remove class')                
 
+                                removeAllOfClassAction = menu.addAction('Remove all of this class from slide', partial(GUIannotation.deleteAllFromClassOnSlide,self.parentObject, self.parentObject.classList[rowId].uid))
+
+
                 if (self.parentObject.activePlugin is not None) and (rowId > 0):
                         if (self.parentObject.classList[rowId].itemID == ClassRowItemId.ITEM_PLUGIN):
                                 addmenu = menu.addMenu('Copy all items to database as:')

@@ -39,6 +39,28 @@ def addSpotAnnotation(self, classID, event, typeAnno=1):
 
     self.showAnnotationsInOverview()
 
+def deleteAllFromClassOnSlide(self, classID, event = None):
+    if not (self.db.isOpen()):
+        return
+
+    reply = QtWidgets.QMessageBox.question(self, 'Question',
+                                    'Do you really wish to delete all objects of this class from the current slide?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+    if reply == QtWidgets.QMessageBox.No:
+        return
+
+
+    deletekeys=[]
+    for annoIdx in self.db.annotations.keys():
+        anno = self.db.annotations[annoIdx]
+        if (anno.majorityLabel()==classID):
+            deletekeys.append(anno.uid)
+    for uid in deletekeys:
+        self.db.removeAnnotation(uid)
+
+    self.showDBentryCount()
+    self.showImage()
+
 def copyAllAnnotations(self, pluginAnnoClass, classID, event = None):
     if not (self.db.isOpen()) or (self.activePlugin == None):
         return
