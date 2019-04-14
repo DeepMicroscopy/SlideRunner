@@ -246,7 +246,6 @@ class SlideRunnerPlugin:
             return annoList
 
 
-
       def getAnnotationLabels(self):
             # sending default annotation labels
             return [PluginAnnotationLabel(0,'annotation', [0,0,0,0])]
@@ -254,3 +253,20 @@ class SlideRunnerPlugin:
       def getAnnotations(self):
             print('Sent empty annotation list.')
             return list()
+
+
+def generateMinMaxCoordsList( annoList) -> (np.ndarray, np.ndarray):
+      # MinMaxCoords lists shows extreme coordinates from object, to decide if an object shall be shown
+      minCoords = np.zeros(shape=(len(annoList),2))
+      maxCoords = np.zeros(shape=(len(annoList),2))
+      for annokey in range(len(annoList)):
+            annotation = annoList[annokey]
+            minCoords[annokey] = np.asarray(annotation.minCoordinates().tolist())
+            maxCoords[annokey] = np.asarray(annotation.maxCoordinates().tolist())
+
+      return minCoords, maxCoords
+
+def getVisibleAnnotations(leftUpper:list, rightLower:list, annotations:np.ndarray, minCoords:np.ndarray, maxCoords:np.ndarray) -> list:
+      potentiallyVisible =  ( (maxCoords[:,0] > leftUpper[0]) & (minCoords[:,0] < rightLower[0]) & 
+                              (maxCoords[:,1] > leftUpper[1]) & (minCoords[:,1] < rightLower[1]) )
+      return np.array(annotations)[np.where(potentiallyVisible)[0]].tolist()

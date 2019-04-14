@@ -322,6 +322,7 @@ class SlideRunnerUI(QMainWindow):
 
     def receiveAnno(self, anno):
         self.pluginAnnos = anno
+        self.pluginMinCoords, self.pluginMaxCoords = SlideRunnerPlugin.generateMinMaxCoordsList(anno)
         self.showImage_part2(np.empty(shape=(1)), self.processingStep)
 
     def setProgressBar(self, number):
@@ -1558,7 +1559,8 @@ class SlideRunnerUI(QMainWindow):
         if (self.activePlugin is not None):
             labels = self.activePlugin.instance.getAnnotationLabels()
             annoKeys=np.array([x.uid for x in labels])[np.where(self.pluginItemsSelected)[0]].tolist()
-            for anno in self.pluginAnnos:
+            for anno in SlideRunnerPlugin.getVisibleAnnotations(leftUpper=self.region[0], rightLower=self.region[0]+self.region[1], 
+                                                                annotations=self.pluginAnnos, minCoords=self.pluginMinCoords, maxCoords=self.pluginMaxCoords):
                 if (anno.pluginAnnotationLabel is None) or (anno.pluginAnnotationLabel.uid in annoKeys):
                     anno.draw(image=npi, leftUpper=self.region[0], 
                               zoomLevel=self.getZoomValue(), thickness=2, vp=self.currentPluginVP,
