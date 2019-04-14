@@ -290,23 +290,6 @@ def rightClickImage(self, event):
 
     if (self.db.isOpen()):
 
-        if (self.activePlugin is not None):
-            clickedAnno = self.activePlugin.instance.findClickAnnotation( clickPosition=mouseClickGlobal, pluginVP=self.currentPluginVP)
-            if (clickedAnno is not None):
-                self.selectedPluginAnno = clickedAnno.uid
-                self.showImage()
-                menu = QMenu(self)
-                addmenu = menu.addMenu('Copy to current database as:')
-                menuitems = list()
-                for clsname in self.db.getAllClasses():
-                    act=addmenu.addAction(clsname[0],partial(GUIannotation.copyAnnotation,self,clickedAnno, clsname[1], event))
-                    menuitems.append(act)
-
-                addmenu = menu.addAction('Cancel', self.hitEscape)
-                action = menu.exec_(self.mapToGlobal(event.pos()))
-                return
-
-
         if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON):
             menu = QMenu(self)
             addmenu = menu.addMenu('Annotate as:')
@@ -322,16 +305,20 @@ def rightClickImage(self, event):
             return
 
         clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP)
+        if (self.activePlugin is not None):
+            clickedPluginAnno = self.activePlugin.instance.findClickAnnotation( clickPosition=mouseClickGlobal, pluginVP=self.currentPluginVP)
+        else:
+            clickedPluginAnno = None
 
 
         menuitems = list()
-        if (clickedAnno is None):
+        if (clickedAnno is None) and (clickedPluginAnno is None):
             addmenu = menu.addMenu('Add annotation')
             menuitems = list()
             for clsname in self.db.getAllClasses():
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.addSpotAnnotation,self,clsname[1], event))
                 menuitems.append(act)
-        else:
+        elif (clickedPluginAnno is None):
             self.selectedAnno = clickedAnno.uid
             self.showImage()
             labels=self.db.findAllAnnotationLabels(clickedAnno.uid)
@@ -362,6 +349,19 @@ def rightClickImage(self, event):
                     if (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.ANNOTATIONACTION):
                         pluginActionMenu.addAction(pluginConfig.name, partial(self.sendAnnoToPlugin, clickedAnno, pluginConfig.uid))                        
 
+        else:
+            self.selectedPluginAnno = clickedPluginAnno.uid
+            self.showImage()
+            menu = QMenu(self)
+            addmenu = menu.addMenu('Copy to current database as:')
+            menuitems = list()
+            for clsname in self.db.getAllClasses():
+                act=addmenu.addAction(clsname[0],partial(GUIannotation.copyAnnotation,self,clickedPluginAnno, clsname[1], event))
+                menuitems.append(act)
+
+#            addmenu = menu.addAction('Cancel', self.hitEscape)
+#            action = menu.exec_(self.mapToGlobal(event.pos()))
+#            return
 
         menu.addSeparator()
         submenu = menu.addMenu('Annotate as: ')
