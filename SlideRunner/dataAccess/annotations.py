@@ -282,7 +282,7 @@ class polygonAnnotation(annotation):
             cx = int((xpos - p1[0]) / zoomLevel)
             cy = int((ypos - p1[1]) / zoomLevel)
             return (cx,cy)        
-        markersize = int(3/zoomLevel)
+        markersize = min(3,int(5/zoomLevel))
         listIdx=-1
 
         self.annoHandles=list()
