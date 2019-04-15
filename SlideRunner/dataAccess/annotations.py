@@ -93,6 +93,12 @@ class annotation():
                retval.append(['Anno %d' % (idx+1), '%s (%s)' % (className,annotatorName)])
            return retval
           
+      def getBoundingBox(self) -> [int,int,int,int]:
+        """
+            returns the bounding box (x,y,w,h) for an object         
+        """
+        minC = self.minCoordinates()
+        return [minC.x,minC.y] + list(self.getDimensions())
 
       def positionInAnnotationHandle(self, position: tuple) -> int:
           return None
@@ -359,10 +365,10 @@ class spotAnnotation(annotation):
                 self.annotationType = AnnotationType.SPECIAL_SPOT
 
       def minCoordinates(self) -> annoCoordinate:
-            return annoCoordinate(self.x1-50, self.y1-50)
+            return annoCoordinate(self.x1-25, self.y1-25)
 
       def maxCoordinates(self) -> annoCoordinate:
-            return annoCoordinate(self.x1+50, self.y1+50)
+            return annoCoordinate(self.x1+25, self.y1+25)
 
       def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected=False):
             xpos1=int((self.x1-leftUpper[0])/zoomLevel)
