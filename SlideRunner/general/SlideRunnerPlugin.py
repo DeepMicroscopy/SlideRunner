@@ -14,6 +14,7 @@ class StatusInformation(enumerate):
       SET_ZOOM = 4
       POPUP_MESSAGEBOX = 5
       UPDATE_CONFIG = 6
+      UPDATE_LABELS = 7
 
 class AnnotationUpdatePolicy(enumerate):
       UPDATE_ON_SCROLL_CHANGE = 0,
@@ -207,6 +208,9 @@ class SlideRunnerPlugin:
       def setZoomLevel(self, zoom:float):
             self.statusQueue.put((StatusInformation.SET_ZOOM,zoom))
 
+      def sendAnnotationLabelUpdate(self):
+            self.statusQueue.put((StatusInformation.UPDATE_LABELS, None))
+
       # Show a simple message box with a string message      
       def showMessageBox(self, msg:str):
             self.statusQueue.put((StatusInformation.POPUP_MESSAGEBOX,msg))
@@ -270,3 +274,4 @@ def getVisibleAnnotations(leftUpper:list, rightLower:list, annotations:np.ndarra
       potentiallyVisible =  ( (maxCoords[:,0] > leftUpper[0]) & (minCoords[:,0] < rightLower[0]) & 
                               (maxCoords[:,1] > leftUpper[1]) & (minCoords[:,1] < rightLower[1]) )
       return np.array(annotations)[np.where(potentiallyVisible)[0]].tolist()
+

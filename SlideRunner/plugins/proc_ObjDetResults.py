@@ -78,17 +78,25 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     description = 'Show unpickled object detection results'
     pluginType = SlideRunnerPlugin.PluginTypes.WHOLESLIDE_PLUGIN
     configurationList = list((
-                            SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Result file', mask='*.p'),
+                            SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Result file', mask='*.p;*.txt'),
                             SlideRunnerPlugin.PluginConfigurationEntry(uid='threshold', name='Detection threshold', initValue=0.5, minValue=0.0, maxValue=1.0),
                             ))
     
-    annotationLabels = {'Detection' : SlideRunnerPlugin.PluginAnnotationLabel(0,'Detection', [0,255,0,255]),}
+    COLORS = [[0,128,0,255],
+              [128,0,0,255],
+              [0,0,128,255],
+              [128,128,0,255],
+              [0,128,128,255],
+              [128,128,128,255]]
 
     def __init__(self, statusQueue:Queue):
         self.statusQueue = statusQueue
+        self.annotationLabels = {'Detection' : SlideRunnerPlugin.PluginAnnotationLabel(0,'Detection', [0,180,0,255]),}
         self.p = Thread(target=self.queueWorker, daemon=True)
         self.p.start()
-        
+
+
+
         pass
 
     def getAnnotationUpdatePolicy():
@@ -115,24 +123,58 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             if not (os.path.exists(job.configuration['file'])):
                 continue
             
-            oldArchive = job.configuration['file']
-            self.resultsArchive = pickle.load(open(oldArchive,'rb'))
+            self.sendAnnotationLabelUpdate()
 
-            pname,fname = os.path.split(job.slideFilename)
-            if (oldFilename is not fname):
-                # process slide
-                if (fname not in self.resultsArchive):
-                    self.setMessage('Slide '+str(fname)+' not found in results file.')
-                    continue
-                
-                oldFilename=fname
+            oldArchive = job.configuration['file']
+            [foo,self.ext] = os.path.splitext(oldArchive)
+            self.ext = self.ext.upper()
 
             self.annos = list()
-            for idx in range(len(self.resultsArchive[fname])):
-                    row = self.resultsArchive[fname][idx]
-                    if (row[5]>job.configuration['threshold']):
-                        myanno = annotations.rectangularAnnotation(uid=idx, x1=row[0], x2=row[2], y1=row[1], y2=row[3], text='%.2f' % row[5], pluginAnnotationLabel=self.annotationLabels['Detection'])                
-                        self.annos.append(myanno)
+
+            if (self.ext=='.P'): # Pickled format - results for many slides
+                self.resultsArchive = pickle.load(open(oldArchive,'rb'))
+
+                pname,fname = os.path.split(job.slideFilename)
+                if (oldFilename is not fname):
+                    # process slide
+                    if (fname not in self.resultsArchive):
+                        self.setMessage('Slide '+str(fname)+' not found in results file.')
+                        continue
+                    
+                    oldFilename=fname
+
+
+                uniqueLabels = np.unique(np.array(self.resultsArchive[fname])[:,4])
+
+                self.annotationLabels = dict()
+                for key,label in enumerate(uniqueLabels):
+                     self.annotationLabels[label] =  SlideRunnerPlugin.PluginAnnotationLabel(0,'Class %d' % label, self.COLORS[key % len(self.COLORS)])
+
+                for idx in range(len(self.resultsArchive[fname])):
+                        row = self.resultsArchive[fname][idx]
+                        if (row[5]>job.configuration['threshold']):
+                            myanno = annotations.rectangularAnnotation(uid=idx, x1=row[0], x2=row[2], y1=row[1], y2=row[3], text='%.2f' % row[5], pluginAnnotationLabel=self.annotationLabels[row[4]])                
+                            self.annos.append(myanno)
+
+                self.sendAnnotationLabelUpdate()
+
+
+            elif (self.ext=='.TXT'): # Assume MS Coco format
+                self.resultsArchive = np.loadtxt(oldArchive, dtype={'names': ('label', 'confidence', 'x','y','w','h'), 'formats': ('U30', 'f4', 'i4','i4','i4','i4')}, skiprows=0, delimiter=' ')
+                uniqueLabels = np.unique(self.resultsArchive['label'])
+
+                self.annotationLabels = dict()
+                for key,label in enumerate(uniqueLabels):
+                     self.annotationLabels[label] =  SlideRunnerPlugin.PluginAnnotationLabel(0,label, self.COLORS[key % len(self.COLORS)])
+
+                self.sendAnnotationLabelUpdate()
+
+                for idx in range(len(self.resultsArchive)):
+                        row = self.resultsArchive[idx]
+                        if (row[5]>job.configuration['threshold']):
+                            myanno = annotations.rectangularAnnotation(uid=idx, x1=row['x'], x2=row['y'], y1=row['x']+row['w'], y2=row['y']+row['h'], text='%.2f' % row['confidence'], pluginAnnotationLabel=self.annotationLabels[row['label']])                
+                            self.annos.append(myanno)
+
 
 
             self.updateAnnotations()
