@@ -118,6 +118,9 @@ class PluginStatusReceiver(threading.Thread):
                 self.selfObj.pluginPopupMessageReceived.emit(value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.UPDATE_CONFIG):
                 self.selfObj.updatePluginConfig.emit(value)
+            elif (msgId == SlideRunnerPlugin.StatusInformation.UPDATE_LABELS):
+                self.selfObj.updatePluginLabels.emit()
+
 
 class SlideRunnerUI(QMainWindow):
     progressBarChanged = pyqtSignal(int)
@@ -129,6 +132,7 @@ class SlideRunnerUI(QMainWindow):
     setZoomReceived = pyqtSignal(float)
     setCenterReceived = pyqtSignal(tuple)
     updatePluginConfig = pyqtSignal(SlideRunnerPlugin.PluginConfigUpdate)
+    updatePluginLabels = pyqtSignal()
     pluginPopupMessageReceived = pyqtSignal(str)
     annotator = bool # ID of curent annotator
     db = Database()
@@ -203,6 +207,7 @@ class SlideRunnerUI(QMainWindow):
         self.showImageRequest.connect(self.showImage_part2)
         self.annotationReceived.connect(self.receiveAnno)
         self.updatePluginConfig.connect(self.updatePluginConfiguration)
+        self.updatePluginLabels.connect(self.showDatabaseUIelements)
         self.updatedCacheAvailable.connect(self.updateCache)
         self.setZoomReceived.connect(self.setZoom)
         self.setCenterReceived.connect(self.setCenter)
@@ -1558,13 +1563,14 @@ class SlideRunnerUI(QMainWindow):
         # Draw annotations by the plugin
         if (self.activePlugin is not None):
             labels = self.activePlugin.instance.getAnnotationLabels()
-            annoKeys=np.array([x.uid for x in labels])[np.where(self.pluginItemsSelected)[0]].tolist()
-            for anno in SlideRunnerPlugin.getVisibleAnnotations(leftUpper=self.region[0], rightLower=self.region[0]+self.region[1], 
-                                                                annotations=self.pluginAnnos, minCoords=self.pluginMinCoords, maxCoords=self.pluginMaxCoords):
-                if (anno.pluginAnnotationLabel is None) or (anno.pluginAnnotationLabel.uid in annoKeys):
-                    anno.draw(image=npi, leftUpper=self.region[0], 
-                              zoomLevel=self.getZoomValue(), thickness=2, vp=self.currentPluginVP,
-                              selected=(self.selectedPluginAnno==anno.uid))
+            if (len(self.pluginAnnos)>0):
+                annoKeys=np.array([x.uid for x in labels])[np.where(self.pluginItemsSelected)[0]].tolist()
+                for anno in SlideRunnerPlugin.getVisibleAnnotations(leftUpper=self.region[0], rightLower=self.region[0]+self.region[1], 
+                                                                    annotations=self.pluginAnnos, minCoords=self.pluginMinCoords, maxCoords=self.pluginMaxCoords):
+                    if (anno.pluginAnnotationLabel is None) or (anno.pluginAnnotationLabel.uid in annoKeys):
+                        anno.draw(image=npi, leftUpper=self.region[0], 
+                                zoomLevel=self.getZoomValue(), thickness=2, vp=self.currentPluginVP,
+                                selected=(self.selectedPluginAnno==anno.uid))
 
         # Overlay Annotations by the user
         if (self.db.isOpen()):
@@ -1906,7 +1912,7 @@ class SlideRunnerUI(QMainWindow):
             self.itemsSelected = np.ones(rowIdx+1)
 
             if (self.activePlugin is not None):
-                annoLabels = self.activePlugin.plugin.getAnnotationLabels(self.activePlugin.plugin)
+                annoLabels = self.activePlugin.instance.getAnnotationLabels()
 
                 for label in annoLabels:
                     item = QTableWidgetItem('plugin:'+label.name)
