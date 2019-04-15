@@ -2,11 +2,14 @@
 
 # SlideRunner 
 
+[![DOI:10.1007/978-3-662-56537-7_81](https://zenodo.org/badge/DOI/10.1007/978-3-662-56537-7_81.svg)](https://doi.org/10.1007/978-3-662-56537-7_81)
+
+
 *SlideRunner* is a tool for massive cell annotations in whole slide images.
 
 It has been created in close cooperation between the [Pattern Recognition Lab](https://www5.cs.fau.de), Friedrich-Alexander-Universität Erlangen-Nürnberg and the [Institute of Veterenary Pathology](http://www.vetmed.fu-berlin.de/einrichtungen/institute/we12/index.html), Freie Universität Berlin.
 
-If you use the software for research purposes, please cite our paper:
+If you use the software for research purposes, please cite our paper: 
 
 > M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018) SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images. In: Bildverarbeitung für die Medizin 2018. Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314. [link](https://www.springerprofessional.de/sliderunner/15478976) [arXiv:1802.02347](https://arxiv.org/abs/1802.02347) 
 
@@ -96,7 +99,8 @@ have a class attached to it.
 
 ## News
 
-Starting with Version 1.10.0, we have a multi-thread-compatible plug-in interface. Up to now, documentation is not yet available. As examples, three plug-ins are provided. 
+New version 1.22.0 has a much improved plugin interface. Amongst the many improvements are annotation support from the plugin, as well as the ability to copy annotations from the plugin to the database, even annotation groups.
+
 
 ## Databases
 
