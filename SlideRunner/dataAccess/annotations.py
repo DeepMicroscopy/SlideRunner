@@ -268,8 +268,16 @@ class polygonAnnotation(annotation):
 
     def getDescription(self,db, micronsPerPixel=None) -> list:
         mc = annoCoordinate(self.coordinates[:,0].mean(), self.coordinates[:,1].mean())
-        area_px = self.area_px()
-        area = '%d px^2' % area_px if micronsPerPixel == 1E-6 else '%.2f µm^2' % (area_px*micronsPerPixel*micronsPerPixel)
+        area_px = float(self.area_px())
+        micronsPerPixel = float(micronsPerPixel)
+        if micronsPerPixel == 1E-6:
+            area = '%d px^2'
+        else:
+            area_mum2 = (area_px*micronsPerPixel*micronsPerPixel)
+            if (area_mum2 < 1E6):
+                area = '%.2f µm^2' % area_mum2
+            else:
+                area = '%.2f mm^2' % (1E-6 * area_mum2)
         return [['Position', 'x1=%d, y1=%d' % (mc.x,mc.y)], ['Area', area]] + self.getAnnotationsDescription(db)
 
 
