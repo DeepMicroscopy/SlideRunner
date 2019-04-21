@@ -14,12 +14,7 @@
         Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314.
 
         This file:
-         Positive Pixel Count Algorithm  (Aperio)
-         
-         see:
-         Olson, Allen H. "Image analysis using the Aperio ScanScope." Technical manual. Aperio Technologies Inc (2006).
-
-
+	   Visualize bounding boxes (object detection results)
 
 """
 
@@ -40,31 +35,6 @@ import SlideRunner.dataAccess.annotations as annotations
 import matplotlib.path as path
 from skimage.feature import blob_dog
 from staintools.miscellaneous.get_concentrations import get_concentrations
-
-def BlobDetection(I):
-    # removes salt and pepper noise
-    image_gray = scipy.ndimage.filters.median_filter(I, size=(2, 2))
-
-    # Difference of Gaussian
-    blobs_dog = blob_dog(image_gray, max_sigma=20, threshold=.1)
-
-    #small detected blobs, because of the size (cannot be CD3-positive cells) were deleted,
-    blob2 = np.extract(blobs_dog[:,2] > 6, blobs_dog[:,2])
-    blob1 = np.extract(blobs_dog[:,2] > 6, blobs_dog[:,1])
-    blob0 = np.extract(blobs_dog[:,2] > 6, blobs_dog[:,0])
-    blobs_dog = np.c_[blob0, blob1]
-    blobs_dog = np.c_[blobs_dog, blob2]
-
-    return blobs_dog
-
-def colorDeconv(img):
-    normalizer = staintools.StainNormalizer(method='macenko')
-    stain_matrix = normalizer.extractor.get_stain_matrix(img)
-    conc = get_concentrations(img, stain_matrix)
-    conc = np.reshape(conc,img.shape[0:2]+(2,))
-
-    return conc
-
 
 
 class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
@@ -109,23 +79,25 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         quitSignal = False
         oldFilename = ''
         oldArchive = ''
+        oldThres=-1
         while not quitSignal:
             job = SlideRunnerPlugin.pluginJob(self.inQueue.get())
+            print(job)
 
             if (job.jobDescription == SlideRunnerPlugin.JobDescription.QUIT_PLUGIN_THREAD):
                 # signal to exit this thread
                 quitSignal=True
                 continue
             
-            if (job.configuration['file'] == oldArchive):
+            if (job.configuration['file'] == oldArchive) and (job.configuration['threshold'] == oldThres):
                 continue
             
             if not (os.path.exists(job.configuration['file'])):
                 continue
-            
             self.sendAnnotationLabelUpdate()
 
             oldArchive = job.configuration['file']
+            oldThres = job.configuration['threshold']
             [foo,self.ext] = os.path.splitext(oldArchive)
             self.ext = self.ext.upper()
 
