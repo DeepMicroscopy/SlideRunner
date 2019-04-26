@@ -524,7 +524,8 @@ class SlideRunnerUI(QMainWindow):
             else:
                 self.ui.opacityLabel.setHidden(True)
                 self.ui.opacitySlider.setHidden(True)
-            self.triggerPlugin(self.rawImage)
+            if (self.imageOpened)
+                self.triggerPlugin(self.rawImage)
         else:
             self.activePlugin = None
             self.ui.opacityLabel.setHidden(True)
@@ -1095,7 +1096,7 @@ class SlideRunnerUI(QMainWindow):
         self.tn_annot = self.thumbnail.getCopy()
         if (self.db.isOpen()):
             tnsize = np.float32(self.thumbnail.shape[1::-1])*self.thumbnail.downsamplingFactor
-            self.tn_annot = self.overlayAnnotations(self.tn_annot, region=[np.zeros(2),tnsize], zoomLevel=self.thumbnail.downsamplingFactor, thickness=1, adjustList = False)
+#            self.tn_annot = self.overlayAnnotations(self.tn_annot, region=[np.zeros(2),tnsize], zoomLevel=self.thumbnail.downsamplingFactor, thickness=1, adjustList = False)
 
 
 
@@ -1198,9 +1199,9 @@ class SlideRunnerUI(QMainWindow):
 
 
             # finally: find polygons
-            annotationPolygons = self.db.findPolygonAnnotatinos(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
-            for poly in annotationPolygons:
-                image = self.showPolygon(tempimage=image, polygon=poly[0], color=self.get_color(poly[1]))
+#            annotationPolygons = self.db.findPolygonAnnotatinos(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
+#            for poly in annotationPolygons:
+#                image = self.showPolygon(tempimage=image, polygon=poly[0], color=self.get_color(poly[1]))
 
             if (adjustList):
                 self.annotationPolygons = annotationPolygons
