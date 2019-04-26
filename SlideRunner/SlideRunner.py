@@ -524,7 +524,7 @@ class SlideRunnerUI(QMainWindow):
             else:
                 self.ui.opacityLabel.setHidden(True)
                 self.ui.opacitySlider.setHidden(True)
-            if (self.imageOpened)
+            if (self.imageOpened):
                 self.triggerPlugin(self.rawImage)
         else:
             self.activePlugin = None
