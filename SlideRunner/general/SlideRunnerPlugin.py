@@ -94,6 +94,9 @@ class PluginAnnotationLabel():
             self.uid = uid
             self.name = name
             self.color = color
+      
+      def __str__(self):
+            return self.name
 
 
 

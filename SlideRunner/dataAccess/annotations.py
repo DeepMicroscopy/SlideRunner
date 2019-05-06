@@ -91,10 +91,13 @@ class annotation():
 
       def getAnnotationsDescription(self, db) -> list:
            retval = list()
-           for idx,label in enumerate(self.labels):
-               annotatorName = db.getAnnotatorByID(label.annnotatorId)
-               className = db.getClassByID(label.classId)
-               retval.append(['Anno %d' % (idx+1), '%s (%s)' % (className,annotatorName)])
+           if (self.pluginAnnotationLabel is None):
+                for idx,label in enumerate(self.labels):
+                    annotatorName = db.getAnnotatorByID(label.annnotatorId)
+                    className = db.getClassByID(label.classId)
+                    retval.append(['Anno %d' % (idx+1), '%s (%s)' % (className,annotatorName)])
+           else:
+                retval.append(['Plugin class', str(self.pluginAnnotationLabel)])
            return retval
           
       def getBoundingBox(self) -> [int,int,int,int]:
