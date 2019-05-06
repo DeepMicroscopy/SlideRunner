@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.22.0'
+version = '1.23.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -1033,6 +1033,11 @@ class SlideRunnerUI(QMainWindow):
     def numberToPosition(self, number):
         nth = ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th']
         return nth[number]
+
+    def setAgreedAnno(self, classId, event, annoId):
+        self.db.setAgreedClass(classId, annoId)
+        self.writeDebug('changed agreed class for object with class %d, slide %d, person %d, ID %d' % ( classId, self.slideUID,self.retrieveAnnotator(event), annoId))
+        self.showImage()
 
     def changeAnnotation(self, classId, event, labelIdx, annoId):
         self.db.setAnnotationLabel(classId, self.retrieveAnnotator(event), labelIdx, annoId)
