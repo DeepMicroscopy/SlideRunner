@@ -323,7 +323,7 @@ class polygonAnnotation(annotation):
 
 
 class circleAnnotation(annotation):
-        def slideToScreen(pos):
+      def slideToScreen(pos):
             """
                 convert slide coordinates to screen coordinates
             """
@@ -332,8 +332,6 @@ class circleAnnotation(annotation):
             cx = int((xpos - p1[0]) / zoomLevel)
             cy = int((ypos - p1[1]) / zoomLevel)
             return (cx,cy)        
-        markersize = min(3,int(5/zoomLevel))
-        listIdx=-1
       
       def __init__(self, uid, x1, y1, x2 = None, y2 = None, r = None, text='', pluginAnnotationLabel=None):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
@@ -371,17 +369,15 @@ class circleAnnotation(annotation):
                     cv2.putText(image, self.text, slideToScreen((xpos1+3, ypos1+10)), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
 class spotAnnotation(annotation):
-        def slideToScreen(pos):
-            """
-                convert slide coordinates to screen coordinates
-            """
-            xpos,ypos = pos
-            p1 = leftUpper
-            cx = int((xpos - p1[0]) / zoomLevel)
-            cy = int((ypos - p1[1]) / zoomLevel)
-            return (cx,cy)        
-        markersize = min(3,int(5/zoomLevel))
-        listIdx=-1
+      def slideToScreen(pos):
+        """
+            convert slide coordinates to screen coordinates
+        """
+        xpos,ypos = pos
+        p1 = leftUpper
+        cx = int((xpos - p1[0]) / zoomLevel)
+        cy = int((ypos - p1[1]) / zoomLevel)
+        return (cx,cy)        
 
       def __init__(self, uid, x1, y1, isSpecialSpot : bool = False,text='', pluginAnnotationLabel=None):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
