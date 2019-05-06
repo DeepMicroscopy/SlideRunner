@@ -26,7 +26,7 @@ class ViewingProfile(object):
                   [166, 10, 168,255],
                   [166,168,10,255]]
     spotCircleRadius = 25
-    majorityClassVote = True
+    majorityClassVote = False
     activeClasses = dict()
 
 
