@@ -357,7 +357,7 @@ def rightClickImage(self, event):
 
                         act=addmenu.addAction(clsname[0]+added,partial(self.setAgreedAnno,clsname[1], event, clickedAnno.uid))
                         act.setCheckable(True)
-                        if (clsname[1]==label[1]):
+                        if (clsname[1]==clickedAnno.agreedClass):
                             act.setChecked(True)
                         menuitems.append(act)
 
