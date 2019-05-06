@@ -137,6 +137,10 @@ class Database(object):
         ids = self.maxCoords[potentiallyVisible,2]
         return dict(filter(lambda i:i[0] in ids, self.annotations.items()))
 
+    def listOfSlides(self):
+        self.execute('SELECT uid,filename from Slides')
+        return self.fetchall()
+
 
     def annotateImage(self, img: np.ndarray, leftUpper: list, rightLower:list, zoomLevel:float, vp : ViewingProfile, selectedAnnoID:int):
         annos = self.getVisibleAnnotations(leftUpper, rightLower)
@@ -162,13 +166,13 @@ class Database(object):
         if (slideId is None):
             return
 
-        self.dbcur.execute('SELECT uid, type FROM Annotations WHERE slide == %d'% slideId)
+        self.dbcur.execute('SELECT uid, type,agreedClass FROM Annotations WHERE slide == %d'% slideId)
         allAnnos = self.dbcur.fetchall()
 
         self.dbcur.execute('SELECT coordinateX, coordinateY,annoid FROM Annotations_coordinates where annoId IN (SELECT uid FROM Annotations WHERE slide == %d) ORDER BY orderIdx' % (slideId))
         allCoords = np.asarray(self.dbcur.fetchall())
 
-        for uid, annotype in allAnnos:
+        for uid, annotype,agreedClass in allAnnos:
             coords = allCoords[allCoords[:,2]==uid,0:2]
             if (annotype == AnnotationType.SPOT):
                 self.annotations[uid] = spotAnnotation(uid, coords[0][0], coords[0][1])
@@ -182,6 +186,7 @@ class Database(object):
                 self.annotations[uid] = circleAnnotation(uid, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
             else:
                 print('Unknown annotation type %d found :( ' % annotype)
+            self.annotations[uid].agreedClass = agreedClass
             
         # Add all labels
         self.dbcur.execute('SELECT annoid, person, class,uid FROM Annotations_label WHERE annoID in (SELECT uid FROM Annotations WHERE slide == %d)'% slideId)
