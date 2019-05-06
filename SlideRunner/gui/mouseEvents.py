@@ -321,11 +321,13 @@ def rightClickImage(self, event):
         elif (clickedPluginAnno is None):
             self.selectedAnno = clickedAnno.uid
             self.showImage()
+            previous=[]
             labels=self.db.findAllAnnotationLabels(clickedAnno.uid)
             if not (annoIsFlag):
                 for labelIdx in range(len(labels)):
                     label = labels[labelIdx]
                     addmenu = menu.addMenu('Change %s annotation' % self.numberToPosition(labelIdx))
+                    previous.append(label[1])
                     for clsname in self.db.getAllClasses():
                         act=addmenu.addAction(clsname[0],partial(self.changeAnnotation,clsname[1], event, label[2], clickedAnno.uid))
                         act.setCheckable(True)
@@ -342,6 +344,25 @@ def rightClickImage(self, event):
                     menuitems.append(act)
                 menuitems.append(act)
             menu.addAction('Remove annotation', partial(self.removeAnnotation, clickedAnno.uid))
+
+            if len(previous)>0:
+                addmenu = menu.addMenu('Set agreed class')
+                previous.append(clickedAnno.agreedClass)
+
+                allPossibleChoices = np.unique(previous)
+
+                for clsname in self.db.getAllClasses():
+                    if (clsname[1] in allPossibleChoices):
+                        added = ' (majority)' if clickedAnno.majorityLabel() == clsname[1] else ''
+
+                        act=addmenu.addAction(clsname[0]+added,partial(self.setAgreedAnno,clsname[1], event, clickedAnno.uid))
+                        act.setCheckable(True)
+                        if (clsname[1]==label[1]):
+                            act.setChecked(True)
+                        menuitems.append(act)
+
+
+
 
             if (self.activePlugin is not None):
                 pluginActionMenu = menu.addMenu('Plugin:'+self.activePlugin.instance.shortName)
