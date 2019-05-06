@@ -177,17 +177,8 @@ class annotation():
             Returns the agreed (common) label for an annotation
       """
       def agreedLabel(self):
-          if len(self.labels)==0:
-              return 0
+          return self.agreedClass
 
-          agreed = self.labels[0].classId
-
-          for label in np.arange(0, len(self.labels)):
-         
-            if not (self.labels[label].classId == agreed):
-                agreed = 0
-        
-          return agreed
       
       def labelBy(self, annotatorId):
           for label in np.arange(0, len(self.labels)):
@@ -365,6 +356,8 @@ class circleAnnotation(annotation):
             radius = int(self.r/zoomLevel)
             if (radius>=0):
                   image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=self.getColor(vp), lineType=cv2.LINE_AA)
+            if (len(self.text)>0):
+                    cv2.putText(image, self.text, slideToScreen((xpos1+3, ypos1+10)), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
 class spotAnnotation(annotation):
 
@@ -388,6 +381,8 @@ class spotAnnotation(annotation):
             radius=int(vp.spotCircleRadius/zoomLevel)
             if (radius>=0):
                   image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=self.getColor(vp), lineType=cv2.LINE_AA)
+            if (len(self.text)>0):
+                    cv2.putText(image, self.text, slideToScreen((xpos1+3, ypos1+10)), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
       def getDescription(self,db, micronsPerPixel=None) -> list:
           return [['Position', 'x1=%d, y1=%d' % (self.x1, self.y1)]] + self.getAnnotationsDescription(db)
