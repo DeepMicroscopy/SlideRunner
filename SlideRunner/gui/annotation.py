@@ -39,6 +39,14 @@ def addSpotAnnotation(self, classID, event, typeAnno=1):
 
     self.showAnnotationsInOverview()
 
+def renameClass(self, classID, event = None):
+    text = self.db.getClassByID(classID)
+    name, ok = QtWidgets.QInputDialog.getText(self, "Please give a new name for the new category",
+                                        "Name:", text=text)
+    if (ok):
+        self.db.renameClass(classID, name)
+        self.showDatabaseUIelements()
+
 def deleteAllFromClassOnSlide(self, classID, event = None):
     if not (self.db.isOpen()):
         return
