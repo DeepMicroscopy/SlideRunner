@@ -72,6 +72,7 @@ class annotation():
           self.labels = list()
           self.uid = uid
           self.text = text
+          self.agreedClass = None
           self.pluginAnnotationLabel = None
           if (pluginAnnotationLabel is not None):
               if (isinstance(pluginAnnotationLabel, SlideRunnerPlugin.PluginAnnotationLabel)):
@@ -81,6 +82,9 @@ class annotation():
 
       def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int = 1, vp: ViewingProfile = ViewingProfile(), selected=False):
             return
+        
+      def setAgreedClass(self, agreedClass):
+          self.agreedClass = agreedClass
     
       def positionInAnnotation(self, position: list) -> bool:
             return False
