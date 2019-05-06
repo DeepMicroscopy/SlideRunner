@@ -107,6 +107,8 @@ def test_database():
     DB.setAgreedClass(1,1)
     assert(DB.annotations[1].agreedClass==1)
 
+    # Change class name
+    DB.renameClass(1, 'Bla')
 
     cleanup()
     
