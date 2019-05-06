@@ -100,6 +100,13 @@ def test_database():
     assert(stats[1,0]==3)
     assert(stats[1,1]==4)
 
+    DB.loadIntoMemory(1)
+
+    # Manipulate agreed class
+    assert(DB.annotations[1].agreedClass==2)
+    DB.setAgreedClass(1,1)
+    assert(DB.annotations[1].agreedClass==1)
+
 
     cleanup()
     

@@ -452,6 +452,13 @@ class Database(object):
         self.execute('INSERT INTO Classes (name) VALUES ("%s")' % (name))
         self.commit()
     
+    def setAgreedClass(self, classId, annoIdx):
+        self.annotations[annoIdx].agreedClass = classId
+        q = 'UPDATE Annotations SET agreedClass==%d WHERE uid== %d' % (classId,annoIdx)
+        self.execute(q)
+        self.commit()
+         
+
     def setAnnotationLabel(self,classId,  person, entryId, annoIdx):
         q = 'UPDATE Annotations_label SET person==%d, class=%d WHERE uid== %d' % (person,classId,entryId)
         self.execute(q)
