@@ -655,7 +655,10 @@ class Database(object):
     def getAllClasses(self):
         self.execute('SELECT name,uid FROM Classes ORDER BY uid')
         return self.fetchall()
-
+    
+    def renameClass(self, classID, name):
+        self.execute('UPDATE Classes set name="%s" WHERE uid ==  %d' % (name, classID))
+        self.commit()
 
     def commit(self):
         return self.db.commit()

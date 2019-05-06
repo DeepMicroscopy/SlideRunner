@@ -172,6 +172,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         # Add sidebar
+        self.onOpen = True
         self.ui = addSidebar(self.ui, self)
         self.ui.moveDots=0
         self.currentZoom = 1
@@ -284,7 +285,7 @@ class SlideRunnerUI(QMainWindow):
         if (len(sys.argv)>2):
             if os.path.isfile(sys.argv[2]):
                 self.openDatabase(True, filename=sys.argv[2])
-
+        
     def get_color(self, idx):
         colors = [[0,0,0,0],[0,0,255,255],[0,255,0,255],[255,255,0,255],[255,0,255,255],[0,127,0,255],[255,127,0,255],[127,127,0,255],[255,255,255,255],[10, 166, 168,255],[166, 10, 168,255],[166,168,10,255]]
 
@@ -512,8 +513,8 @@ class SlideRunnerUI(QMainWindow):
 
             self.activePlugin = plugin
             self.pluginItemsSelected = None
-            self.showDatabaseUIelements()
             self.addActivePluginToSidebar(plugin.plugin)
+            self.showDatabaseUIelements()
             if (plugin.plugin.outputType != SlideRunnerPlugin.PluginOutputType.NO_OVERLAY):
                 self.ui.opacitySlider.valueChanged.disconnect(self.changeOpacity)                
                 self.ui.opacitySlider.setValue(int(plugin.plugin.initialOpacity*100))
@@ -1292,6 +1293,8 @@ class SlideRunnerUI(QMainWindow):
             Resize event, used as callback function when the application is resized.
         """
         super().resizeEvent(event)
+        self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
+
         if (event.oldSize() == event.size()):
             return
         
@@ -1300,11 +1303,13 @@ class SlideRunnerUI(QMainWindow):
         if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
             self.pluginAnnos = list()
         if (self.imageOpened):
-            self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
             self.showImage()
             self.updateScrollbars()
         if (event is not None):
             event.accept()
+
+        
+
 
     def sliderToZoomValue(self):
         """
@@ -1502,6 +1507,16 @@ class SlideRunnerUI(QMainWindow):
             self.slideReaderThread.queue.put((location_im, act_level, size_im, self.processingStep))
 
     def showImage_part2(self, npi, id):
+
+        self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
+
+        if (self.onOpen):
+            # This is clumpsy fix for resizing not happening properly on the main image
+            old = self.ui.progressBar.isHidden()
+            self.ui.progressBar.setHidden(False)
+            self.ui.progressBar.setHidden(old)
+            self.onOpen=False
+
         if (len(npi.shape)==1): # empty was given as parameter - i.e. trigger comes from plugin
             npi = self.cachedLastImage
 
