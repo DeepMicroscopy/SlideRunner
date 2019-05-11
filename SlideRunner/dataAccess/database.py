@@ -32,6 +32,8 @@ class DatabaseField(object):
 
 
 def isActiveClass(label, activeClasses):
+        if (label) is None:
+            return True
         if (label<len(activeClasses)):
             return activeClasses[label]
         else:
@@ -193,7 +195,8 @@ class Database(object):
         allLabels = self.dbcur.fetchall()
 
         for (annoId, person, classId,uid) in allLabels:
-            self.annotations[annoId].addLabel(AnnotationLabel(person, classId, uid))
+            self.annotations[annoId].addLabel(AnnotationLabel(person, classId, uid), updateAgreed=False)
+
 
         self.generateMinMaxCoordsList()
 
@@ -232,7 +235,7 @@ class Database(object):
 
 
 
-            return True
+            return self
         else:
             return False
     
@@ -644,8 +647,11 @@ class Database(object):
             return ''
 
     def getClassByID(self, id):
-        self.execute('SELECT name FROM Classes WHERE uid == %d' % id)
-        return self.fetchone()[0]
+        try:
+            self.execute('SELECT name FROM Classes WHERE uid == %d' % id)
+            return self.fetchone()[0]
+        except:
+            return '-unknown-'+str(id)+'-'
 
 
     def getAllPersons(self):

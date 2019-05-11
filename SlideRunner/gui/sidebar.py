@@ -11,9 +11,13 @@ class ClassSelectTableWidget(QTableWidget):
         self.parentObject = parentObject
     
     def contextMenuEvent(self, event):
+        columnId = self.columnAt(event.pos().x())
         rowId = self.rowAt(event.pos().y())
         menu = QMenu(self)
-        if (self.parentObject.db.isOpen()):
+        if (columnId == 0):
+                addAction = menu.addAction('Toggle all', self.parentObject.toggleAllClasses)
+
+        elif (self.parentObject.db.isOpen()):
                 addAction = menu.addAction('Add new class')
                 addAction.triggered.connect(self.parentObject.addCellClass)
                 if (rowId > 0):

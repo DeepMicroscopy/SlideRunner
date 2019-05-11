@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.23.0'
+version = '1.23.1'
 
 SLIDERUNNER_DEBUG = False
 
@@ -287,7 +287,7 @@ class SlideRunnerUI(QMainWindow):
                 self.openDatabase(True, filename=sys.argv[2])
         
     def get_color(self, idx):
-        colors = [[0,0,0,0],[0,0,255,255],[0,255,0,255],[255,255,0,255],[255,0,255,255],[0,127,0,255],[255,127,0,255],[127,127,0,255],[255,255,255,255],[10, 166, 168,255],[166, 10, 168,255],[166,168,10,255]]
+        colors = [[0,0,0,0],[0,0,255,255],[0,255,0,255],[255,255,0,255],[255,0,255,255],[0,127,0,255],[255,127,0,255],[127,127,0,255],[255,200,200,255],[10, 166, 168,255],[166, 10, 168,255],[166,168,10,255]]
 
         return colors[idx % len(colors)]
 
@@ -369,7 +369,9 @@ class SlideRunnerUI(QMainWindow):
         elif (config.dialogType == SlideRunnerPlugin.FilePickerDialogType.OPEN_DIRECTORY):
             ret,err = QFileDialog.getExistingDirectory(self,config.title, "",config.mask)
         
-        labelObj.setText(ret)
+        labelObj.setText('...'+ret[-20:] if len(ret)>20 else ret)
+        self.pluginFilepickers[config.uid]['value'] = ret
+
         if (ret is not None) and (self.imageOpened):
             self.triggerPlugin(self.cachedLastImage, trigger=config)
 
@@ -416,7 +418,7 @@ class SlideRunnerUI(QMainWindow):
                     hLayout.addWidget(newLabel)
                     newButton.clicked.connect(partial(self.pluginFilePickerButtonHit, pluginConfig, newLabel))
                     self.ui.tab3Layout.addLayout(hLayout)
-                    self.pluginFilepickers[pluginConfig.uid] = {'button' : newButton, 'label' : newLabel}
+                    self.pluginFilepickers[pluginConfig.uid] = {'button' : newButton, 'label' : newLabel, 'value' : ''}
                     
                 elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.SLIDER_WITH_FLOAT_VALUE):
                     newLabel = QtWidgets.QLabel(self.ui.tab3widget)
@@ -547,7 +549,7 @@ class SlideRunnerUI(QMainWindow):
         for key in self.pluginParameterSliders.keys():
             config[key] = self.pluginParameterSliders[key].value()/1000.0
         for key in self.pluginFilepickers.keys():
-            config[key] = self.pluginFilepickers[key]['label'].text()
+            config[key] = self.pluginFilepickers[key]['value']
         return config
 
 
@@ -1661,7 +1663,17 @@ class SlideRunnerUI(QMainWindow):
         # Display image in GUI
         self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.displayedImage)))
 
+
+    def toggleAllClasses(self):
+        for item in range(len(self.modelItems)):
+            self.modelItems[item].stateChanged.disconnect(self.selectClasses)
+            self.modelItems[item].setChecked(not(self.modelItems[item].checkState()))
+        
+        for item in range(len(self.modelItems)):
+            self.modelItems[item].stateChanged.connect(self.selectClasses)
        
+        self.selectClasses(None)
+ 
     def selectClasses(self,event):
         """
             Helper function to select classes for enabling/disabling display of annotations
@@ -1851,7 +1863,6 @@ class SlideRunnerUI(QMainWindow):
         if (self.selectedAnno is not None):
             self.removeAnnotation(self.selectedAnno)
 
-
     def showDatabaseUIelements(self):
         """
             Show and update UI controls related to the database
@@ -2040,6 +2051,12 @@ class SlideRunnerUI(QMainWindow):
             Initialize the scrollbar slider.
         """
         self.ui.zoomSlider.valueChanged.connect(self.sliderChanged)
+
+    def setMPP(self):
+        mppval, ok = QInputDialog.getDouble(self, "Value for 'microns per pixel'",
+                                          "Image MPP:", value=self.slideMicronsPerPixel, decimals=3 )
+        if (ok):
+            self.slideMicronsPerPixel = mppval if mppval>0 else 1e-6
 
     def saveDBto(self):
         filename = QFileDialog.getSaveFileName(filter='*.sqlite')[0]
