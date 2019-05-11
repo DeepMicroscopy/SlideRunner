@@ -21,7 +21,7 @@ class ViewingProfile(object):
                   [0,127,0,255],
                   [255,127,0,255],
                   [127,127,0,255],
-                  [255,255,255,255],
+                  [255,200,200,255],
                   [10, 166, 168,255],
                   [166, 10, 168,255],
                   [166,168,10,255]]
@@ -96,8 +96,12 @@ class annotation():
                     annotatorName = db.getAnnotatorByID(label.annnotatorId)
                     className = db.getClassByID(label.classId)
                     retval.append(['Anno %d' % (idx+1), '%s (%s)' % (className,annotatorName)])
+                retval.append(['Agreed Class', db.getClassByID(self.agreedLabel())])
            else:
                 retval.append(['Plugin class', str(self.pluginAnnotationLabel)])
+                if (self.text is not None):
+                    retval.append(['Description', str(self.text)])
+
            return retval
           
       def getBoundingBox(self) -> [int,int,int,int]:
@@ -116,8 +120,11 @@ class annotation():
             else:
                 return [['Plugin Anno',self.pluginAnnotationLabel.name],]
 
-      def addLabel(self, label:AnnotationLabel):
+      def addLabel(self, label:AnnotationLabel, updateAgreed=True):
           self.labels.append(label)
+          
+          if (updateAgreed):
+              self.agreedClass = self.majorityLabel()
 
       def _create_annohandle(self, image:np.ndarray, coord:tuple, markersize:int, color:tuple) -> AnnotationHandle:
             pt1_rect = (max(0,coord[0]-markersize),
@@ -180,7 +187,10 @@ class annotation():
             Returns the agreed (common) label for an annotation
       """
       def agreedLabel(self):
-          return self.agreedClass
+          if (self.agreedClass is not None):
+              return self.agreedClass
+          else:
+              return 0
 
       
       def labelBy(self, annotatorId):
@@ -264,19 +274,32 @@ class polygonAnnotation(annotation):
     def area_px(self) -> float:
         return cv2.contourArea(self.coordinates)
 
+    # Largest diameter --> 2* radius of minimum enclosing circle
+    def diameter_px(self) -> float:
+        (x,y),radius = cv2.minEnclosingCircle(self.coordinates)
+        return radius*2
+
     def getDescription(self,db, micronsPerPixel=None) -> list:
         mc = annoCoordinate(self.coordinates[:,0].mean(), self.coordinates[:,1].mean())
         area_px = float(self.area_px())
+        diameter_px = float(self.diameter_px())
         micronsPerPixel = float(micronsPerPixel)
-        if micronsPerPixel == 1E-6:
-            area = '%d px^2'
+        if micronsPerPixel < 2E-6:
+            area = '%d px^2' % area_px
+            diameter = '%d px^2' % diameter_px
         else:
             area_mum2 = (area_px*micronsPerPixel*micronsPerPixel)
-            if (area_mum2 < 1E6):
+            diameter_mum = diameter_px*micronsPerPixel
+            if (area_mum2 < 1E4):
                 area = '%.2f µm^2' % area_mum2
             else:
                 area = '%.2f mm^2' % (1E-6 * area_mum2)
-        return [['Position', 'x1=%d, y1=%d' % (mc.x,mc.y)], ['Area', area]] + self.getAnnotationsDescription(db)
+            if (diameter_mum < 1e3):
+                diameter = '%.2f µm^2' % diameter_mum
+            else:
+                diameter = '%.2f mm^2' % (diameter_mum * 1e-3)
+
+        return [['Position', 'x1=%d, y1=%d' % (mc.x,mc.y)], ['Area', area], ['Largest diameter', diameter]] + self.getAnnotationsDescription(db)
 
 
     def positionInAnnotation(self, position: list) -> bool:
@@ -326,15 +349,6 @@ class polygonAnnotation(annotation):
 
 
 class circleAnnotation(annotation):
-      def slideToScreen(pos):
-            """
-                convert slide coordinates to screen coordinates
-            """
-            xpos,ypos = pos
-            p1 = leftUpper
-            cx = int((xpos - p1[0]) / zoomLevel)
-            cy = int((ypos - p1[1]) / zoomLevel)
-            return (cx,cy)        
       
       def __init__(self, uid, x1, y1, x2 = None, y2 = None, r = None, text='', pluginAnnotationLabel=None):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
@@ -369,18 +383,9 @@ class circleAnnotation(annotation):
             if (radius>=0):
                   image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=self.getColor(vp), lineType=cv2.LINE_AA)
             if (len(self.text)>0):
-                    cv2.putText(image, self.text, slideToScreen((xpos1+3, ypos1+10)), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+                    cv2.putText(image, self.text, (xpos1,ypos1), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
 class spotAnnotation(annotation):
-      def slideToScreen(pos):
-        """
-            convert slide coordinates to screen coordinates
-        """
-        xpos,ypos = pos
-        p1 = leftUpper
-        cx = int((xpos - p1[0]) / zoomLevel)
-        cy = int((ypos - p1[1]) / zoomLevel)
-        return (cx,cy)        
 
       def __init__(self, uid, x1, y1, isSpecialSpot : bool = False,text='', pluginAnnotationLabel=None):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
@@ -403,7 +408,7 @@ class spotAnnotation(annotation):
             if (radius>=0):
                   image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=self.getColor(vp), lineType=cv2.LINE_AA)
             if (len(self.text)>0):
-                    cv2.putText(image, self.text, slideToScreen((xpos1+3, ypos1+10)), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+                    cv2.putText(image, self.text, (xpos1+3, ypos1+10), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
       def getDescription(self,db, micronsPerPixel=None) -> list:
           return [['Position', 'x1=%d, y1=%d' % (self.x1, self.y1)]] + self.getAnnotationsDescription(db)
