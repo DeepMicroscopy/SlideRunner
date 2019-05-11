@@ -76,6 +76,7 @@ def defineMenu(self, MainWindow):
         self.actionAbout = QtWidgets.QAction(MainWindow)
         self.actionAbout.setObjectName("actionAbout")
         self.actionSettings = QtWidgets.QAction(MainWindow)
+        self.action_setMPP = QtWidgets.QAction(MainWindow)
         self.actionSettings.setObjectName("actionSettings")
         self.menuDatabase.addAction(self.actionCreate_new)
         self.menuDatabase.addAction(self.action_Open)
@@ -87,6 +88,7 @@ def defineMenu(self, MainWindow):
         self.menuFile.addAction(self.actionOpen)
         defineOpenRecent(MainWindow)
         self.menuFile.addAction(self.action_Close)
+        self.menuFile.addAction(self.action_setMPP)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.action_Quit)
         self.menuHelp.addAction(self.actionAbout)
@@ -99,6 +101,7 @@ def defineMenu(self, MainWindow):
         self.menubar.addAction(self.menuHelp.menuAction())
         self.menuDatabase.setTitle(("Database"))
         self.menuFile.setTitle(("Slide"))
+        self.action_setMPP.setText(("Set microns/pixel"))
         self.menuAnnotation.setTitle(("Annotation"))
         self.menuHelp.setTitle(("Help"))
         self.action_Open.setText(("&Open default"))
@@ -118,6 +121,7 @@ def defineMenu(self, MainWindow):
         self.saveto = self.menuDatabase.addAction('Copy To ...')
         self.saveto.setEnabled(False)
         self.saveto.triggered.connect(MainWindow.saveDBto)
+        self.action_setMPP.triggered.connect(MainWindow.setMPP)
 
         self.actionSettings.triggered.connect(MainWindow.settingsDialog)
 
