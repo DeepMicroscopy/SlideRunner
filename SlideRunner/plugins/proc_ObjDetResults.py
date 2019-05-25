@@ -26,7 +26,6 @@ import cv2
 import os
 import numpy as np
 import matplotlib.pyplot as plt 
-import sklearn.cluster
 import matplotlib.colors
 import staintools
 import scipy
@@ -49,7 +48,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     pluginType = SlideRunnerPlugin.PluginTypes.WHOLESLIDE_PLUGIN
     configurationList = list((
                             SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Result file', mask='*.p;*.txt'),
-                            SlideRunnerPlugin.PluginConfigurationEntry(uid='threshold', name='Detection threshold', initValue=0.5, minValue=0.0, maxValue=1.0),
+                            SlideRunnerPlugin.PluginConfigurationEntry(uid='threshold', name='Detection threshold', initValue=0.75, minValue=0.0, maxValue=1.0),
                             ))
     
     COLORS = [[0,128,0,255],
@@ -79,17 +78,19 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         quitSignal = False
         oldFilename = ''
         oldArchive = ''
+        oldSlide = ''
         oldThres=-1
         while not quitSignal:
             job = SlideRunnerPlugin.pluginJob(self.inQueue.get())
             print(job)
+            print(job.configuration)
 
             if (job.jobDescription == SlideRunnerPlugin.JobDescription.QUIT_PLUGIN_THREAD):
                 # signal to exit this thread
                 quitSignal=True
                 continue
             
-            if (job.configuration['file'] == oldArchive) and (job.configuration['threshold'] == oldThres):
+            if (job.configuration['file'] == oldArchive) and (job.configuration['threshold'] == oldThres) and (job.slideFilename == oldSlide):
                 continue
             
             if not (os.path.exists(job.configuration['file'])):
@@ -98,6 +99,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
             oldArchive = job.configuration['file']
             oldThres = job.configuration['threshold']
+            oldSlide = job.slideFilename
             [foo,self.ext] = os.path.splitext(oldArchive)
             self.ext = self.ext.upper()
 
