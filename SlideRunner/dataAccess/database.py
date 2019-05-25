@@ -151,14 +151,24 @@ class Database(object):
             if (isActiveClass(activeClasses=vp.activeClasses,label=anno.agreedLabel())):
                 anno.draw(img, leftUpper, zoomLevel, thickness=2, vp=vp, selected=(selectedAnnoID==anno.uid))
     
+    def findIntersectingAnnotation(self, anno:annotation, vp: ViewingProfile, database=None, annoType = None):    
+        if (database is None):
+            database = self.VA            
+        for idx,DBanno in database.items():
+            if (vp.activeClasses[DBanno.agreedLabel()]):
+                if (DBanno.intersectingWithAnnotation(anno )):
+                    if (annoType == DBanno.annotationType) or (annoType is None):
+                        return DBanno
+        return None
 
-    def findClickAnnotation(self, clickPosition, vp : ViewingProfile, database=None):
+    def findClickAnnotation(self, clickPosition, vp : ViewingProfile, database=None, annoType = None):
         if (database is None):
             database = self.VA            
         for idx,anno in database.items():
             if (vp.activeClasses[anno.agreedLabel()]):
                 if (anno.positionInAnnotation(clickPosition )):
-                    return anno
+                    if (annoType == anno.annotationType) or (annoType is None):
+                        return anno
         return None
 
     def loadIntoMemory(self, slideId):
@@ -499,6 +509,23 @@ class Database(object):
         self.checkCommonAnnotation( annoId)
         self.commit()
 
+    def exchangePolygonCoordinates(self, annoId, slideUID, annoList):
+        self.annotations[annoId].annotationType = AnnotationType.POLYGON
+        self.annotations[annoId].coordinates = np.asarray(annoList)
+        self.generateMinMaxCoordsList()
+
+        query = 'DELETE FROM Annotations_coordinates where annoId == %d' % annoId
+        self.execute(query)
+
+        for annotation in annoList:
+            query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
+                    % (annotation[0],annotation[1],slideUID, annoId, 1))
+            self.execute(query)
+        
+        self.commit()
+
+
+
     def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator):
         query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,3)' % (slideUID,classID)
 #        query = 'INSERT INTO Annotations (coordinateX1, coordinateY1, coordinateX2, coordinateY2, slide, class1, person1) VALUES (%d,%d,%d,%d,%d,%d, %d)' % (x1,y1,x2,y2,slideUID,classID,annotator)
@@ -594,6 +621,7 @@ class Database(object):
             self.annotations[annoIdx].removeLabel(labelIdx)
             self.commit()
             self.checkCommonAnnotation(annoIdx)
+
 
     def removeAnnotation(self, annoId):
             self.execute('DELETE FROM Annotations_label WHERE annoId == %d' % annoId)
