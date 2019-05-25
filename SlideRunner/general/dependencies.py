@@ -63,6 +63,7 @@ def check_all_dependencies():
                 ('signal','signal', None),
                 ('matplotlib.path','path',None),
                 ('time','time',None),
+                ('shapely','shapely','1.6.0'),
                 ('functools','functools',None),
                 ('openslide','openslide','1.1.1')] # (library_name, shorthand)
 
