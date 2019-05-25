@@ -26,16 +26,12 @@ import cv2
 import os
 import numpy as np
 import matplotlib.pyplot as plt 
-import sklearn.cluster
 import matplotlib.colors
-import staintools
-import scipy
 import pickle
 import SlideRunner.dataAccess.annotations as annotations 
 import matplotlib.path as path
 from SlideRunner.dataAccess.database import Database
 from skimage.feature import blob_dog
-from staintools.miscellaneous.get_concentrations import get_concentrations
 
 
 class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
