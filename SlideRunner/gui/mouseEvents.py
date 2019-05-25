@@ -26,6 +26,7 @@ import matplotlib.path as path
 import cv2
 from SlideRunner.gui import annotation as GUIannotation
 from SlideRunner.general import SlideRunnerPlugin
+from SlideRunner.dataAccess.annotations import *
 
 def doubleClick(self, event):
     """
@@ -292,7 +293,16 @@ def rightClickImage(self, event):
 
         if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON):
             menu = QMenu(self)
-            addmenu = menu.addMenu('Annotate as:')
+            clickedAnno = self.db.findIntersectingAnnotation(polygonAnnotation(-1, self.ui.annotationsList), self.currentVP, annoType=AnnotationType.POLYGON)
+            if (clickedAnno is not None):
+                self.selectedAnno = clickedAnno.uid
+                self.showImage()
+                addmenu = menu.addMenu('Existing annotation')
+                
+                addmenu.addAction('Remove area from existing annotation', partial(GUIannotation.removeFromPolygon,self,clickedAnno))
+                addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno))
+            addmenu = menu.addMenu('Add annotation for:')
+            
             menuitems = list()
             for clsname in self.db.getAllClasses():
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event))

@@ -89,6 +89,12 @@ class annotation():
       def positionInAnnotation(self, position: list) -> bool:
             return False
 
+      def intersectingWithAnnotation(self, anno) -> bool:
+          return self.convertToPath().intersects_path(anno.convertToPath())
+
+      def convertToPath(self):
+            return path.Path([])
+
       def getAnnotationsDescription(self, db) -> list:
            retval = list()
            if (self.pluginAnnotationLabel is None):
@@ -240,6 +246,9 @@ class rectangularAnnotation(annotation):
             return ((position[0]>self.x1) and (position[0]<self.x2) and 
                    (position[1]>self.y1) and (position[1]<self.y2))
 
+      def convertToPath(self):
+          return path.Path(np.array([[self.x1, self.x2, self.x2, self.x1, self.x1] ,[self.y1, self.y1, self.y2, self.y2, self.y1]]).T)
+
       def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected = False):
             xpos1=max(0,int((self.x1-leftUpper[0])/zoomLevel))
             ypos1=max(0,int((self.y1-leftUpper[1])/zoomLevel))
@@ -301,11 +310,12 @@ class polygonAnnotation(annotation):
 
         return [['Position', 'x1=%d, y1=%d' % (mc.x,mc.y)], ['Area', area], ['Largest diameter', diameter]] + self.getAnnotationsDescription(db)
 
+    def convertToPath(self):
+        p = path.Path(self.coordinates)
+        return p
 
     def positionInAnnotation(self, position: list) -> bool:
-        p = path.Path(self.coordinates)
-
-        return p.contains_point(position)
+        return self.convertToPath().contains_point(position)
 
     def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected=False):
         def slideToScreen(pos):
@@ -366,6 +376,13 @@ class circleAnnotation(annotation):
       def minCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1-self.r, self.y1-self.r)
 
+      def convertToPath(self):
+          pi = np.linspace(0,2*np.pi,100)
+          x = np.sin(pi)*self.r+self.x1
+          y = np.cos(pi)*self.r+self.y1
+          return path.Path(np.c_[x,y])
+          
+
       def maxCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1+self.r, self.y1+self.r)
 
@@ -400,6 +417,10 @@ class spotAnnotation(annotation):
 
       def maxCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1+25, self.y1+25)
+
+      def intersectingWithAnnotation(self, anno) -> bool:
+            return False
+
 
       def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected=False):
             xpos1=int((self.x1-leftUpper[0])/zoomLevel)

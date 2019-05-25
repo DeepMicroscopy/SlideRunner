@@ -17,6 +17,7 @@
 import numpy as np
 from SlideRunner.gui import mouseEvents as mouseEvents
 from PyQt5 import QtWidgets
+from shapely.geometry import * 
 
 
 def addSpotAnnotation(self, classID, event, typeAnno=1):
@@ -106,7 +107,32 @@ def addPolygonAnnotation(self,classID,event):
     self.showAnnotationsInOverview()
     self.writeDebug('added polygon annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))
     self.showDBentryCount()
-    
+
+def addToPolygon(self, annotation):
+
+    p1 = Polygon(np.array(annotation.convertToPath().vertices))
+    p2 = Polygon(np.array(self.ui.annotationsList))
+
+    unionPolygon = p1.union(p2).exterior.coords.xy
+
+    unionCoords = np.float32(np.c_[unionPolygon[0],unionPolygon[1]])
+
+    self.db.exchangePolygonCoordinates(annotation.uid, self.slideUID, unionCoords)
+    self.ui.annotationMode=0
+    self.showImage()
+
+def removeFromPolygon(self, annotation):
+
+    p1 = Polygon(annotation.convertToPath().vertices)
+    p2 = Polygon(self.ui.annotationsList)
+
+    unionPolygon = p1.difference(p2).exterior.coords.xy
+
+    unionCoords = np.float32(np.c_[unionPolygon[0],unionPolygon[1]])
+
+    self.db.exchangePolygonCoordinates(annotation.uid, self.slideUID, unionCoords)
+    self.ui.annotationMode=0
+    self.showImage()
 
 def addCircleAnnotation(self, classID, event):
     self.saveLastViewport()
