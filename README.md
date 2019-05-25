@@ -23,7 +23,7 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 
 | Operating System | Version | Download link|
 |---|---|---|
-| Windows 10 | V. 1.20.0 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.exe) |
+| Windows 10 | V. 1.24.0 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.exe) |
 |Mac OS X (10.14) | V 1.20.0 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.app.zip)|
 
 ## Installation - Source
@@ -99,7 +99,7 @@ have a class attached to it.
 
 ## News
 
-New version 1.22.0 has a much improved plugin interface. Amongst the many improvements are annotation support from the plugin, as well as the ability to copy annotations from the plugin to the database, even annotation groups.
+New version 1.22.0 has a much improved plugin interface. Amongst the many improvements are annotation support from the plugin, as well as the ability to copy annotations from the plugin to the database, even annotation groups. 
 
 
 ## Databases
