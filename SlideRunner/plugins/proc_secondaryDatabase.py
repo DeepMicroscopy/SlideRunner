@@ -31,7 +31,6 @@ import pickle
 import SlideRunner.dataAccess.annotations as annotations 
 import matplotlib.path as path
 from SlideRunner.dataAccess.database import Database
-from skimage.feature import blob_dog
 
 
 class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
