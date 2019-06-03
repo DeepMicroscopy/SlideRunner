@@ -25,6 +25,7 @@ class UIMainMode (enumerate):
     MODE_ANNOTATE_POLYGON = 4
     MODE_ANNOTATE_FLAG = 5
     MODE_ANNOTATE_CIRCLE = 6
+    MODE_ANNOTATE_WAND = 7
     
 class ClassRowItemId (enumerate):
     ITEM_DATABASE = 0
@@ -36,3 +37,13 @@ class ClassRowItem(object):
         self.uid = uid
         self.classID = classID
 
+
+class WandAnnotation(object):
+    def __init__(self, xy:tuple=(None,None)):
+        self.x, self.y = xy
+        self.tolerance=2
+        self.mask=None
+        self.polygon=None
+    
+    def seed_point(self):
+        return (self.x, self.y)

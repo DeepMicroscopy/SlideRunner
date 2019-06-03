@@ -204,6 +204,12 @@ def defineAnnotationMenu(self):
         self.menuItemAnnotateOutline.setChecked(False)
         self.menuItemAnnotateOutline.setEnabled(True)
 
+        self.menuItemAnnotateWand = annomode.addAction('Annotate outline (magic wand)', partial(self.setUIMode, UIMainMode.MODE_ANNOTATE_WAND))
+        self.menuItemAnnotateWand.setCheckable(True)
+        self.menuItemAnnotateWand.setChecked(False)
+        self.menuItemAnnotateWand.setEnabled(True)
+
+
         self.menuItemAnnotateFlag= annomode.addAction('Annotate important position', partial(self.setUIMode, UIMainMode.MODE_ANNOTATE_FLAG))
         self.menuItemAnnotateFlag.setCheckable(True)
         self.menuItemAnnotateFlag.setChecked(False)
