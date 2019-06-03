@@ -113,7 +113,11 @@ def addToPolygon(self, annotation):
     p1 = Polygon(np.array(annotation.convertToPath().vertices))
     p2 = Polygon(np.array(self.ui.annotationsList))
 
-    unionPolygon = p1.union(p2).exterior.coords.xy
+    try:
+        unionPolygon = p1.union(p2).exterior.coords.xy
+    except:
+        reply = QtWidgets.QMessageBox.about(self, "Error", 'Polygon union did not work. Sorry!')
+        return
 
     unionCoords = np.float32(np.c_[unionPolygon[0],unionPolygon[1]])
 
@@ -126,13 +130,23 @@ def removeFromPolygon(self, annotation):
     p1 = Polygon(annotation.convertToPath().vertices)
     p2 = Polygon(self.ui.annotationsList)
 
-    unionPolygon = p1.difference(p2).exterior.coords.xy
+    try:
+        diffPolygon = p1.difference(p2)
+    except:
+        reply = QtWidgets.QMessageBox.about(self, "Error", 'Polygon difference did not work. Sorry!')
+        return
 
-    unionCoords = np.float32(np.c_[unionPolygon[0],unionPolygon[1]])
+    if isinstance(diffPolygon, Polygon):
+        diffPolyCoords = diffPolygon.exterior.coords.xy 
 
-    self.db.exchangePolygonCoordinates(annotation.uid, self.slideUID, unionCoords)
-    self.ui.annotationMode=0
-    self.showImage()
+        unionCoords = np.float32(np.c_[diffPolyCoords[0],diffPolyCoords[1]])
+
+        self.db.exchangePolygonCoordinates(annotation.uid, self.slideUID, unionCoords)
+        self.ui.annotationMode=0
+        self.showImage()
+    else:
+        reply = QtWidgets.QMessageBox.about(self, "Error", 'Polygon difference reported no single polygon as output.')
+        
 
 def addCircleAnnotation(self, classID, event):
     self.saveLastViewport()
