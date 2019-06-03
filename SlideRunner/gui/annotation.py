@@ -95,23 +95,23 @@ def copyAnnotation(self,pluginAnno, classID,event):
     self.showImage()
     self.showDBentryCount()
 
-def addPolygonAnnotation(self,classID,event):
+def addPolygonAnnotation(self,classID,event, annoList):
     """
         Polygon annotation is ready. Add to database.
     """
     self.saveLastViewport()
     self.ui.annotationMode=0
-    self.db.insertNewPolygonAnnotation(self.ui.annotationsList,
+    self.db.insertNewPolygonAnnotation(annoList,
                                 self.slideUID,classID, self.retrieveAnnotator(event))
     self.showImage()
     self.showAnnotationsInOverview()
     self.writeDebug('added polygon annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))
     self.showDBentryCount()
 
-def addToPolygon(self, annotation):
+def addToPolygon(self, annotation, annoList):
 
     p1 = Polygon(np.array(annotation.convertToPath().vertices))
-    p2 = Polygon(np.array(self.ui.annotationsList))
+    p2 = Polygon(np.array(annoList))
 
     try:
         unionPolygon = p1.union(p2).exterior.coords.xy
@@ -125,10 +125,10 @@ def addToPolygon(self, annotation):
     self.ui.annotationMode=0
     self.showImage()
 
-def removeFromPolygon(self, annotation):
+def removeFromPolygon(self, annotation, annoList):
 
     p1 = Polygon(annotation.convertToPath().vertices)
-    p2 = Polygon(self.ui.annotationsList)
+    p2 = Polygon(annoList)
 
     try:
         diffPolygon = p1.difference(p2)

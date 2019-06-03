@@ -38,7 +38,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.24.0'
+version = '1.25.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -180,6 +180,7 @@ class SlideRunnerUI(QMainWindow):
         self.annotationsArea = list()
         self.annotationsCircle = list()
         self.annotationsList = list()
+        self.ui.wandAnnotation = WandAnnotation()
         self.slidename=''
         self.slideUID = 0
         self.ui.annotationMode = 0
@@ -861,6 +862,9 @@ class SlideRunnerUI(QMainWindow):
         elif (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT):
             self.menuItemAnnotateCenter.setChecked(True)
             self.ui.iconCircle.setChecked(True)
+        elif (self.ui.mode == UIMainMode.MODE_ANNOTATE_WAND):
+            self.menuItemAnnotateWand.setChecked(True)
+            self.ui.iconWand.setChecked(True)
         elif (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA):
             self.menuItemAnnotateArea.setChecked(True)
             self.ui.iconRect.setChecked(True)
@@ -1512,13 +1516,6 @@ class SlideRunnerUI(QMainWindow):
 
         self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
 
-        if (self.onOpen):
-            # This is clumpsy fix for resizing not happening properly on the main image
-            old = self.ui.progressBar.isHidden()
-            self.ui.progressBar.setHidden(False)
-            self.ui.progressBar.setHidden(old)
-            self.onOpen=False
-
         if (len(npi.shape)==1): # empty was given as parameter - i.e. trigger comes from plugin
             npi = self.cachedLastImage
 
@@ -1602,6 +1599,28 @@ class SlideRunnerUI(QMainWindow):
         # Show the current polygon (if in polygon annotation mode)
         if (self.db.isOpen()) & (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
             npi = self.showPolygon(npi, self.ui.annotationsList, color=[0,0,0,255])
+
+        if (self.ui.wandAnnotation.x is not None):
+            # Wand annotation is active
+            mask = np.zeros( (npi.shape[0]+2, npi.shape[1]+2), dtype=np.uint8)
+            seed_point = self.ui.wandAnnotation.seed_point()
+            seedPoint_screen = self.slideToScreen(seed_point)
+            flags = 4 | 255 << 8   # bit shift
+            flags |= cv2.FLOODFILL_FIXED_RANGE | cv2.FLOODFILL_MASK_ONLY
+            flood_image = npi[...,0:3].copy()
+            tol = (int(self.ui.wandAnnotation.tolerance),)*3
+            try:
+                cv2.floodFill(image=flood_image, mask=mask, seedPoint=seedPoint_screen, newVal=(1,1,1),
+                        loDiff=tol, upDiff=tol, flags=flags)
+                self.ui.wandAnnotation.mask = 255-mask
+
+                npi[mask[1:-1,1:-1]!=0,0:3] = 255 - npi[mask[1:-1,1:-1]!=0,0:3]
+            except:
+                print('Floodfill did not work!')
+
+        if (self.ui.wandAnnotation.polygon is not None):
+            npi = self.showPolygon(npi, self.ui.wandAnnotation.polygon, color=[0,0,0,255])
+
 
         # Copy displayed image
         self.displayedImage = npi
