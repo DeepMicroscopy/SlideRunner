@@ -951,7 +951,7 @@ class SlideRunnerUI(QMainWindow):
 
     def showPolygon(self, tempimage, polygon, color):
         zoomLevel = self.getZoomValue()
-        markersize = int(5/zoomLevel)
+        markersize = 3
         listIdx=-1
 
         # small assertion to fix bug #12
