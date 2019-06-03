@@ -37,7 +37,7 @@ def doubleClick(self, event):
         addmenu = menu.addMenu('Annotate as:')
         menuitems = list()
         for clsname in self.db.getAllClasses():
-            act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event))
+            act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event, self.ui.annotationsList))
             menuitems.append(act)
         addmenu = menu.addAction('Cancel', self.hitEscape)
 
@@ -121,6 +121,11 @@ def moveImage(self, event):
 
         self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(tempimage)))
 
+    if (self.ui.mode == UIMainMode.MODE_ANNOTATE_WAND):
+        if (self.ui.wandAnnotation.x is not None):
+            self.ui.wandAnnotation.tolerance = min(100,max(2,np.abs(self.screenToSlide(getMouseEventPosition(self,event))[0]-self.ui.wandAnnotation.x)))
+            self.showImage()
+
     if not (modifiers == Qt.ShiftModifier) and (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
         self.ui.moveDots+=1
         self.ui.annotationsList.append(self.screenToSlide(getMouseEventPosition(self,event)))            
@@ -190,6 +195,9 @@ def leftClickImage(self, event):
             self.ui.clickToMove = True
             self.setCursor(Qt.ClosedHandCursor)
 
+        if clickedAnno is None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_WAND) and (self.db.isOpen()):
+            self.ui.wandAnnotation = WandAnnotation(self.screenToSlide(getMouseEventPosition(self,event)))
+            self.showImage()
 
         if clickedAnno is None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT):
             if (self.lastAnnotationClass==0):
@@ -238,7 +246,7 @@ def releaseImage(self, event):
     """
     self.ui.clickToMove = False
     self.setCursor(Qt.ArrowCursor)
-    if (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA) & (self.ui.annotationMode>1):
+    if (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA) & (self.ui.annotationMode>1) and (self.db.isOpen()):
         self.ui.annotationMode=0        
         if (self.lastAnnotationClass == 0):
             menu = QMenu(self)
@@ -254,7 +262,44 @@ def releaseImage(self, event):
             GUIannotation.addAreaAnnotation(self, self.lastAnnotationClass, event)
             self.showImage()
 
-    if (self.ui.mode == UIMainMode.MODE_ANNOTATE_CIRCLE) & (self.ui.annotationMode>1):
+    if (self.ui.mode == UIMainMode.MODE_ANNOTATE_WAND) and (self.db.isOpen()):
+        
+        if (self.ui.wandAnnotation.mask is not None):
+            polygons = cv2.findContours(self.ui.wandAnnotation.mask, cv2.RETR_LIST,
+                                          cv2.CHAIN_APPROX_SIMPLE)[1]
+
+            lenpoly = [len(x) for x in polygons]
+            polygon = polygons[np.argmax(lenpoly)]
+
+            self.ui.wandAnnotation.polygon = list()
+            for xy in polygon:
+                self.ui.wandAnnotation.polygon.append(self.screenToSlide(xy[0]))            
+
+            self.showImage()
+            menu = QMenu(self)
+            clickedAnno = self.db.findIntersectingAnnotation(polygonAnnotation(-1, self.ui.wandAnnotation.polygon), self.currentVP, annoType=AnnotationType.POLYGON)
+            if (clickedAnno is not None):
+                self.selectedAnno = clickedAnno.uid
+                self.showImage()
+                addmenu = menu.addMenu('Existing annotation')
+                
+                addmenu.addAction('Remove area from existing annotation', partial(GUIannotation.removeFromPolygon,self,clickedAnno, self.ui.wandAnnotation.polygon))
+                addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno, self.ui.wandAnnotation.polygon))
+
+
+            addmenu = menu.addMenu('Annotate as:')
+            menuitems = list()
+            for clsname in self.db.getAllClasses():
+                act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self, clsname[1], event, self.ui.wandAnnotation.polygon))
+                menuitems.append(act)
+
+            action = menu.exec_(self.mapToGlobal(event.pos()))
+
+        
+        self.ui.wandAnnotation = WandAnnotation()
+        self.showImage()
+
+    if (self.ui.mode == UIMainMode.MODE_ANNOTATE_CIRCLE) & (self.ui.annotationMode>1) and (self.db.isOpen()):
         self.ui.annotationMode=0        
         menu = QMenu(self)
         if (self.lastAnnotationClass == 0):
@@ -299,13 +344,13 @@ def rightClickImage(self, event):
                 self.showImage()
                 addmenu = menu.addMenu('Existing annotation')
                 
-                addmenu.addAction('Remove area from existing annotation', partial(GUIannotation.removeFromPolygon,self,clickedAnno))
-                addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno))
+                addmenu.addAction('Remove area from existing annotation', partial(GUIannotation.removeFromPolygon,self,clickedAnno, self.ui.annotationsList))
+                addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno, self.ui.annotationsList))
             addmenu = menu.addMenu('Add annotation for:')
             
             menuitems = list()
             for clsname in self.db.getAllClasses():
-                act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event))
+                act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event, self.ui.annotationsList))
                 menuitems.append(act)
             addmenu = menu.addAction('Remove last point', partial(self.removeLastPolygonPoint,self))
             addmenu = menu.addAction('Cancel', self.hitEscape)
