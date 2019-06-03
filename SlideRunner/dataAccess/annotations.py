@@ -133,6 +133,7 @@ class annotation():
               self.agreedClass = self.majorityLabel()
 
       def _create_annohandle(self, image:np.ndarray, coord:tuple, markersize:int, color:tuple) -> AnnotationHandle:
+            markersize=3
             pt1_rect = (max(0,coord[0]-markersize),
                         max(0,coord[1]-markersize))
             pt2_rect = (min(image.shape[1],coord[0]+markersize),
