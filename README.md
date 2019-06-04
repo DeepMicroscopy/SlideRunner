@@ -26,6 +26,13 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 | Windows 10 | V. 1.24.0 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.exe) |
 |Mac OS X (10.14) | V 1.20.0 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.app.zip)|
 
+## Updates
+
+Starting V. 1.25.0, SlideRunner features a *magic wand* tool.
+
+[![Watch the video](https://img.youtube.com/vi/X8NGDqVj3o0/hqdefault.jpg)](https://youtu.be/X8NGDqVj3o0)
+
+
 ## Installation - Source
 
 SlideRunner is written in Python 3, so you will need a Python 3 distribution like e.g. Anaconda (https://www.anaconda.com/download/) to run it. Further, you need to install
