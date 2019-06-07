@@ -67,3 +67,4 @@ def defineMenuShortcuts(self):
     self.menuItemAnnotateCircle.setShortcut('C')
     self.menuItemAnnotateArea.setShortcut('R')
     self.menuItemAnnotateFlag.setShortcut('F')
+    self.menuItemAnnotateWand.setShortcut('W')
