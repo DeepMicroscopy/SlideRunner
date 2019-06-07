@@ -477,6 +477,11 @@ class Database(object):
         self.execute(q)
         self.commit()
         self.annotations[annoIdx].changeLabel(entryId, person, classId)
+        
+        # check if all labels belong to one class now
+        if np.all(np.array([lab.classId for lab in self.annotations[annoIdx].labels])==classId):
+            self.setAgreedClass(classId, annoIdx)
+
         self.checkCommonAnnotation(annoIdx)
 
     def checkCommonAnnotation(self, annoIdx ):
