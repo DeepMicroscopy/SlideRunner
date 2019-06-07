@@ -855,6 +855,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.iconCircle.setChecked(False)
         self.ui.iconPolygon.setChecked(False)
         self.ui.iconFlag.setChecked(False)
+        self.ui.iconWand.setChecked(False)
 
         if (self.ui.mode == UIMainMode.MODE_VIEW):
             self.menuItemView.setChecked(True)
@@ -874,6 +875,9 @@ class SlideRunnerUI(QMainWindow):
         elif (self.ui.mode == UIMainMode.MODE_ANNOTATE_FLAG):
             self.menuItemAnnotateFlag.setChecked(True)
             self.ui.iconFlag.setChecked(True)
+        elif (self.ui.mode == UIMainMode.MODE_ANNOTATE_WAND):
+            self.menuItemAnnotateWand.setChecked(True)
+            self.ui.iconWand.setChecked(True)
 
     def toQImage(self, im, copy=False):
         qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_RGBA8888)
@@ -1607,7 +1611,7 @@ class SlideRunnerUI(QMainWindow):
             seedPoint_screen = self.slideToScreen(seed_point)
             flags = 4 | 255 << 8   # bit shift
             flags |= cv2.FLOODFILL_FIXED_RANGE | cv2.FLOODFILL_MASK_ONLY
-            flood_image = npi[...,0:3].copy()
+            flood_image = self.rawImage[...,0:3].copy()
             tol = (int(self.ui.wandAnnotation.tolerance),)*3
             try:
                 cv2.floodFill(image=flood_image, mask=mask, seedPoint=seedPoint_screen, newVal=(1,1,1),
