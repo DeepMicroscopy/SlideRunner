@@ -34,9 +34,14 @@ def doubleClick(self, event):
     """
     if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON):
         menu = QMenu(self)
+        DBclasses=self.db.getAllClasses()
+        DBclassToName = {classId:className for className,classId in DBclasses}
+        if (self.lastAnnotationClass>0):
+            act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
+            act.setShortcut(Qt.Key_Enter)
         addmenu = menu.addMenu('Annotate as:')
         menuitems = list()
-        for clsname in self.db.getAllClasses():
+        for clsname in DBclasses:
             act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event, self.ui.annotationsList))
             menuitems.append(act)
         addmenu = menu.addAction('Cancel', self.hitEscape)
@@ -250,8 +255,8 @@ def releaseImage(self, event):
         self.ui.annotationMode=0        
         if (self.lastAnnotationClass == 0):
             menu = QMenu(self)
-            addmenu = menu.addMenu('Annotate as:')
             menuitems = list()
+            addmenu = menu.addMenu('Annotate as:')
             for clsname in self.db.getAllClasses():
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.addAreaAnnotation,self, clsname[1], event))
                 menuitems.append(act)
@@ -286,10 +291,14 @@ def releaseImage(self, event):
                 addmenu.addAction('Remove area from existing annotation', partial(GUIannotation.removeFromPolygon,self,clickedAnno, self.ui.wandAnnotation.polygon))
                 addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno, self.ui.wandAnnotation.polygon))
 
-
+            DBclasses=self.db.getAllClasses()
+            DBclassToName = {classId:className for className,classId in DBclasses}
+            if (self.lastAnnotationClass>0):
+                act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.wandAnnotation.polygon))
+                act.setShortcut(Qt.Key_Enter)
             addmenu = menu.addMenu('Annotate as:')
             menuitems = list()
-            for clsname in self.db.getAllClasses():
+            for clsname in DBclasses:
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self, clsname[1], event, self.ui.wandAnnotation.polygon))
                 menuitems.append(act)
 
@@ -346,7 +355,12 @@ def rightClickImage(self, event):
                 
                 addmenu.addAction('Remove area from existing annotation', partial(GUIannotation.removeFromPolygon,self,clickedAnno, self.ui.annotationsList))
                 addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno, self.ui.annotationsList))
-            addmenu = menu.addMenu('Add annotation for:')
+            DBclasses=self.db.getAllClasses()
+            DBclassToName = {classId:className for className,classId in DBclasses}
+            if (self.lastAnnotationClass>0):
+                act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
+                act.setShortcut(Qt.Key_Enter)
+            addmenu = menu.addMenu('Annotate as:')
             
             menuitems = list()
             for clsname in self.db.getAllClasses():
