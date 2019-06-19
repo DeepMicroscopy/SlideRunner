@@ -24,6 +24,7 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 | Operating System | Version | Download link|
 |---|---|---|
 | Windows 10 | V. 1.25.0 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.exe) |
+| Windows 10 (google drive)| V. 1.26.0 | [link](https://drive.google.com/open?id=1Zn6z1uiVdw_pRvEZk9aVyCfVrKSFv9qc) |
 |Mac OS X (10.14) | V 1.20.0 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.app.zip)|
 
 ## Updates
