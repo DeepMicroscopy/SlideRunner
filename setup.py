@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 import os
 import sys
 
-version = '1.25.0'
+version = '1.26.0'
 
 if sys.argv[-1] == 'publish':
   if (os.system("python setup.py test") == 0):
@@ -30,7 +30,7 @@ setup(name='SlideRunner',
       }, 
       install_requires=[
           'PyQt5', 'openslide-python>=1.1.1', 'pyqt5>=5.5.0', 'opencv-python>=3.1.0',
-          'matplotlib>=2.0.0', 'numpy>=1.13', 'matplotlib>=2.0.0'
+          'matplotlib>=2.0.0', 'numpy>=1.13', 'matplotlib>=2.0.0', 'rollbar>=0.14', 'shapely>=1.6.4'
       ],
       setup_requires=['pytest-runner'],
       entry_points={

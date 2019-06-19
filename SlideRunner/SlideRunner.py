@@ -21,6 +21,8 @@
             pyqt                pyqt5-5.5.0
             sqlite3             2.6.0
             matplotlib          2.0.0
+            shapely             1.6.4
+            rollbar             0.14
 
 
 
@@ -38,7 +40,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.25.0'
+version = '1.26.0'
 
 SLIDERUNNER_DEBUG = False
 
