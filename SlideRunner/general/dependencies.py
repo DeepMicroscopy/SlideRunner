@@ -62,6 +62,7 @@ def check_all_dependencies():
                 ('logging','logging','0.5'),
                 ('signal','signal', None),
                 ('matplotlib.path','path',None),
+                ('rollbar','rollbar', '0.14'),
                 ('time','time',None),
                 ('shapely','shapely','1.6.0'),
                 ('functools','functools',None),
