@@ -1688,6 +1688,16 @@ class SlideRunnerUI(QMainWindow):
         # Display image in GUI
         self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.displayedImage)))
 
+    def toggleOneClass(self, row):
+        if (row>=len(self.modelItems)):
+            return
+        self.modelItems[row].stateChanged.disconnect(self.selectClasses)
+        self.modelItems[row].setChecked(not(self.modelItems[row].checkState()))
+    
+        self.modelItems[row].stateChanged.connect(self.selectClasses)
+       
+        self.selectClasses(None)
+
 
     def toggleAllClasses(self):
         for item in range(len(self.modelItems)):
