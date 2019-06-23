@@ -28,9 +28,15 @@ def defineShortcuts(self):
     shortcuts=[]
 
     for k in range(8):
+        shortcut = QShortcut(QKeySequence("Ctrl+%d" % (k+1)),self)
+        shortcut.activated.connect(partial(self.toggleOneClass, k+1))
+        shortcuts.append(shortcut)
+
+    for k in range(8):
         shortcut = QShortcut(QKeySequence("%d" % (k+1)),self)
         shortcut.activated.connect(partial(self.clickAnnoclass, k+1))
         shortcuts.append(shortcut)
+
 
     # Set keyboard shortcuts
     shortcutEsc = QShortcut(QKeySequence("Esc"), self)
