@@ -111,6 +111,7 @@ class Database(object):
 
         self.databaseStructure = dict()
         self.annotations = dict()       
+        self.doCommit = True
         self.annotationsSlide = None
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
         self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT'))
@@ -703,31 +704,28 @@ class Database(object):
         return self.db.commit()
 
     def countEntryPerClass(self, slideID = 0):
+        retval = {'unknown' :  {'uid': 0, 'count_total':0, 'count_slide':0}}
         self.dbcur.execute('SELECT Classes.uid, COUNT(*), name FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass GROUP BY Classes.uid')
         allClasses = self.dbcur.fetchall()
-
-        statistics = np.zeros((2,1+len(allClasses)))
     
-        names=list()
         classids = np.zeros(len(allClasses))        
         for idx,element in enumerate(allClasses):
-                classids[idx] = element[0]
-                statistics[1,idx] = element[1]
-                if (element[2] is not None):
-                    names.append( str(element[2]))
-                else:
-                    names.append('unknown')
-                    classids[idx] = 0
+                name = element[2] if element[2] is not None else 'unknown'
+                
+                retval[name] = {'uid': element[0], 'count_total':element[1], 'count_slide':0}
+        uidToName = {uid:name for uid,_,name in allClasses}
+
 
         if (slideID is not None):
-            if (self.annotationsSlide is not slideID):
-                self.loadIntoMemory(slideId=slideID)
-            for annoId in self.annotations.keys():
-                statistics[0,self.annotations[annoId].majorityLabel()-1] += 1
 
+            self.dbcur.execute('SELECT Classes.uid, COUNT(*), name FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass where slide==%d GROUP BY Classes.uid' % slideID)
+            allClasses = self.dbcur.fetchall()
+            
+            for uid,cnt,name in allClasses:
+                retval[name]['count_slide'] = cnt
 
+        return retval
 
-        return (names, statistics)
 
     def countEntries(self):
         self.dbcur.execute('SELECT COUNT(*) FROM Annotations')
