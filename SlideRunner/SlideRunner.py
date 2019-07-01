@@ -1549,8 +1549,8 @@ class SlideRunnerUI(QMainWindow):
         self.refreshTimer.start()
 
         if ((self.activePlugin is not None) and (self.overlayMap is None) and 
-           ((self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE ) or 
-            self.activePlugin.instance.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN) and (len(self.pluginAnnos)==0)):
+           ((self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE ) or
+            self.activePlugin.instance.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN)): # and (len(self.pluginAnnos)==0))
             from threading import Timer
             if (self.updateTimer is not None):
                 self.updateTimer.cancel()
