@@ -1856,12 +1856,13 @@ class SlideRunnerUI(QMainWindow):
         table_model.setColumnCount(3)
         table_model.setHorizontalHeaderLabels("Name;# on slide;# total".split(";"))
 
-        names, statistics = self.db.countEntryPerClass(self.slideUID)
+        statistics = self.db.countEntryPerClass(self.slideUID)
 
+        names = list(statistics.keys())
         for idx in range(len(names)):
             txt = QStandardItem(names[idx])
-            col1 = QStandardItem('%d' % statistics[0,idx])
-            col2 = QStandardItem('%d' % statistics[1,idx])
+            col1 = QStandardItem('%d' % statistics[names[idx]]['count_slide'])
+            col2 = QStandardItem('%d' % statistics[names[idx]]['count_total'])
             table_model.appendRow([txt,col1,col2])
 
         self.ui.statisticView.setModel(table_model)
