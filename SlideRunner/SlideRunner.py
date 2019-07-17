@@ -78,6 +78,7 @@ class imageReceiverThread(threading.Thread):
             self.selfObj.overlayMap = img
             self.selfObj.showImageRequest.emit(np.empty(0), procId)
 
+
 class SlideReaderThread(threading.Thread):
     queue = queue.Queue()
     def __init__(self, SlideRunnerObject):
@@ -122,6 +123,8 @@ class PluginStatusReceiver(threading.Thread):
                 self.selfObj.updatePluginConfig.emit(value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.UPDATE_LABELS):
                 self.selfObj.updatePluginLabels.emit()
+            elif (msgId == SlideRunnerPlugin.StatusInformation.UPDATE_INFORMATION):
+                self.selfObj.pluginInformationReceived.emit(value)
 
 
 class SlideRunnerUI(QMainWindow):
@@ -130,6 +133,7 @@ class SlideRunnerUI(QMainWindow):
     readRegionCompleted = pyqtSignal(np.ndarray, int)
     statusViewChanged = pyqtSignal(str)
     annotationReceived = pyqtSignal(list)
+    pluginInformationReceived = pyqtSignal(dict)
     updatedCacheAvailable = pyqtSignal(dict)
     setZoomReceived = pyqtSignal(float)
     setCenterReceived = pyqtSignal(tuple)
@@ -210,6 +214,8 @@ class SlideRunnerUI(QMainWindow):
         self.statusViewChanged.connect(self.setStatusView)
         self.showImageRequest.connect(self.showImage_part2)
         self.annotationReceived.connect(self.receiveAnno)
+        self.pluginInformationReceived.connect(self.receivePluginInformation)
+
         self.updatePluginConfig.connect(self.updatePluginConfiguration)
         self.updatePluginLabels.connect(self.showDatabaseUIelements)
         self.updatedCacheAvailable.connect(self.updateCache)
@@ -334,6 +340,23 @@ class SlideRunnerUI(QMainWindow):
         self.pluginMinCoords, self.pluginMaxCoords = SlideRunnerPlugin.generateMinMaxCoordsList(anno)
         self.showImage_part2(np.empty(shape=(1)), self.processingStep)
 
+
+    #receivePluginInformation
+    def receivePluginInformation(self, pluginInformation):
+        self.pluginInformation = pluginInformation
+
+        self.pluginTableWidget.clearContents()
+
+        self.pluginTableWidget.setRowCount(len(pluginInformation))
+        self.pluginTableWidget.setColumnCount(2)
+        self.pluginTableWidget.setHorizontalHeaderLabels(["Key", "Value"])
+
+        for id, key in enumerate(self.pluginInformation):
+            self.pluginTableWidget.setItem(id,0, QTableWidgetItem(str(key)))
+            self.pluginTableWidget.setItem(id,1, QTableWidgetItem(str(self.pluginInformation[key])))
+
+
+
     def setProgressBar(self, number):
         if (number == -1):
             self.ui.progressBar.setHidden(True)
@@ -455,14 +478,21 @@ class SlideRunnerUI(QMainWindow):
                     self.pluginParameterSliders[pluginConfig.uid] = newSlider
                     self.pluginConfigLabels[pluginConfig.uid] = valLabel
                     newSlider.setStyleSheet("""
-    QSlider:horizontal {
-        min-height: 10px;
-    }
-    
-    QSlider::groove:horizontal {
-        margin: 0px 0; /* decrease this size (make it more negative)—I changed mine from –2px to –8px. */
-    }
-    """)
+                    QSlider:horizontal {
+                        min-height: 10px;
+                    }
+                    
+                    QSlider::groove:horizontal {
+                        margin: 0px 0; /* decrease this size (make it more negative)—I changed mine from –2px to –8px. */
+                    }
+                    """)
+                elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.TABLE):
+                    self.pluginTableWidget = QTableWidget()
+                    self.pluginTableWidget.setHorizontalHeaderLabels(['Key', 'Value'])
+
+                    self.ui.tab3Layout.addWidget(self.pluginTableWidget)
+
+
 
 
                 
@@ -1483,6 +1513,9 @@ class SlideRunnerUI(QMainWindow):
 
         if (self.overviewOverlayHeatmap):
             npi = self.screeningMap.overlayHeatmap(npi)
+
+        if(self.activePlugin is not None and hasattr(self.activePlugin.instance, 'overlayHeatmap')):
+            npi = self.activePlugin.instance.overlayHeatmap(npi)
 
         # Set pixmap of overview image (display overview image)
         self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(npi))
