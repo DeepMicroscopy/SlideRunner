@@ -34,7 +34,6 @@ class JobDescription(enumerate):
       PROCESS = 0
       QUIT_PLUGIN_THREAD = 99
 
-
 class pluginJob():
       jobDescription = None
       slideFilename = None
@@ -172,6 +171,7 @@ class ComboboxPluginConfigurationEntry(PluginConfigurationEntry):
             self.name=name
             self.type=PluginConfigurationType.COMBOBOX
             self.options = options
+            self.selected_value = 0
 
 
 class TablePluginConfigurationEntry(PluginConfigurationEntry):

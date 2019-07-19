@@ -49,7 +49,7 @@ def addSidebar(self, parentObject):
         sizePolicy.setVerticalStretch(0)
 #        sizePolicy.setHeightForWidth(self.tabView.sizePolicy().hasHeightForWidth())
         self.tabView.setSizePolicy(sizePolicy)
-        self.tabView.setMaximumSize(QtCore.QSize(16777215, 300))
+        self.tabView.setMaximumSize(QtCore.QSize(16777215, 1200))
 
         self.tab1widget = QtWidgets.QWidget()
         self.tab1Layout = QtWidgets.QVBoxLayout()

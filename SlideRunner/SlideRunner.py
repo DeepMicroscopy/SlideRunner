@@ -407,6 +407,11 @@ class SlideRunnerUI(QMainWindow):
         self.triggerPlugin(self.cachedLastImage, trigger=btn)
 #        self.showImage()
 
+    def pluginComboboxChanged(self, option, index):
+
+        option.selected_value = index.currentText()
+        self.triggerPlugin(self.cachedLastImage, trigger=option)
+
     """
      Add configuration options of active plugin to sidebar
     """
@@ -491,12 +496,13 @@ class SlideRunnerUI(QMainWindow):
                     self.pluginTableWidget.setHorizontalHeaderLabels(['Key', 'Value'])
 
                     self.ui.tab3Layout.addWidget(self.pluginTableWidget)
+                elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.COMBOBOX):
+                    cb = QtWidgets.QComboBox()
+                    cb.setToolTip(pluginConfig.name)
+                    cb.addItems(pluginConfig.options)
 
-
-
-
-                
-                
+                    self.ui.tab3Layout.addWidget(cb)
+                    cb.currentIndexChanged.connect(partial(self.pluginComboboxChanged, pluginConfig, cb))
 
     """
     Helper function to toggle Plugin activity
@@ -1585,7 +1591,7 @@ class SlideRunnerUI(QMainWindow):
 
         if ((self.activePlugin is not None) and (self.overlayMap is None) and 
            ((self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE ) or 
-            self.activePlugin.instance.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN) and (len(self.pluginAnnos)==0)):
+            self.activePlugin.instance.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN)): # and (len(self.pluginAnnos)==0)
             from threading import Timer
             if (self.updateTimer is not None):
                 self.updateTimer.cancel()
