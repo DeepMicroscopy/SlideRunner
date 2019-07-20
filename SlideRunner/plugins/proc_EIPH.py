@@ -12,11 +12,19 @@ import torchvision.transforms as transforms
 
 import SlideRunner.dataAccess.annotations as annotations
 
+
+from SlideRunner.plugins.lib.RetinaNet import RetinaNet
+from SlideRunner.plugins.lib.helper.fastai_helpers import *
+
+
 from helper.object_detection_helper import *
-from loss.RetinaNetFocalLoss import RetinaNetFocalLoss
-from models.RetinaNet import RetinaNet
+#from models.RetinaNet import RetinaNet
 from helper.nms_center_distance import non_max_suppression_by_distance
 
+
+#import gdown
+#url = 'https://docs.google.com/uc?id=1eN7yOmdRSLJ4myJnm7-VFeV1eFXdlEty'
+#gdown.download(url, 'eiph.p', quiet=False)
 
 
 class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
@@ -35,9 +43,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                                                                          initValue=1024, minValue=128,
                                                                          maxValue=8192),
                               SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Model file',
-                                                                             mask='*.pth'),
-                              SlideRunnerPlugin.FilePickerConfigurationEntry(uid='stats', name='Stats file',
-                                                                             mask='*.p'),
+                                                                             mask='*.pth;;*.p'),
                               SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="Predict",
                                                                                    name="Predict field of View"),
                               #SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="PredictWSI",
@@ -99,6 +105,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         last_annos_original_count = 0
         last_ModelName = ''
         last_StatsName = ''
+        last_DataSource = None
         uid = 100000
 
         while not quitSignal:
@@ -132,8 +139,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             if job.trigger is not None and \
                     job.trigger.uid == "Datasource":
                 self.data_source = job.trigger.selected_value
-
-
+                self.overlay = self.create_overlay(job, self.data_source)
 
             #refresh overview image
             if (len(job.openedDatabase.annotations) != last_annotations_count) \
@@ -142,28 +148,38 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 self.overlay = self.create_overlay(job, self.data_source)
 
 
-            if job.configuration['file'] != last_ModelName:
+            if job.configuration['file'] != last_ModelName \
+                    and job.configuration['file'] != "":
                 last_ModelName = job.configuration['file']
 
-                model_weights = torch.load(last_ModelName, map_location='cpu') \
+                model_information = torch.load(last_ModelName, map_location='cpu') \
                     if torch.cuda.is_available() \
                     else torch.load(last_ModelName)
 
-                model_weights = model_weights['model']
+                model_weights = model_information['model']
 
-                encoder = create_body(models.resnet18, True, -2)
-                self.model = RetinaNet(encoder, 6, n_anchors=3, sizes=[32], chs=32, final_bias=-4., n_conv=2)
+                self.anchors = model_information["anchors"]
+                self.mean = model_information["mean"]
+                self.std = model_information["std"]
+                self.shape = model_information["size"]
+                n_classes = model_information['n_classes']
+                n_anchors = model_information['n_anchors']
+                sizes = model_information['sizes']
+                chs = model_information['chs']
+                encoder = model_information['encoder']
+                n_conv = model_information['n_conv']
+
+                if encoder == "RN-18":
+                    encoder = create_body(models.resnet18, False, -2)
+                elif encoder == "RN-34":
+                    encoder = create_body(models.resnet34, False, -2)
+                elif encoder == "RN-50":
+                    encoder = create_body(models.resnet50, False, -2)
+
+
+                self.model = RetinaNet(encoder, n_classes, n_anchors=n_anchors, sizes=sizes,
+                                       chs=chs, final_bias=-4., n_conv=n_conv)
                 self.model.load_state_dict(model_weights)
-
-            if job.configuration['stats'] != last_StatsName:
-                last_StatsName = job.configuration['stats']
-
-                statistics = pickle.load(open(last_StatsName, "rb"))
-
-                self.anchors = statistics["anchors"]
-                self.mean = statistics["mean"]
-                self.std = statistics["std"]
-                self.shape = statistics["size"]
 
             if self.model is not None            \
                     and self.anchors is not None \
@@ -306,20 +322,21 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         x_steps = range(0, self.level_dimension[0] - 2 * self.headmap_resolution, int(self.headmap_resolution / 2))
         y_steps = range(0, self.level_dimension[1] - 2 * self.headmap_resolution, int(self.headmap_resolution / 2))
         gt_image = np.zeros(shape=(len(x_steps) + 1, len(y_steps) + 1))
-        x_index = 0
-        for x in x_steps:
-            y_index = 0
-            for y in y_steps:
-                ids = ((annotations[:, 1]) > x) \
-                      & ((annotations[:, 0]) > y) \
-                      & ((annotations[:, 3]) < x + self.headmap_resolution) \
-                      & ((annotations[:, 2]) < y + self.headmap_resolution)
+        if len(annotations) > 0:
+            x_index = 0
+            for x in x_steps:
+                y_index = 0
+                for y in y_steps:
+                    ids = ((annotations[:, 1]) > x) \
+                          & ((annotations[:, 0]) > y) \
+                          & ((annotations[:, 3]) < x + self.headmap_resolution) \
+                          & ((annotations[:, 2]) < y + self.headmap_resolution)
 
-                score = np.mean(annotations[ids, 4]) if np.count_nonzero(ids) > 1 else 0
-                gt_image[x_index, y_index] = score
+                    score = np.mean(annotations[ids, 4]) if np.count_nonzero(ids) > 1 else 0
+                    gt_image[x_index, y_index] = score
 
-                y_index += 1
-            x_index += 1
+                    y_index += 1
+                x_index += 1
         gt_image = np.expand_dims(gt_image * (255. / 4), axis=2).astype(np.uint8)
         overlay = cv2.applyColorMap(gt_image, cv2.COLORMAP_JET)
         # Mask overlay
