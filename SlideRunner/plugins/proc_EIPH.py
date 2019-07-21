@@ -15,11 +15,9 @@ import SlideRunner.dataAccess.annotations as annotations
 
 from SlideRunner.plugins.lib.RetinaNet import RetinaNet
 from SlideRunner.plugins.lib.helper.fastai_helpers import *
+from SlideRunner.plugins.lib.helper.object_detection_helper import *
+from SlideRunner.plugins.lib.helper.nms import non_max_suppression_by_distance
 
-
-from helper.object_detection_helper import *
-#from models.RetinaNet import RetinaNet
-from helper.nms_center_distance import non_max_suppression_by_distance
 
 
 #import gdown
@@ -43,7 +41,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                                                                          initValue=1024, minValue=128,
                                                                          maxValue=8192),
                               SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Model file',
-                                                                             mask='*.pth;;*.p'),
+                                                                             mask='*.p;;*.pth'),
                               SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="Predict",
                                                                                    name="Predict field of View"),
                               #SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="PredictWSI",
@@ -52,6 +50,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                                                                          initValue=0.5, minValue=0.0, maxValue=1.0),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='nms_thresh', name='NMS by distance',
                                                                          initValue=75, minValue=15, maxValue=250),
+                              SlideRunnerPlugin.PluginConfigurationEntry(uid='batch_size', name='Batch Size',
+                                                                         initValue=8, minValue=1, maxValue=256),
                               #SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="NMS",
                               #                                                     name="Non maxima supression")
                               ))
@@ -76,6 +76,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         self.annos = list()
         self.annos_original =  list()
         self.overlap = 0.75
+
 
         self.data_source = "DATABASE"
 
@@ -119,6 +120,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
             nms_thresh = job.configuration["nms_thresh"]
             detect_thresh = job.configuration["nms_thresh"]
+            batch_size = job.configuration["batch_size"]
 
             if job.slideFilename != self.last_slideFilename:
                 self.last_slideFilename = job.slideFilename
@@ -189,7 +191,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                     job.trigger is not None and \
                     job.trigger.uid == "Predict":
 
-                self.perform_inference(job, nms_thresh, uid)
+                with torch.no_grad():
+                    self.perform_inference(job, nms_thresh, uid, batch_size)
 
 
             result_dict = self.calculate_eiph_statistics(job, self.data_source)
@@ -198,7 +201,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
             self.setProgressBar(-1)
 
-    def perform_inference(self, job, nms_thresh, uid):
+    def perform_inference(self, job, nms_thresh, uid, batch_size):
 
         x_steps = range(int(job.coordinates[0]), int(job.coordinates[0] + job.coordinates[2]),
                         int(self.shape * self.down_factor * self.overlap))
@@ -208,6 +211,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         x_coordinates = []
         y_coordinates = []
         self.setMessage('Divide WSI into patches')
+        patch_counter = 0
+        class_pred_batch, bbox_pred_batch = [], []
         for x in x_steps:
             for y in y_steps:
                 patch = np.array(self.slide.read_region(location=(int(x), int(y)),
@@ -220,10 +225,24 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 x_coordinates.append(x)
                 y_coordinates.append(y)
 
-                self.setProgressBar((len(patches) / (len(x_steps) * len(y_steps))) / 2 * 100)
-        self.setMessage('Performe inference on {} patches'.format(len(patches)))
-        class_pred_batch, bbox_pred_batch, _ = self.model(torch.cat(patches))
-        self.setProgressBar(75)
+                if len(patches) == batch_size:
+                    self.setMessage('Performe inference on {} off {} patches'.format(len(patches), (len(x_steps) * len(y_steps))))
+                    class_pred, bbox_pred, _ = self.model(torch.cat(patches))
+                    class_pred_batch.extend (class_pred)
+                    bbox_pred_batch.extend(bbox_pred)
+
+                    patches = []
+
+                patch_counter += 1
+                self.setProgressBar((patch_counter / (len(x_steps) * len(y_steps))) * 100)
+
+        if len(patches) > 0:
+            class_pred, bbox_pred, _ = self.model(torch.cat(patches))
+            class_pred_batch.extend (class_pred)
+            bbox_pred_batch.extend(bbox_pred)
+
+
+
         counter = 0
         self.setMessage('Post processing ')
         for clas_pred, bbox_pred, x, y in zip(class_pred_batch, bbox_pred_batch, x_coordinates, y_coordinates):
@@ -259,7 +278,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                     uid += 1
 
-            self.setProgressBar((counter / (len(y_coordinates))) / 4 * 100 + 75)
+            self.setProgressBar((counter / (len(y_coordinates))) / 100)
             counter += 1
         self.performe_nms(nms_thresh)
         self.setMessage('Done')
