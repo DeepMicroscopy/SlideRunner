@@ -47,7 +47,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                               #SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="PredictWSI",
                               #                                                     name="Predict WSI"),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='detect_thresh', name='Detection threshold',
-                                                                         initValue=0.5, minValue=0.0, maxValue=1.0),
+                                                                         initValue=0.35, minValue=0.0, maxValue=1.0),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='nms_thresh', name='NMS by distance',
                                                                          initValue=75, minValue=15, maxValue=250),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='batch_size', name='Batch Size',
@@ -77,7 +77,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         self.annos_original =  list()
         self.overlap = 0.75
 
-
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.data_source = "DATABASE"
 
         self.headmap_resolution = 1024
@@ -119,7 +119,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 continue
 
             nms_thresh = job.configuration["nms_thresh"]
-            detect_thresh = job.configuration["nms_thresh"]
+            detect_thresh = job.configuration["detect_thresh"]
             batch_size = job.configuration["batch_size"]
 
             if job.slideFilename != self.last_slideFilename:
@@ -160,7 +160,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                 model_weights = model_information['model']
 
-                self.anchors = model_information["anchors"]
+                self.anchors = model_information["anchors"]#.to(self.device)
                 self.mean = model_information["mean"]
                 self.std = model_information["std"]
                 self.shape = model_information["size"]
@@ -170,6 +170,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 chs = model_information['chs']
                 encoder = model_information['encoder']
                 n_conv = model_information['n_conv']
+                self.level = model_information['level']
 
                 if encoder == "RN-18":
                     encoder = create_body(models.resnet18, False, -2)
@@ -183,6 +184,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                                        chs=chs, final_bias=-4., n_conv=n_conv)
                 self.model.load_state_dict(model_weights)
 
+                self.model.to(self.device)
+
             if self.model is not None            \
                     and self.anchors is not None \
                     and self.mean is not None \
@@ -192,7 +195,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                     job.trigger.uid == "Predict":
 
                 with torch.no_grad():
-                    self.perform_inference(job, nms_thresh, uid, batch_size)
+                    self.perform_inference(job, nms_thresh, uid, batch_size, detect_thresh)
 
 
             result_dict = self.calculate_eiph_statistics(job, self.data_source)
@@ -201,7 +204,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
             self.setProgressBar(-1)
 
-    def perform_inference(self, job, nms_thresh, uid, batch_size):
+    def perform_inference(self, job, nms_thresh, uid, batch_size, detect_thresh):
 
         x_steps = range(int(job.coordinates[0]), int(job.coordinates[0] + job.coordinates[2]),
                         int(self.shape * self.down_factor * self.overlap))
@@ -227,7 +230,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                 if len(patches) == batch_size:
                     self.setMessage('Performe inference on {} off {} patches'.format(len(patches), (len(x_steps) * len(y_steps))))
-                    class_pred, bbox_pred, _ = self.model(torch.cat(patches))
+                    class_pred, bbox_pred, _ = self.model(torch.cat(patches).to(self.device))
                     class_pred_batch.extend (class_pred)
                     bbox_pred_batch.extend(bbox_pred)
 
@@ -237,7 +240,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 self.setProgressBar((patch_counter / (len(x_steps) * len(y_steps))) * 100)
 
         if len(patches) > 0:
-            class_pred, bbox_pred, _ = self.model(torch.cat(patches))
+            class_pred, bbox_pred, _ = self.model(torch.cat(patches).to(self.device))
             class_pred_batch.extend (class_pred)
             bbox_pred_batch.extend(bbox_pred)
 
@@ -247,10 +250,10 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         self.setMessage('Post processing ')
         for clas_pred, bbox_pred, x, y in zip(class_pred_batch, bbox_pred_batch, x_coordinates, y_coordinates):
 
-            bbox_pred, scores, preds = process_output(clas_pred, bbox_pred, self.anchors, detect_thresh=0.3)
+            bbox_pred, scores, preds = process_output(clas_pred.cpu(), bbox_pred.cpu(), self.anchors, detect_thresh=detect_thresh)
 
             if bbox_pred is not None:
-                to_keep = nms(bbox_pred, scores, 0.5)  # nms_thresh=
+                to_keep = nms(bbox_pred, scores, 0.9)  # nms_thresh=
                 bbox_pred, preds, scores = bbox_pred[to_keep].cpu(), preds[to_keep].cpu(), scores[to_keep].cpu()
 
                 t_sz = torch.Tensor([self.shape, self.shape])[None].float()
@@ -319,7 +322,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
         result_dict["Total"] = total
         if total > 0:
-            result_dict["Golde et al."] = '{:f}'.format(np.mean(grades))
+            result_dict["Golde et al."] = '{:f}'.format(np.mean(grades) * 100)
             # Doucet
             doucet = sum([(result_dict[i] / (total / 100)) * i for i in range(5)])
             result_dict["Doucet et al."] = '{:f}'.format(doucet)
