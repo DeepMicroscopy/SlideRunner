@@ -1,6 +1,6 @@
 ![Logos](SlideRunner/doc/logoline.png)
 
-# SlideRunner 
+# SlideRunner
 
 [![DOI:10.1007/978-3-662-56537-7_81](https://zenodo.org/badge/DOI/10.1007/978-3-662-56537-7_81.svg)](https://doi.org/10.1007/978-3-662-56537-7_81)
 
@@ -9,15 +9,15 @@
 
 It has been created in close cooperation between the [Pattern Recognition Lab](https://www5.cs.fau.de), Friedrich-Alexander-Universität Erlangen-Nürnberg and the [Institute of Veterenary Pathology](http://www.vetmed.fu-berlin.de/einrichtungen/institute/we12/index.html), Freie Universität Berlin.
 
-If you use the software for research purposes, please cite our paper: 
+If you use the software for research purposes, please cite our paper:
 
-> M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018) SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images. In: Bildverarbeitung für die Medizin 2018. Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314. [link](https://www.springerprofessional.de/sliderunner/15478976) [arXiv:1802.02347](https://arxiv.org/abs/1802.02347) 
+> M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018) SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images. In: Bildverarbeitung für die Medizin 2018. Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314. [link](https://www.springerprofessional.de/sliderunner/15478976) [arXiv:1802.02347](https://arxiv.org/abs/1802.02347)
 
 
 Please find the authors webpage at: https://www5.cs.fau.de/~aubreville/
 
 
-## Download and Installation 
+## Download and Installation
 
 For Windows 10 and Mac OS X, we provide a binary file, that you can download here:
 
@@ -65,7 +65,7 @@ The installation procedure is then as easy as:
 
 To run, the following libraries and their dependencies will be installed:
 
-Library           | version           |  link             
+Library           | version           |  link
 ------------------|-------------------|-------------------
 PyQT5             | >= 5.6.0         | https://pyqt.sourceforge.net/
 numpy             | >= 1.13           | https://www.numpy.org
@@ -79,7 +79,7 @@ openslide         | >= 1.1.1          | https://www.openslide.org
 
 ## Usage
 
-SlideRunner features a number of annotation modes. 
+SlideRunner features a number of annotation modes.
 
 ![Annotation modes](SlideRunner/doc/annotations.png)
 
@@ -89,7 +89,7 @@ This mode is meant for browsing/screening the image, without the intention to ad
 
 **Object center annotation**
 
-In this mode, annotations of object centers (e.g. cells) can be made with one click only. Select the class to annotate by clicking the button next to it in the class list or press 
+In this mode, annotations of object centers (e.g. cells) can be made with one click only. Select the class to annotate by clicking the button next to it in the class list or press
 the key corresponding to the number in the list of annotations (e.g. key **1** for the first class entry). Objects annotated in this mode are displayed with a circle having a diameter of 50 pixels in full resolution, and scaled appropriately when not viewed in full resolution.
 
 **Outline annotation (rectangular)**
@@ -107,7 +107,7 @@ have a class attached to it.
 
 ## News
 
-New version 1.22.0 has a much improved plugin interface. Amongst the many improvements are annotation support from the plugin, as well as the ability to copy annotations from the plugin to the database, even annotation groups. 
+New version 1.22.0 has a much improved plugin interface. Amongst the many improvements are annotation support from the plugin, as well as the ability to copy annotations from the plugin to the database, even annotation groups.
 
 
 ## Databases
@@ -125,10 +125,16 @@ There are currently three plug-ins available:
 - OTSU threshold: A simple OTSU threshold plugin. Positive pixels are shown in green color.
 - PPC: Positive Pixel Count, as in: Olson, Allen H. "Image analysis using the Aperio ScanScope." Technical manual. Aperio Technologies Inc (2006).
 - Macenko normalization: Image-based normalization using the method of Macenko et al. [link](https://ieeexplore.ieee.org/document/5193250/)
+- EIPH: Allows deep learning-based quantification of pulmonary hemosiderophages in cytology slides
+
+Model name | Speed CPU | Speed GPU | COCO mAP | Level
+--- | --- | --- |  ---  |  ---
+[RetinaNet](https://drive.google.com/file/d/11Bc2rQIQzNRjtD4tQgwZdpaR3mnlPe61/view?usp=sharing) | 92s (WSI) <br/> <1s (Patch) | 37s (WSI) <br/> <1s (Patch) | 0.34 | 1
+RetinaNet | 351s (WSI) <br/> <10s (Patch) | 107s (WSI) <br/> <2s (Patch) | 0.66 | 0
 
 ## Database structure
 
-The major entity of our database model is the annotation. Each annotation can have multiple coordinates, with their respective x and y coordinates, and the order they were drawn (for polygons). Further, each annotation has a multitude of labels that were given by one person each and are belonging to one class, respectively. 
+The major entity of our database model is the annotation. Each annotation can have multiple coordinates, with their respective x and y coordinates, and the order they were drawn (for polygons). Further, each annotation has a multitude of labels that were given by one person each and are belonging to one class, respectively.
 
 ![DB Structure](SlideRunner/doc/SlideRunner_UML.png)
 

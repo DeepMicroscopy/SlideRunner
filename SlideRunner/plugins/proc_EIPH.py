@@ -154,7 +154,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 last_ModelName = job.configuration['file']
 
                 model_information = torch.load(last_ModelName, map_location='cpu') \
-                    if torch.cuda.is_available() \
+                    if torch.cuda.is_available() ==  False \
                     else torch.load(last_ModelName)
 
                 model_weights = model_information['model']
@@ -379,8 +379,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
     def overlayHeatmap(self, numpyImage) -> np.ndarray:
 
-        if self.overlay is not None:
-            temp_overlay = cv2.resize(self.overlay, numpyImage.shape[:2])
+        if self.overlay is not None and numpyImage is not None:
+            temp_overlay = cv2.resize(self.overlay, numpyImage.shape[:2][::-1])
             return cv2.addWeighted(numpyImage, 0.7, temp_overlay, 0.3, 0)
         else:
             return numpyImage
