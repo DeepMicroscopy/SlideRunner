@@ -44,8 +44,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                                                                              mask='*.p;;*.pth'),
                               SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="Predict",
                                                                                    name="Predict field of View"),
-                              #SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="PredictWSI",
-                              #                                                     name="Predict WSI"),
+                              SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="PredictWSI",
+                                                                                   name="Predict WSI"),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='detect_thresh', name='Detection threshold',
                                                                          initValue=0.35, minValue=0.0, maxValue=1.0),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='nms_thresh', name='NMS by distance',
@@ -84,7 +84,6 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         self.overlay = None
         self.classes = {3: 0, 4: 1, 5: 2, 6: 3, 7: 4}
 
-        #[255,255,0,255],[255,0,255,255],[0,127,0,255],[255,127,0,255],[127,127,0,255],[255,200,200,255],[10, 166, 168,255],[
         self.annotationLabels = {
             0: SlideRunnerPlugin.PluginAnnotationLabel(0, '0', [255, 255, 0, 255]),
             1: SlideRunnerPlugin.PluginAnnotationLabel(1, '1', [255, 0, 255, 255]),
@@ -172,6 +171,10 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 n_conv = model_information['n_conv']
                 self.level = model_information['level']
 
+                self.level_dimension = self.slide.level_dimensions[self.level]
+                self.down_factor = self.slide.level_downsamples[self.level]
+
+
                 if encoder == "RN-18":
                     encoder = create_body(models.resnet18, False, -2)
                 elif encoder == "RN-34":
@@ -186,16 +189,14 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                 self.model.to(self.device)
 
-            if self.model is not None            \
-                    and self.anchors is not None \
-                    and self.mean is not None \
-                    and self.std is not None \
-                    and self.shape is not None and \
-                    job.trigger is not None and \
-                    job.trigger.uid == "Predict":
-
+            if self.model is not None and job.trigger is not None:
                 with torch.no_grad():
-                    self.perform_inference(job, nms_thresh, uid, batch_size, detect_thresh)
+                    if job.trigger.uid == "Predict":
+                        self.perform_inference(job, nms_thresh, uid, batch_size, detect_thresh)
+                    elif job.trigger.uid == "PredictWSI":
+                        self.perform_inference(job, nms_thresh, uid, batch_size, detect_thresh, True)
+                self.overlay = self.create_overlay(job, self.data_source)
+
 
 
             result_dict = self.calculate_eiph_statistics(job, self.data_source)
@@ -204,12 +205,18 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
             self.setProgressBar(-1)
 
-    def perform_inference(self, job, nms_thresh, uid, batch_size, detect_thresh):
+    def perform_inference(self, job, nms_thresh, uid, batch_size, detect_thresh, predict_wsi:bool = False):
 
-        x_steps = range(int(job.coordinates[0]), int(job.coordinates[0] + job.coordinates[2]),
-                        int(self.shape * self.down_factor * self.overlap))
-        y_steps = range(int(job.coordinates[1]), int(job.coordinates[1] + job.coordinates[3]),
-                        int(self.shape * self.down_factor * self.overlap))
+        if predict_wsi:
+            x_steps = range(0, int(self.slide.level_dimensions[0][0]),
+                            int(self.shape * self.down_factor * self.overlap))
+            y_steps = range(0, int(self.slide.level_dimensions[0][1]),
+                            int(self.shape * self.down_factor * self.overlap))
+        else:
+            x_steps = range(int(job.coordinates[0]), int(job.coordinates[0] + job.coordinates[2]),
+                            int(self.shape * self.down_factor * self.overlap))
+            y_steps = range(int(job.coordinates[1]), int(job.coordinates[1] + job.coordinates[3]),
+                            int(self.shape * self.down_factor * self.overlap))
         patches = []
         x_coordinates = []
         y_coordinates = []
@@ -229,7 +236,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 y_coordinates.append(y)
 
                 if len(patches) == batch_size:
-                    self.setMessage('Performe inference on {} off {} patches'.format(len(patches), (len(x_steps) * len(y_steps))))
+                    self.setMessage('Performe inference on {} off {} patches'.format(len(patches),
+                                                                                     (len(x_steps) * len(y_steps))))
                     class_pred, bbox_pred, _ = self.model(torch.cat(patches).to(self.device))
                     class_pred_batch.extend (class_pred)
                     bbox_pred_batch.extend(bbox_pred)
@@ -250,7 +258,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         self.setMessage('Post processing ')
         for clas_pred, bbox_pred, x, y in zip(class_pred_batch, bbox_pred_batch, x_coordinates, y_coordinates):
 
-            bbox_pred, scores, preds = process_output(clas_pred.cpu(), bbox_pred.cpu(), self.anchors, detect_thresh=detect_thresh)
+            bbox_pred, scores, preds = process_output(clas_pred.cpu(), bbox_pred.cpu(),
+                                                      self.anchors, detect_thresh=detect_thresh)
 
             if bbox_pred is not None:
                 to_keep = nms(bbox_pred, scores, 0.9)  # nms_thresh=
@@ -281,7 +290,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                     uid += 1
 
-            self.setProgressBar((counter / (len(y_coordinates))) / 100)
+            self.setProgressBar((counter / (len(y_coordinates))) * 100)
             counter += 1
         self.performe_nms(nms_thresh)
         self.setMessage('Done')
@@ -341,8 +350,10 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                                     if a[1].labels[0].classId in self.classes])
             self.headmap_resolution = int(job.configuration["Headmap_Resolution"])
 
-        x_steps = range(0, self.level_dimension[0] - 2 * self.headmap_resolution, int(self.headmap_resolution / 2))
-        y_steps = range(0, self.level_dimension[1] - 2 * self.headmap_resolution, int(self.headmap_resolution / 2))
+        x_steps = range(0, self.slide.level_dimensions[0][0] - 2 * self.headmap_resolution,
+                        int(self.headmap_resolution / 2))
+        y_steps = range(0, self.slide.level_dimensions[0][1] - 2 * self.headmap_resolution,
+                        int(self.headmap_resolution / 2))
         gt_image = np.zeros(shape=(len(x_steps) + 1, len(y_steps) + 1))
         if len(annotations) > 0:
             x_index = 0
