@@ -81,7 +81,7 @@ openslide         | >= 1.1.1          | https://www.openslide.org
 
 | ![EIPH Inference](SlideRunner/doc/EIPH-Demo.png) |
 |:--:|
-| *EIPH plugin inference results with score heat map field of view statistics |
+| *Results from the Deep Learning-Based Quantification of Pulmonary Hemosiderophages in Cytology Slides generated with the EIPH Plugin* |
 
 ## Usage
 
