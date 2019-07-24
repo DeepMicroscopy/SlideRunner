@@ -75,7 +75,13 @@ openslide         | >= 1.1.1          | https://www.openslide.org
 
 ## Screenshots
 
-![SlideRunner Screenshot](SlideRunner/doc/gui.png)
+| ![SlideRunner Screenshot](SlideRunner/doc/gui.png) |
+|:--:|
+| *SlideRunner GUI Screenshot* |
+
+| ![EIPH Inference](SlideRunner/doc/EIPH-Demo.png) |
+|:--:|
+| *EIPH plugin inference results with score heat map field of view statistics |
 
 ## Usage
 
@@ -129,8 +135,8 @@ There are currently three plug-ins available:
 
 Model name | Speed CPU | Speed GPU | COCO mAP | Level
 --- | --- | --- |  ---  |  ---
-[RetinaNet](https://drive.google.com/file/d/11Bc2rQIQzNRjtD4tQgwZdpaR3mnlPe61/view?usp=sharing) | 92s (WSI) <br/> <1s (Patch) | 37s (WSI) <br/> <1s (Patch) | 0.34 | 1
-RetinaNet | 351s (WSI) <br/> <10s (Patch) | 107s (WSI) <br/> <2s (Patch) | 0.66 | 0
+[RetinaNet](https://drive.google.com/open?id=11Bc2rQIQzNRjtD4tQgwZdpaR3mnlPe61) | 92s (WSI) <br/> <1s (Patch) | 37s (WSI) <br/> <1s (Patch) | 0.34 | 1
+[RetinaNet](https://drive.google.com/open?id=1f6WhzP4bdgzy34HBZxlHGmM-Mg1wIGGI) | 351s (WSI) <br/> <10s (Patch) | 107s (WSI) <br/> <2s (Patch) | 0.66 | 0
 
 ## Database structure
 
