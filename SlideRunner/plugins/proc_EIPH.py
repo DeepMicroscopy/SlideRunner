@@ -49,7 +49,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='detect_thresh', name='Detection threshold',
                                                                          initValue=0.35, minValue=0.0, maxValue=1.0),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='nms_thresh', name='NMS by distance',
-                                                                         initValue=75, minValue=15, maxValue=250),
+                                                                         initValue=50, minValue=15, maxValue=250),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='batch_size', name='Batch Size',
                                                                          initValue=8, minValue=1, maxValue=256),
                               #SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="NMS",
@@ -130,6 +130,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                 self.annos = list()
                 self.annos_original = list()
+
+                self.overlay = self.create_overlay(job, self.data_source)
 
             if job.trigger is not None and \
                     job.trigger.uid == "NMS":
