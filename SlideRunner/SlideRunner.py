@@ -146,12 +146,12 @@ class SlideRunnerUI(QMainWindow):
     slideMagnification = 1
     slideMicronsPerPixel = 20
     pluginAnnos = list()
-    cachedLevel = None
     pluginFilepickers = dict()
     currentVP = ViewingProfile()
     currentPluginVP = ViewingProfile()
     lastReadRequest = None
     cachedLocation = None
+    cachedLevel = None
     pluginTextLabels = dict()
     cachedImage = None
     selectedPluginAnno = None
@@ -2115,6 +2115,11 @@ class SlideRunnerUI(QMainWindow):
             return
 
         self.slide = openslide.open_slide(filename)
+
+        # Clear cache
+        self.cachedLocation = None
+        self.cachedLevel = None
+
         if (openslide.PROPERTY_NAME_OBJECTIVE_POWER in self.slide.properties):
             self.slideMagnification = self.slide.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         else:
