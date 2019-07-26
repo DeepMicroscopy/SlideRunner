@@ -461,6 +461,8 @@ class Database(object):
     def insertAnnotator(self, name):
         self.execute('INSERT INTO Persons (name) VALUES ("%s")' % (name))
         self.commit()
+        query = 'SELECT last_insert_rowid()'
+        return self.execute(query).fetchone()[0]
 
     def insertClass(self, name):
         self.execute('INSERT INTO Classes (name) VALUES ("%s")' % (name))
