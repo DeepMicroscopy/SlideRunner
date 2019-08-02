@@ -246,6 +246,13 @@ class rectangularAnnotation(annotation):
       def positionInAnnotation(self, position: list) -> bool:
             return ((position[0]>self.x1) and (position[0]<self.x2) and 
                    (position[1]>self.y1) and (position[1]<self.y2))
+    
+      def width(self) -> float:
+          return self.x2-self.x1
+
+      def height(self) -> float:
+          return self.y2-self.y1
+
 
       def convertToPath(self):
           return path.Path(np.array([[self.x1, self.x2, self.x2, self.x1, self.x1] ,[self.y1, self.y1, self.y2, self.y2, self.y1]]).T)
