@@ -43,7 +43,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     description = 'Show unpickled object detection results'
     pluginType = SlideRunnerPlugin.PluginTypes.WHOLESLIDE_PLUGIN
     configurationList = list((
-                            SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Result file', mask='*.p;*.txt'),
+                            SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Result file', mask='*.p;;*.txt'),
                             SlideRunnerPlugin.PluginConfigurationEntry(uid='threshold', name='Detection threshold', initValue=0.75, minValue=0.0, maxValue=1.0),
                             ))
     

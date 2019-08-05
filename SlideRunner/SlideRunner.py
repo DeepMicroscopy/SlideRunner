@@ -21,6 +21,8 @@
             pyqt                pyqt5-5.5.0
             sqlite3             2.6.0
             matplotlib          2.0.0
+            shapely             1.6.4
+            rollbar             0.14
 
 
 
@@ -38,7 +40,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.25.0'
+version = '1.26.1'
 
 SLIDERUNNER_DEBUG = False
 
@@ -330,7 +332,7 @@ class SlideRunnerUI(QMainWindow):
     def receiveAnno(self, anno):
         self.pluginAnnos = anno
         self.pluginMinCoords, self.pluginMaxCoords = SlideRunnerPlugin.generateMinMaxCoordsList(anno)
-        self.showImage_part2(np.empty(shape=(1)), self.processingStep)
+        self.showImage_part3(np.empty(shape=(1)), self.processingStep)
 
     def setProgressBar(self, number):
         if (number == -1):
@@ -1498,7 +1500,7 @@ class SlideRunnerUI(QMainWindow):
         size_im = (int(imgarea_w[0]/closest_ds), int(imgarea_w[1]/closest_ds))
         location_im = (int(imgarea_p1[0]), int(imgarea_p1[1]))
 
-        # Read from Whole Slide Image
+        # Read from Whole Slide Image Overview
         npi = self.prepare_region_from_overview(location_im, act_level, size_im)
 
         self.processingStep += 1
@@ -1506,11 +1508,11 @@ class SlideRunnerUI(QMainWindow):
 #        npi = self.read_region(location=location_im,level=act_level,size=size_im)
         if (act_level == self.slide.level_count-1): # overview image is always correct from cache
             self.showImage_part2(npi, self.processingStep)
-        elif not (outOfCache):
+        elif not (outOfCache): # image in cache --> read from cache
             npi = self.read_region(location_im, act_level, size_im)
             self.showImage_part2(npi, self.processingStep)
 
-        else:
+        else:  # neither cached nor on outer level -> put into queue 
             npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
             self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(npi)))
             
@@ -1519,11 +1521,6 @@ class SlideRunnerUI(QMainWindow):
     def showImage_part2(self, npi, id):
 
         self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
-
-        if (len(npi.shape)==1): # empty was given as parameter - i.e. trigger comes from plugin
-            npi = self.cachedLastImage
-
-        self.cachedLastImage = npi
 
         if (id<self.processingStep):
             return
@@ -1535,7 +1532,6 @@ class SlideRunnerUI(QMainWindow):
             im_size=(self.ui.MainImage.frameGeometry().width(),int(self.ui.MainImage.frameGeometry().width()/aspectRatio_image))
         else:
             im_size=(int(self.ui.MainImage.frameGeometry().height()*aspectRatio_image),self.ui.MainImage.frameGeometry().height())
-
 
         # Resize to real image size
         npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
@@ -1549,13 +1545,20 @@ class SlideRunnerUI(QMainWindow):
         self.refreshTimer.start()
 
         if ((self.activePlugin is not None) and (self.overlayMap is None) and 
-           ((self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE ) or
-            self.activePlugin.instance.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN)): # and (len(self.pluginAnnos)==0))
+           ((self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE ) or 
+            self.activePlugin.instance.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN)):
             from threading import Timer
             if (self.updateTimer is not None):
                 self.updateTimer.cancel()
             self.updateTimer = Timer(self.activePlugin.plugin.updateTimer, partial(self.triggerPlugin,np.copy(npi)))                
             self.updateTimer.start()
+        
+        self.cachedLastImage = np.copy(npi)
+        self.showImage_part3(npi, id)
+
+    def showImage_part3(self, npi, id):
+        if (len(npi.shape)==1): # empty was given as parameter - i.e. trigger comes from plugin
+            npi = self.cachedLastImage
 
         if (self.overlayMap is not None) and (self.activePlugin is not None):
                 if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.BINARY_MASK):
@@ -1685,6 +1688,16 @@ class SlideRunnerUI(QMainWindow):
 
         # Display image in GUI
         self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.displayedImage)))
+
+    def toggleOneClass(self, row):
+        if (row>=len(self.modelItems)):
+            return
+        self.modelItems[row].stateChanged.disconnect(self.selectClasses)
+        self.modelItems[row].setChecked(not(self.modelItems[row].checkState()))
+    
+        self.modelItems[row].stateChanged.connect(self.selectClasses)
+       
+        self.selectClasses(None)
 
 
     def toggleAllClasses(self):
@@ -1844,12 +1857,13 @@ class SlideRunnerUI(QMainWindow):
         table_model.setColumnCount(3)
         table_model.setHorizontalHeaderLabels("Name;# on slide;# total".split(";"))
 
-        names, statistics = self.db.countEntryPerClass(self.slideUID)
+        statistics = self.db.countEntryPerClass(self.slideUID)
 
+        names = list(statistics.keys())
         for idx in range(len(names)):
             txt = QStandardItem(names[idx])
-            col1 = QStandardItem('%d' % statistics[0,idx])
-            col2 = QStandardItem('%d' % statistics[1,idx])
+            col1 = QStandardItem('%d' % statistics[names[idx]]['count_slide'])
+            col2 = QStandardItem('%d' % statistics[names[idx]]['count_total'])
             table_model.appendRow([txt,col1,col2])
 
         self.ui.statisticView.setModel(table_model)

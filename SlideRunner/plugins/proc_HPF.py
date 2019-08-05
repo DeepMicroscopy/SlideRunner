@@ -61,6 +61,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     def queueWorker(self):
 
         quitSignal=False
+        oldSlide = ''
         while not quitSignal:
             job = SlideRunnerPlugin.pluginJob(self.inQueue.get())
             filename = job
@@ -69,9 +70,11 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 # signal to exit this thread
                 quitSignal=True
                 continue
-
-
-            self.processWholeSlide(job)
+            if (job.slideFilename != oldSlide) or (job.trigger is not None):
+                self.processWholeSlide(job)
+                oldSlide = job.slideFilename
+            else:
+                print('Trigger:',job.trigger)
 
     def getAnnotations(self):
         return self.annos
@@ -80,7 +83,6 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
         filename = job.slideFilename
         self.slide = openslide.open_slide(filename)
-
 
         # 1 HPF = 0.237 mm^2 
         A = job.configuration[2] # mm^2 
