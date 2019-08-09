@@ -43,6 +43,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         self.std = [0.2619, 0.3365, 0.3751] #std
         self.shape = (512, 512)
 
+        self.annos = []
+
 
         COLORS = [[0, 128, 0, 255],
                   [128, 0, 0, 255],
