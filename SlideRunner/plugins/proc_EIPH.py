@@ -49,7 +49,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='detect_thresh', name='Detection threshold',
                                                                          initValue=0.35, minValue=0.0, maxValue=1.0),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='nms_thresh', name='NMS by distance',
-                                                                         initValue=40, minValue=15, maxValue=250),
+                                                                         initValue=50, minValue=15, maxValue=250),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid='batch_size', name='Batch Size',
                                                                          initValue=8, minValue=1, maxValue=256),
                               #SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid="NMS",
@@ -131,6 +131,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 self.annos = list()
                 self.annos_original = list()
 
+                self.overlay = self.create_overlay(job, self.data_source)
+
             if job.trigger is not None and \
                     job.trigger.uid == "NMS":
 
@@ -208,9 +210,9 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     def perform_inference(self, job, nms_thresh, uid, batch_size, detect_thresh, predict_wsi:bool = False):
 
         if predict_wsi:
-            x_steps = range(0, int(self.slide.level_dimensions[0][0] - self.shape * self.down_factor),
+            x_steps = range(0, int(self.slide.level_dimensions[0][0]),
                             int(self.shape * self.down_factor * self.overlap))
-            y_steps = range(0, int(self.slide.level_dimensions[0][1] - self.shape * self.down_factor),
+            y_steps = range(0, int(self.slide.level_dimensions[0][1]),
                             int(self.shape * self.down_factor * self.overlap))
         else:
             x_steps = range(int(job.coordinates[0]), int(job.coordinates[0] + job.coordinates[2]),

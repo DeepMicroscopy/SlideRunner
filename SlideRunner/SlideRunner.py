@@ -2153,6 +2153,9 @@ class SlideRunnerUI(QMainWindow):
             return
 
         self.slide = openslide.open_slide(filename)
+        self.cachedLocation = None
+        self.cachedLevel = None
+
         if (openslide.PROPERTY_NAME_OBJECTIVE_POWER in self.slide.properties):
             self.slideMagnification = self.slide.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         else:

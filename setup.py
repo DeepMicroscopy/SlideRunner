@@ -29,8 +29,9 @@ setup(name='SlideRunner',
         'SlideRunner': ['artwork/*.png', 'Slides.sqlite', 'plugins/*.py'],
       }, 
       install_requires=[
-          'PyQt5', 'openslide-python>=1.1.1', 'pyqt5>=5.5.0', 'opencv-python>=3.1.0',
-          'matplotlib>=2.0.0', 'numpy>=1.13', 'matplotlib>=2.0.0', 'rollbar>=0.14', 'shapely>=1.6.4'
+          'PyQt5', 'openslide-python>=1.1.1', 'pyqt5>=5.5.0', 'opencv-python>=3.1.0', 'torch==1.2.0+cpu',
+          'torchvision==0.4.0+cpu', 'matplotlib>=2.0.0', 'numpy>=1.13', 'matplotlib>=2.0.0', 'rollbar>=0.14',
+          'shapely>=1.6.4'
       ],
       setup_requires=['pytest-runner'],
       entry_points={
