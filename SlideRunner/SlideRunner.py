@@ -2177,7 +2177,10 @@ class SlideRunnerUI(QMainWindow):
         self.thumbnail = thumbnail.thumbnail(self.slide)
 
         # Read overview thumbnail from slide
-        level_overview = np.where(np.array(self.slide.level_downsamples)==32)[0][0] # pick overview at 32x
+        if 32 in self.slide.level_downsamples:
+            level_overview = np.where(np.array(self.slide.level_downsamples)==32)[0][0] # pick overview at 32x
+        else:
+            level_overview = self.slide.level_count-1
         overview = self.slide.read_region(location=(0,0), level=level_overview, size=self.slide.level_dimensions[level_overview])
         self.slideOverview = np.asarray(overview)
         overview = cv2.cvtColor(np.asarray(overview), cv2.COLOR_BGRA2RGB)
