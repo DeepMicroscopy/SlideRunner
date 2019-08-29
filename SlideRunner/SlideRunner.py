@@ -76,7 +76,7 @@ class imageReceiverThread(threading.Thread):
             (img, procId) = self.queue.get()
             print('Received an image from the plugin queue')
             self.selfObj.overlayMap = img
-            self.selfObj.showImageRequest.emit(np.empty(0), procId)
+            self.selfObj.showImage3Request.emit(np.empty(0), procId)
 
 class SlideReaderThread(threading.Thread):
     queue = queue.Queue()
@@ -127,6 +127,7 @@ class PluginStatusReceiver(threading.Thread):
 class SlideRunnerUI(QMainWindow):
     progressBarChanged = pyqtSignal(int)
     showImageRequest = pyqtSignal(np. ndarray, int)
+    showImage3Request = pyqtSignal(np. ndarray, int)
     readRegionCompleted = pyqtSignal(np.ndarray, int)
     statusViewChanged = pyqtSignal(str)
     annotationReceived = pyqtSignal(list)
@@ -146,12 +147,13 @@ class SlideRunnerUI(QMainWindow):
     slideMagnification = 1
     slideMicronsPerPixel = 20
     pluginAnnos = list()
-    cachedLevel = None
     pluginFilepickers = dict()
+    pluginComboboxes = dict()
     currentVP = ViewingProfile()
     currentPluginVP = ViewingProfile()
     lastReadRequest = None
     cachedLocation = None
+    cachedLevel = None
     pluginTextLabels = dict()
     cachedImage = None
     selectedPluginAnno = None
@@ -209,6 +211,7 @@ class SlideRunnerUI(QMainWindow):
         self.progressBarChanged.connect(self.setProgressBar)
         self.statusViewChanged.connect(self.setStatusView)
         self.showImageRequest.connect(self.showImage_part2)
+        self.showImage3Request.connect(self.showImage_part3)
         self.annotationReceived.connect(self.receiveAnno)
         self.updatePluginConfig.connect(self.updatePluginConfiguration)
         self.updatePluginLabels.connect(self.showDatabaseUIelements)
@@ -382,7 +385,11 @@ class SlideRunnerUI(QMainWindow):
         self.overlayMap = None
         self.pluginAnnos = list()
         self.triggerPlugin(self.cachedLastImage, trigger=btn)
-#        self.showImage()
+
+    def pluginComboboxChanged(self, option, index):
+
+        option.selected_value = index.currentText()
+        self.triggerPlugin(self.cachedLastImage, trigger=option)
 
     """
      Add configuration options of active plugin to sidebar
@@ -394,6 +401,7 @@ class SlideRunnerUI(QMainWindow):
             self.pluginTextLabels = dict()
             self.pluginPushbuttons = dict()
             self.pluginFilepickers = dict()
+            self.pluginComboboxes = dict()
             sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
             sizePolicy.setHorizontalStretch(1.0)
             sizePolicy.setVerticalStretch(0)
@@ -463,7 +471,19 @@ class SlideRunnerUI(QMainWindow):
         margin: 0px 0; /* decrease this size (make it more negative)—I changed mine from –2px to –8px. */
     }
     """)
+                elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.TABLE):
+                    self.pluginTableWidget = QTableWidget()
+                    self.pluginTableWidget.setHorizontalHeaderLabels(['Key', 'Value'])
 
+                    self.ui.tab3Layout.addWidget(self.pluginTableWidget)
+                elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.COMBOBOX):
+                    cb = QtWidgets.QComboBox()
+                    cb.setToolTip(pluginConfig.name)
+                    cb.addItems(pluginConfig.options)
+
+                    self.ui.tab3Layout.addWidget(cb)
+                    self.pluginComboboxes[pluginConfig.uid] = cb
+                    cb.currentIndexChanged.connect(partial(self.pluginComboboxChanged, pluginConfig, cb))
 
                 
                 
@@ -497,6 +517,9 @@ class SlideRunnerUI(QMainWindow):
                 self.ui.tab3Layout.removeWidget(self.pluginFilepickers[uid]['label'])
                 self.pluginFilepickers[uid]['label'].deleteLater()
                 self.pluginFilepickers[uid]['button'].deleteLater()
+            for uid in self.pluginComboboxes.keys():
+                self.ui.tab3Layout.removeWidget(self.pluginComboboxes[uid])
+                self.pluginComboboxes[uid].deleteLater()
 
 
 
@@ -553,6 +576,8 @@ class SlideRunnerUI(QMainWindow):
             config[key] = self.pluginParameterSliders[key].value()/1000.0
         for key in self.pluginFilepickers.keys():
             config[key] = self.pluginFilepickers[key]['value']
+        for key in self.pluginComboboxes.keys():
+            config[key] = self.pluginComboboxes[key].currentIndex()
         return config
 
 
@@ -2115,6 +2140,11 @@ class SlideRunnerUI(QMainWindow):
             return
 
         self.slide = openslide.open_slide(filename)
+
+        # Clear cache
+        self.cachedLocation = None
+        self.cachedLevel = None
+
         if (openslide.PROPERTY_NAME_OBJECTIVE_POWER in self.slide.properties):
             self.slideMagnification = self.slide.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
         else:
@@ -2147,9 +2177,14 @@ class SlideRunnerUI(QMainWindow):
         self.thumbnail = thumbnail.thumbnail(self.slide)
 
         # Read overview thumbnail from slide
-        overview = self.slide.read_region(location=(0,0), level=self.slide.level_count-1, size=self.slide.level_dimensions[-1])
+        if 32 in self.slide.level_downsamples:
+            level_overview = np.where(np.array(self.slide.level_downsamples)==32)[0][0] # pick overview at 32x
+        else:
+            level_overview = self.slide.level_count-1
+        overview = self.slide.read_region(location=(0,0), level=level_overview, size=self.slide.level_dimensions[level_overview])
         self.slideOverview = np.asarray(overview)
         overview = cv2.cvtColor(np.asarray(overview), cv2.COLOR_BGRA2RGB)
+
 
         # Initialize a new screening map
         self.screeningMap = screening.screeningMap(overview, self.mainImageSize, self.slide.level_dimensions, self.thumbnail.size)
