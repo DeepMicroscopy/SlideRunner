@@ -21,11 +21,14 @@ def check_version(actual:str, target:str) -> bool:
     actual_tup = actual.split('.')
     target_tup = target.split('.')
 
-    for idx in range(len(target_tup)):
-        if int(target_tup[idx])>int(actual_tup[idx]):
-            return False
-        if int(target_tup[idx])<int(actual_tup[idx]):
-            return True
+    try:
+        for idx in range(len(target_tup)):
+            if int(target_tup[idx])>int(actual_tup[idx]):
+                return False
+            if int(target_tup[idx])<int(actual_tup[idx]):
+                return True
+    except:
+        return True
     
     return True
 
