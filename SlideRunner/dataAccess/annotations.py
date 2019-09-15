@@ -252,7 +252,9 @@ class rectangularAnnotation(annotation):
 
       def height(self) -> float:
           return self.y2-self.y1
-
+        
+      def centerCoordinate(self) -> tuple:
+          return annoCoordinate(x=int(0.5*(self.x1+self.x2)),y=int(0.5*(self.y1+self.y2)))
 
       def convertToPath(self):
           return path.Path(np.array([[self.x1, self.x2, self.x2, self.x1, self.x1] ,[self.y1, self.y1, self.y2, self.y2, self.y1]]).T)
