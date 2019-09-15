@@ -40,7 +40,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.26.1'
+version = '1.27.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -1305,19 +1305,25 @@ class SlideRunnerUI(QMainWindow):
 
             if (slideUID is None):
                 msg = "Slide is not in database. Do you wish to add it?"
-                reply = QtWidgets.QMessageBox.question(self, 'Message',
-                                                       msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-
+                reply = YesNoAbortDialog('Question',msg,'Yes, add it.','No, open other slide', 'No, open other DB')
                 if reply == QtWidgets.QMessageBox.Yes:
                     self.db.insertNewSlide(self.slidename,self.slidepathname)
                     self.findSlideUID(dimensions)
                     self.db.setSlideDimensions(slideUID, dimensions)
                     return
-                else:
+                elif reply== QtWidgets.QMessageBox.No:
                     slname = self.openSlideDialog()
-                    if (len(slname) == 0):
-                        self.imageOpened=False
-                        self.showImage()
+                    self.findSlideUID()
+#                    if (len(slname) == 0):
+#                        self.imageOpened=False
+#                        self.showImage()
+                elif reply == QtWidgets.QMessageBox.Abort:
+                    self.openCustomDB()
+                    self.findSlideUID(dimensions)
+                else:
+                    print('Reply was: ',reply)
+
+                
             else:
                 self.slideUID = slideUID
                 self.db.setSlideDimensions(slideUID, dimensions)
