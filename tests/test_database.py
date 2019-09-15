@@ -87,18 +87,16 @@ def test_database():
 
     # test statistics
     
-    (names,stats) = DB.countEntryPerClass(slideID=2)
+    stats = DB.countEntryPerClass(slideID=2)
     
-    assert(names[0]=='Cell')
-    assert(names[1]=='Crap')
+    assert('Cell' in stats)
+    assert('Crap' in stats)
 
-    # first column: This slide
-    assert(stats[0,0]==0)
-    assert(stats[0,1]==1)
+    assert(stats['Cell']['count_slide']==0)
+    assert(stats['Crap']['count_slide']==1)
 
-    # second column: all slides
-    assert(stats[1,0]==3)
-    assert(stats[1,1]==4)
+    assert(stats['Cell']['count_total']==3)
+    assert(stats['Crap']['count_total']==4)
 
     DB.loadIntoMemory(1)
 
