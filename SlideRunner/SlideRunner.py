@@ -1147,8 +1147,11 @@ class SlideRunnerUI(QMainWindow):
         """
             Add new annotator (person) to database.
         """
-        name, ok = QInputDialog.getText(self, "Please give a name for the new expert",
-                                          "Full name:")
+        attr = 'first' if (len(self.db.getAllPersons())==0) else 'new'
+
+        name, ok = QInputDialog.getText(self, f"Please give a name for the {attr} expert",
+                                        "Full name:")
+
         if (ok):
             self.db.insertAnnotator(name)
             # show DB overview
@@ -1158,7 +1161,8 @@ class SlideRunnerUI(QMainWindow):
         """
             Add new cell class to database.
         """
-        name, ok = QInputDialog.getText(self, "Please give a name for the new category",
+        attr = 'first' if len(self.db.getAllClasses())==0 else 'new'
+        name, ok = QInputDialog.getText(self, f"Please give a name for the {attr} category",
                                           "Name:")
         if (ok):
             self.db.insertClass(name)
@@ -1810,6 +1814,9 @@ class SlideRunnerUI(QMainWindow):
 
             if (reply == QtWidgets.QMessageBox.Yes):
                 success = self.db.create(filename)
+                if (success):
+                    self.addAnnotator()
+                    self.addCellClass()
 
         if success:            
             filename = os.path.abspath(filename)
@@ -2112,6 +2119,11 @@ class SlideRunnerUI(QMainWindow):
 
         # create and automatically open DB
         self.db.create(dbfilename)
+
+        self.addAnnotator()
+        self.addCellClass()
+
+
         self.showDatabaseUIelements()
 
 
