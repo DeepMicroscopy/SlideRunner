@@ -14,6 +14,13 @@
 
 """
 from PyQt5 import QtWidgets
+import re
+
+def numeric(text) -> str:
+    """
+      converts a string including numbers to a string not including numbers any more
+    """
+    return ''.join(re.findall('\d+', text ))
 
 def check_version(actual:str, target:str) -> bool:
     if (target is None):
@@ -23,11 +30,12 @@ def check_version(actual:str, target:str) -> bool:
 
     try:
         for idx in range(len(target_tup)):
-            if int(target_tup[idx])>int(actual_tup[idx]):
+            if int(numeric(target_tup[idx]))>int(numeric(actual_tup[idx])):
                 return False
-            if int(target_tup[idx])<int(actual_tup[idx]):
+            if int(numeric(target_tup[idx]))<int(numeric(actual_tup[idx])):
                 return True
-    except:
+    except Exception as e:
+        print(e)
         return True
     
     return True
@@ -103,6 +111,7 @@ from PyQt5.QtWidgets import QDialog, QWidget, QFileDialog, QMenu,QInputDialog, Q
 # internal imports
 from SlideRunner.gui.SlideRunner_ui import Ui_MainWindow
 from SlideRunner.gui.dialogs.about import aboutDialog
+from SlideRunner.gui.dialogs.question import YesNoAbortDialog
 from SlideRunner.gui.dialogs.settings import settingsDialog
 from SlideRunner.gui import shortcuts, toolbar, mouseEvents, annotation
 from SlideRunner.dataAccess.database import Database, annotation
