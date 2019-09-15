@@ -1405,9 +1405,14 @@ class SlideRunnerUI(QMainWindow):
         return self.currentZoom
 
     def prepare_region_from_overview(self, location, level, size):
-        locationInOverview = ( int(location[0]/self.slide.level_downsamples[-1]),
-                               int(location[1]/self.slide.level_downsamples[-1]))
-        scale = self.slide.level_downsamples[-1]/self.slide.level_downsamples[level]
+        if 32 in self.slide.level_downsamples:
+            level_overview = np.where(np.array(self.slide.level_downsamples)==32)[0][0] # pick overview at 32x
+        else:
+            level_overview = self.slide.level_count-1
+
+        locationInOverview = ( int(location[0]/self.slide.level_downsamples[level_overview]),
+                               int(location[1]/self.slide.level_downsamples[level_overview]))
+        scale = self.slide.level_downsamples[level_overview]/self.slide.level_downsamples[level]
         M = np.array([[scale,0,-locationInOverview[0]*scale],
              [0, scale, -locationInOverview[1]*scale]])
         sp = cv2.warpAffine(self.slideOverview[:,:,0:3], M, dsize=size)
@@ -1530,8 +1535,14 @@ class SlideRunnerUI(QMainWindow):
 
         self.processingStep += 1
         outOfCache,_ = self.image_in_cache(location_im, act_level, size_im)
+
+        if 32 in self.slide.level_downsamples:
+            level_overview = np.where(np.array(self.slide.level_downsamples)==32)[0][0] # pick overview at 32x
+        else:
+            level_overview = self.slide.level_count-1
+
 #        npi = self.read_region(location=location_im,level=act_level,size=size_im)
-        if (act_level == self.slide.level_count-1): # overview image is always correct from cache
+        if (act_level == level_overview): # overview image is always correct from cache
             self.showImage_part2(npi, self.processingStep)
         elif not (outOfCache): # image in cache --> read from cache
             npi = self.read_region(location_im, act_level, size_im)
