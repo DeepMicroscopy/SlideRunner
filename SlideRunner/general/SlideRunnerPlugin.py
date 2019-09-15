@@ -67,6 +67,7 @@ class PluginConfigurationType(enumerate):
       COMBOBOX = 2
       ANNOTATIONACTION = 3
       FILEPICKER = 4
+      TABLE = 5
 
 class FilePickerDialogType(enumerate):
       OPEN_FILE = 0
