@@ -724,6 +724,7 @@ class Database(object):
             allClasses = self.dbcur.fetchall()
             
             for uid,cnt,name in allClasses:
+                name = 'unknown' if name is None else name
                 retval[name]['count_slide'] = cnt
 
         return retval
