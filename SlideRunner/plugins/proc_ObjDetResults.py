@@ -44,7 +44,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     pluginType = SlideRunnerPlugin.PluginTypes.WHOLESLIDE_PLUGIN
     configurationList = list((
                             SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Result file', mask='*.p;;*.txt'),
-                            SlideRunnerPlugin.PluginConfigurationEntry(uid='threshold', name='Detection threshold', initValue=0.75, minValue=0.0, maxValue=1.0),
+                            SlideRunnerPlugin.PluginConfigurationEntry(uid='threshold', name='Detection threshold', initValue=0.35, minValue=0.0, maxValue=1.0),
                             ))
     
     COLORS = [[0,128,0,255],
@@ -118,10 +118,11 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                 self.annotationLabels = dict()
                 for key,label in enumerate(uniqueLabels):
-                     self.annotationLabels[label] =  SlideRunnerPlugin.PluginAnnotationLabel(0,'Class %d' % label, self.COLORS[key % len(self.COLORS)])
+                     self.annotationLabels[label] =  SlideRunnerPlugin.PluginAnnotationLabel(key,'Class %d' % label, self.COLORS[key % len(self.COLORS)])
 
-                for idx in range(len(self.resultsArchive[fname])):
-                        row = self.resultsArchive[fname][idx]
+                file_annotations = self.resultsArchive[fname][self.resultsArchive[fname][:,5].argsort()]
+                for idx in range(len(file_annotations)):
+                        row = file_annotations[idx]
                         if (row[5]>job.configuration['threshold']):
                             myanno = annotations.rectangularAnnotation(uid=idx, x1=row[0], x2=row[2], y1=row[1], y2=row[3], text='%.2f' % row[5], pluginAnnotationLabel=self.annotationLabels[row[4]])                
                             self.annos.append(myanno)
@@ -135,7 +136,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                 self.annotationLabels = dict()
                 for key,label in enumerate(uniqueLabels):
-                     self.annotationLabels[label] =  SlideRunnerPlugin.PluginAnnotationLabel(0,label, self.COLORS[key % len(self.COLORS)])
+                     self.annotationLabels[label] =  SlideRunnerPlugin.PluginAnnotationLabel(key,label, self.COLORS[key % len(self.COLORS)])
 
                 self.sendAnnotationLabelUpdate()
 

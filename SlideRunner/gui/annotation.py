@@ -18,7 +18,7 @@ import numpy as np
 from SlideRunner.gui import mouseEvents as mouseEvents
 from PyQt5 import QtWidgets
 from shapely.geometry import * 
-
+from tqdm import tqdm
 
 def addSpotAnnotation(self, classID, event, typeAnno=1):
     self.saveLastViewport()
@@ -82,7 +82,7 @@ def copyAllAnnotations(self, pluginAnnoClass, classID, event = None):
     if reply == QtWidgets.QMessageBox.No:
         return
     
-    for pluginAnno in annos:
+    for pluginAnno in tqdm(annos):
         self.db.addAnnotationToDatabase(pluginAnno, slideUID=self.slideUID, classID=classID, annotatorID=self.retrieveAnnotator(event))
     
     self.showImage()
