@@ -426,7 +426,7 @@ class spotAnnotation(annotation):
       def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected=False):
             xpos1=int((self.x1-leftUpper[0])/zoomLevel)
             ypos1=int((self.y1-leftUpper[1])/zoomLevel)
-            radius=int(vp.spotCircleRadius/zoomLevel)
+            radius=int(int(vp.spotCircleRadius)/zoomLevel)
             if (radius>=0):
                   image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=self.getColor(vp), lineType=cv2.LINE_AA)
             if (len(self.text)>0):
