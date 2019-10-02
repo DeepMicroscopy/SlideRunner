@@ -118,7 +118,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                 self.annotationLabels = dict()
                 for key,label in enumerate(uniqueLabels):
-                     self.annotationLabels[label] =  SlideRunnerPlugin.PluginAnnotationLabel(0,'Class %d' % label, self.COLORS[key % len(self.COLORS)])
+                     self.annotationLabels[label] =  SlideRunnerPlugin.PluginAnnotationLabel(key, 'Class %d' % label, self.COLORS[key % len(self.COLORS)])
 
                 for idx in range(len(self.resultsArchive[fname])):
                         row = self.resultsArchive[fname][idx]
@@ -135,7 +135,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                 self.annotationLabels = dict()
                 for key,label in enumerate(uniqueLabels):
-                     self.annotationLabels[label] =  SlideRunnerPlugin.PluginAnnotationLabel(0,label, self.COLORS[key % len(self.COLORS)])
+                     self.annotationLabels[label] =  SlideRunnerPlugin.PluginAnnotationLabel(key, label, self.COLORS[key % len(self.COLORS)])
 
                 self.sendAnnotationLabelUpdate()
 
