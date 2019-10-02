@@ -1150,7 +1150,7 @@ class SlideRunnerUI(QMainWindow):
         attr = 'first' if (len(self.db.getAllPersons())==0) else 'new'
 
         name, ok = QInputDialog.getText(self, f"Please give a name for the {attr} expert",
-                                        "Full name:")
+                                        f"{attr} expert name:                               ")
 
         if (ok):
             self.db.insertAnnotator(name)
@@ -1163,7 +1163,7 @@ class SlideRunnerUI(QMainWindow):
         """
         attr = 'first' if len(self.db.getAllClasses())==0 else 'new'
         name, ok = QInputDialog.getText(self, f"Please give a name for the {attr} category",
-                                          "Name:")
+                                          f"{attr} class name:                             ")
         if (ok):
             self.db.insertClass(name)
             # show DB overview
