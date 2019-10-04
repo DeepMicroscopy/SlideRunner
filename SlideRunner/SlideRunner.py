@@ -238,7 +238,8 @@ class SlideRunnerUI(QMainWindow):
         self.ui.MainImage.mouseMoveEvent = partial(mouseEvents.moveImage,self)
         self.ui.MainImage.mouseDoubleClickEvent = partial(mouseEvents.doubleClick,self)
         self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(127*np.ones((200,200,3),np.uint8)))
-        self.opacity = 1.0
+        self.opacity = 0.5
+
         self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
         self.ui.OverviewLabel.mousePressEvent = self.pressOverviewImage
 
@@ -546,6 +547,7 @@ class SlideRunnerUI(QMainWindow):
             if (plugin.plugin.outputType != SlideRunnerPlugin.PluginOutputType.NO_OVERLAY):
                 self.ui.opacitySlider.valueChanged.disconnect(self.changeOpacity)                
                 self.ui.opacitySlider.setValue(int(plugin.plugin.initialOpacity*100))
+                self.opacity = plugin.plugin.initialOpacity
                 self.ui.opacitySlider.valueChanged.connect(self.changeOpacity)
                 self.ui.opacitySlider.setHidden(False)
                 self.ui.opacitySlider.setEnabled(True)
@@ -1115,6 +1117,7 @@ class SlideRunnerUI(QMainWindow):
             convert screen coordinates to slide coordinates
         """
         p1 = self.region[0]
+        print('CO:',co, 'p1',p1)
         xpos = int(co[0] * self.getZoomValue() + p1[0])
         ypos = int(co[1] * self.getZoomValue() + p1[1])
         return (xpos,ypos)
