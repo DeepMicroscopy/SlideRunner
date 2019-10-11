@@ -23,7 +23,7 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 
 | Operating System | Version | Download link|
 |---|---|---|
-| Windows 10 (google drive)| V. 1.27.1 | [link](https://drive.google.com/file/d/1-YcuMiQn5sxi0i6S0hFv7JTnXjgIjlQU/view?usp=sharing) |
+| Windows 10 (google drive)| V. 1.27.1 | [link](https://drive.google.com/file/d/1BPUM3M76qUqW9b8WpMA-p34NEyNyoQec/view?usp=sharing) |
 |Mac OS X (10.14) | V 1.20.0 | [link](https://github.com/maubreville/SlideRunner/raw/master/dist/SlideRunner.app.zip)|
 
 ## Updates
