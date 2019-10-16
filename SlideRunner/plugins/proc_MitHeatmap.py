@@ -97,6 +97,9 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             
             sourceChanged = job.configuration['source'] != oldSource
             if (job.configuration['source']==0):
+                if not hasattr(job.openedDatabase, 'dbfilename'):
+                    # DB not open yet
+                    continue
                 job.configuration['dbfile'] = job.openedDatabase.dbfilename
             
             dbfilechanged = job.configuration['dbfile'] != oldDBfile
