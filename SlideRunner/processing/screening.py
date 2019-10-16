@@ -27,8 +27,28 @@ class screeningMap(object):
     mainImageSize = None
 
     # Reset screening - create new copy of screening map
-    def reset(self):
-        self.mapWorkingCopy = np.copy(self.map)
+    def reset(self,thresholding):
+        gray = self.grayImage
+        if (thresholding=='OTSU'):
+            # OTSU thresholding
+            ret, thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
+        elif (thresholding=='high'):
+            ret, thresh = cv2.threshold(gray,200,255,cv2.THRESH_BINARY_INV)
+        elif (thresholding=='med'):
+            ret, thresh = cv2.threshold(gray,127,255,cv2.THRESH_BINARY_INV)
+        elif (thresholding=='low'):
+            ret, thresh = cv2.threshold(gray,80,255,cv2.THRESH_BINARY_INV)
+        else: # off
+            thresh = np.ones_like(gray)*255
+
+        # dilate
+        dil = cv2.dilate(thresh, kernel = np.ones((7,7),np.uint8))
+
+        # erode
+        er = cv2.erode(dil, kernel = np.ones((7,7),np.uint8))
+
+        self.map = er
+        self.mapWorkingCopy = np.copy(er)
 
     def checkIsNew(self,coordinates):
         check_x = np.int16(np.floor((coordinates[0])*self.map.shape[1]))
@@ -40,22 +60,12 @@ class screeningMap(object):
         
         return False
 
-    def __init__(self,overview, mainImageSize, slideLevelDimensions, thumbNailSize):
+    def __init__(self,overview, mainImageSize, slideLevelDimensions, thumbNailSize, thresholding:str):
             super(screeningMap, self).__init__()        
             # Convert to grayscale
             gray = cv2.cvtColor(overview,cv2.COLOR_BGR2GRAY)
-
-            # OTSU thresholding
-            ret, thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY_INV+cv2.THRESH_OTSU)
-
-            # dilate
-            dil = cv2.dilate(thresh, kernel = np.ones((7,7),np.uint8))
-
-            # erode
-            er = cv2.erode(dil, kernel = np.ones((7,7),np.uint8))
-
-            self.map = er
-            self.mapWorkingCopy = np.copy(er)
+            self.grayImage = gray
+            self.reset(thresholding)
 
             w_screeningmap = np.int16(np.floor(mainImageSize[0]/slideLevelDimensions[0][0]*self.map.shape[1])*0.9)
             h_screeningmap = np.int16(np.floor(mainImageSize[1]/slideLevelDimensions[0][1]*self.map.shape[0])*0.9)
@@ -76,6 +86,8 @@ class screeningMap(object):
         numpyImage[:,:,0] = np.uint8(np.clip((np.float32(numpyImage[:,:,0]) * (1-self.mapHeatmap[:,:]/255)),0,255))
         numpyImage[:,:,1] = np.uint8(np.clip((np.float32(numpyImage[:,:,1]) * (1+self.mapHeatmap[:,:]/255)),0,255))
         numpyImage[:,:,2] = np.uint8(np.clip((np.float32(numpyImage[:,:,2]) * (1-self.mapHeatmap[:,:]/255)),0,255))
+        resizedMap = cv2.resize(self.map, dsize=(numpyImage.shape[1], numpyImage.shape[0]))
+        numpyImage[resizedMap<250,0] = 0
         return numpyImage
 
     """
