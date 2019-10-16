@@ -40,7 +40,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.27.1'
+version = '1.28.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -304,7 +304,8 @@ class SlideRunnerUI(QMainWindow):
             self.settings.setValue('OverlayColorMap', 'Greens')
         if (self.settings.value('SpotCircleRadius') == None):
             self.settings.setValue('SpotCircleRadius', 25)
-
+        if (self.settings.value('GuidedScreeningThreshold') == None):
+            self.settings.setValue('GuidedScreeningThreshold', 'OTSU')
 
     class NotImplementedException:
         pass
@@ -616,7 +617,7 @@ class SlideRunnerUI(QMainWindow):
 
     def resetGuidedScreening(self):
             self.lastScreeningLeftUpper = np.zeros(2)
-            self.screeningMap.reset()
+            self.screeningMap.reset(self.settings.value('GuidedScreeningThreshold'))
             self.lastScreeningCenters = list()
             self.screeningIndex = 0
             self.nextScreeningStep()
@@ -2219,7 +2220,7 @@ class SlideRunnerUI(QMainWindow):
 
 
         # Initialize a new screening map
-        self.screeningMap = screening.screeningMap(overview, self.mainImageSize, self.slide.level_dimensions, self.thumbnail.size)
+        self.screeningMap = screening.screeningMap(overview, self.mainImageSize, self.slide.level_dimensions, self.thumbnail.size, self.settings.value('GuidedScreeningThreshold'))
 
         self.initZoomSlider()
         self.imageCenter=[0,0]
