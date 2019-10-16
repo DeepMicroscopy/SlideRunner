@@ -13,11 +13,13 @@ cmaps = ['viridis', 'plasma', 'inferno', 'magma', 'cividis', 'Greys', 'Purples',
             'gnuplot', 'gnuplot2', 'CMRmap', 'cubehelix', 'brg',
             'gist_rainbow', 'rainbow', 'jet', 'nipy_spectral', 'gist_ncar']
 
+GuidedScreeningThresholdOptions = ['OTSU','high','med','low','off']
 
 def saveAndClose(ev, d: QDialog, elem:dict, settingsObject):
     cmap = cmaps[elem['combo_colorbar'].currentIndex()]
     settingsObject.setValue('OverlayColorMap', cmap)
-
+    thres = GuidedScreeningThresholdOptions[elem['combo_guided'].currentIndex()]
+    settingsObject.setValue('GuidedScreeningThreshold', thres)
     settingsObject.setValue('SpotCircleRadius', elem['radiusSlider'].value())
 
 
@@ -51,6 +53,7 @@ def settingsDialog(settingsObject):
             ci = key
     elem['combo_colorbar'] = c1 
     c1.setCurrentIndex(ci)
+    layout.addWidget(c1, 0,1)
 
     l2 = QtWidgets.QLabel("Radius of spot annotations")
     l3 = QtWidgets.QLabel("%d px" %settingsObject.value('SpotCircleRadius') )
@@ -78,11 +81,26 @@ def settingsDialog(settingsObject):
     newSlider.valueChanged.connect(partial(changePxSlider, sliderObj=newSlider, labelObj=l3))
 
 
+    l6 = QtWidgets.QLabel("Guided Screening Threshold")
+    layout.addWidget(l6, 3,0)
+    c2 = QtWidgets.QComboBox()
+    ci = 0
 
-    layout.addWidget(c1, 0,1)
+    for key,item in enumerate(GuidedScreeningThresholdOptions):
+        c2.addItem(item)
+        if (item == settingsObject.value('GuidedScreeningThreshold')):
+            ci = key
+    elem['combo_guided'] = c2
+    c2.setCurrentIndex(ci)
+    layout.addWidget(c2, 3,1)
+
+
+
     b1 = QPushButton("ok",d)
-    layout.addWidget(b1, 3,1)
+    layout.addWidget(b1, 4,1)
     b1.clicked.connect(partial(saveAndClose, d=d, elem=elem, settingsObject=settingsObject))
+
+
 
 #    b1.move(50,50)
     d.setWindowTitle("Settings")
