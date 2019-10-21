@@ -40,7 +40,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.28.0'
+version = '1.28.1'
 
 SLIDERUNNER_DEBUG = False
 
@@ -339,6 +339,21 @@ class SlideRunnerUI(QMainWindow):
         self.pluginMinCoords, self.pluginMaxCoords = SlideRunnerPlugin.generateMinMaxCoordsList(anno)
         self.showImage_part3(np.empty(shape=(1)), self.processingStep)
 
+    #receivePluginInformation
+    def receivePluginInformation(self, pluginInformation):
+        self.pluginInformation = pluginInformation
+
+        self.pluginTableWidget.clearContents()
+
+        self.pluginTableWidget.setRowCount(len(pluginInformation))
+        self.pluginTableWidget.setColumnCount(2)
+        self.pluginTableWidget.setHorizontalHeaderLabels(["Key", "Value"])
+
+        for id, key in enumerate(self.pluginInformation):
+            self.pluginTableWidget.setItem(id,0, QTableWidgetItem(str(key)))
+            self.pluginTableWidget.setItem(id,1, QTableWidgetItem(str(self.pluginInformation[key])))
+
+
     def setProgressBar(self, number):
         if (number == -1):
             self.ui.progressBar.setHidden(True)
@@ -392,6 +407,8 @@ class SlideRunnerUI(QMainWindow):
 
         option.selected_value = index.currentText()
         self.triggerPlugin(self.cachedLastImage, trigger=option)
+
+
 
     """
      Add configuration options of active plugin to sidebar
@@ -465,14 +482,14 @@ class SlideRunnerUI(QMainWindow):
                     self.pluginParameterSliders[pluginConfig.uid] = newSlider
                     self.pluginConfigLabels[pluginConfig.uid] = valLabel
                     newSlider.setStyleSheet("""
-    QSlider:horizontal {
-        min-height: 10px;
-    }
-    
-    QSlider::groove:horizontal {
-        margin: 0px 0; /* decrease this size (make it more negative)—I changed mine from –2px to –8px. */
-    }
-    """)
+                    QSlider:horizontal {
+                        min-height: 10px;
+                    }
+                    
+                    QSlider::groove:horizontal {
+                        margin: 0px 0; /* decrease this size (make it more negative)—I changed mine from –2px to –8px. */
+                    }
+                    """)
                 elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.TABLE):
                     self.pluginTableWidget = QTableWidget()
                     self.pluginTableWidget.setHorizontalHeaderLabels(['Key', 'Value'])
@@ -608,7 +625,8 @@ class SlideRunnerUI(QMainWindow):
 
         coordinates = (int(imgarea_p1[0]), int(imgarea_p1[1]), int(imgarea_w[0]), int(imgarea_w[1]))
 
-        self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, configuration=self.gatherPluginConfig(), annotations=annotations, trigger=trigger,coordinates=coordinates, actionUID=actionUID, openedDatabase=self.db))
+        if (self.activePlugin is not None):
+            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, configuration=self.gatherPluginConfig(), annotations=annotations, trigger=trigger,coordinates=coordinates, actionUID=actionUID, openedDatabase=self.db))
 
 
     """
@@ -1527,6 +1545,12 @@ class SlideRunnerUI(QMainWindow):
 
         if (self.overviewOverlayHeatmap):
             npi = self.screeningMap.overlayHeatmap(npi)
+
+        if(self.activePlugin is not None and hasattr(self.activePlugin.instance, 'overlayHeatmap')):
+            try:
+                npi = self.activePlugin.instance.overlayHeatmap(npi)
+            except Exception as e:
+                self.popupmessage(f'Plugin returned exception: '+str(e))
 
         # Set pixmap of overview image (display overview image)
         self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(npi))

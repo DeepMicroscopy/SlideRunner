@@ -15,6 +15,7 @@ class StatusInformation(enumerate):
       POPUP_MESSAGEBOX = 5
       UPDATE_CONFIG = 6
       UPDATE_LABELS = 7
+      UPDATE_INFORMATION = 8
 
 class AnnotationUpdatePolicy(enumerate):
       UPDATE_ON_SCROLL_CHANGE = 0,
@@ -171,7 +172,14 @@ class ComboboxPluginConfigurationEntry(PluginConfigurationEntry):
             self.name=name
             self.type=PluginConfigurationType.COMBOBOX
             self.options = options
+            self.selected_value = 0
 
+
+class TablePluginConfigurationEntry(PluginConfigurationEntry):
+      def __init__(self, uid: int, name: str):
+            self.uid = uid
+            self.name = name
+            self.type = PluginConfigurationType.TABLE
 
 
 class SlideRunnerPlugin:
@@ -234,6 +242,10 @@ class SlideRunnerPlugin:
 
       def updateAnnotations(self):
             self.statusQueue.put((StatusInformation.ANNOTATIONS, self.getAnnotations()))
+
+      def updateInformation(self, pluginInformation):
+            self.statusQueue.put((StatusInformation.UPDATE_INFORMATION, pluginInformation))
+
 
       def findClickAnnotation(self, clickPosition, pluginVP):
             labels = self.getAnnotationLabels()
