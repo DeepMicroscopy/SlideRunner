@@ -238,6 +238,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.MainImage.mouseMoveEvent = partial(mouseEvents.moveImage,self)
         self.ui.MainImage.mouseDoubleClickEvent = partial(mouseEvents.doubleClick,self)
         self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(127*np.ones((200,200,3),np.uint8)))
+        self.overviewimage = 127*np.ones((200,200,3),np.uint8)
         self.opacity = 0.5
 
         self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
@@ -1538,22 +1539,17 @@ class SlideRunnerUI(QMainWindow):
         imgarea_w =  self.mainImageSize * self.getZoomValue()
 
         # Annotate current screen being presented on overview map
-        npi = self.thumbnail.annotateCurrentRegion(npi, imgarea_p1, imgarea_w)
+        self.overviewimage = self.thumbnail.annotateCurrentRegion(npi, imgarea_p1, imgarea_w)
 
         # annotate on screening map
         self.screeningMap.annotate(imgarea_p1, imgarea_w)
 
         if (self.overviewOverlayHeatmap):
-            npi = self.screeningMap.overlayHeatmap(npi)
+            self.overviewimage = self.screeningMap.overlayHeatmap(self.overviewimage)
 
-        if(self.activePlugin is not None and hasattr(self.activePlugin.instance, 'overlayHeatmap')):
-            try:
-                npi = self.activePlugin.instance.overlayHeatmap(npi)
-            except Exception as e:
-                self.popupmessage(f'Plugin returned exception: '+str(e))
 
         # Set pixmap of overview image (display overview image)
-        self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(npi))
+        self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(self.overviewimage))
 
         # Now for the main image
 
@@ -1659,6 +1655,15 @@ class SlideRunnerUI(QMainWindow):
                         for c in range(3):
                             npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
                     
+        if(self.activePlugin is not None and hasattr(self.activePlugin.instance, 'overlayHeatmap')):
+            try:
+                heatmap = self.activePlugin.instance.overlayHeatmap(self.overviewimage)
+                # Set pixmap of overview image (display overview image)
+                self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(heatmap))
+            except Exception as e:
+                self.popupmessage(f'Plugin returned exception: '+str(e))
+        else:
+            self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(self.overviewimage))
 
 
         # Draw annotations by the plugin
