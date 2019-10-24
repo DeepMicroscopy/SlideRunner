@@ -16,6 +16,7 @@ class StatusInformation(enumerate):
       UPDATE_CONFIG = 6
       UPDATE_LABELS = 7
       UPDATE_INFORMATION = 8
+      REFRESH_VIEW = 9
 
 class AnnotationUpdatePolicy(enumerate):
       UPDATE_ON_SCROLL_CHANGE = 0,
@@ -167,12 +168,12 @@ class PluginActionEntry(PluginConfigurationEntry):
 
 
 class ComboboxPluginConfigurationEntry(PluginConfigurationEntry):
-      def __init__(self,uid:int,name:str, options:list ):
+      def __init__(self,uid:int,name:str, options:list, selected_value:int=0 ):
             self.uid=uid
             self.name=name
             self.type=PluginConfigurationType.COMBOBOX
             self.options = options
-            self.selected_value = 0
+            self.selected_value = selected_value
 
 
 class TablePluginConfigurationEntry(PluginConfigurationEntry):
@@ -223,6 +224,8 @@ class SlideRunnerPlugin:
       def sendAnnotationLabelUpdate(self):
             self.statusQueue.put((StatusInformation.UPDATE_LABELS, None))
 
+      def triggerRefreshView(self):
+            self.statusQueue.put((StatusInformation.REFRESH_VIEW, None))
       # Show a simple message box with a string message      
       def showMessageBox(self, msg:str):
             self.statusQueue.put((StatusInformation.POPUP_MESSAGEBOX,msg))
@@ -236,6 +239,10 @@ class SlideRunnerPlugin:
       # Return an image to SlideRunner UI
       def returnImage(self, img : np.ndarray, procId = None):
             self.outQueue.put((img, procId))
+      
+      def resetImage(self):
+            self.outQueue.put((None, -1))
+
 
       def exceptionHandlerOnExit(self):
             return
