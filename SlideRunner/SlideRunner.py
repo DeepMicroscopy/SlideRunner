@@ -40,7 +40,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.28.2'
+version = '1.28.3'
 
 SLIDERUNNER_DEBUG = False
 
@@ -510,7 +510,8 @@ class SlideRunnerUI(QMainWindow):
 
                     self.ui.tab3Layout.addWidget(cb)
                     self.pluginComboboxes[pluginConfig.uid] = cb
-                    cb.setCurrentIndex(pluginConfig.selected_value)
+                    if (isinstance(pluginConfig.selected_value,int)):
+                        cb.setCurrentIndex(pluginConfig.selected_value)
                     cb.currentIndexChanged.connect(partial(self.pluginComboboxChanged, pluginConfig, cb))
 
                 
@@ -1636,7 +1637,7 @@ class SlideRunnerUI(QMainWindow):
 
     def showImage_part3(self, npi, id):
         if (len(npi.shape)==1): # empty was given as parameter - i.e. trigger comes from plugin
-            npi = self.cachedLastImage
+            npi = np.copy(self.cachedLastImage)
 
         if (self.overlayMap is not None) and (self.activePlugin is not None):
                 if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.BINARY_MASK):
@@ -1911,6 +1912,12 @@ class SlideRunnerUI(QMainWindow):
         dbinfo = '<html>'+self.db.getDBname()+'(%d entries)' % (num) +'<br><html>'
         self.ui.databaseLabel.setText(dbinfo)
         self.showDBstatistics()
+
+    def savescreenshot(self):
+        filename = QFileDialog.getSaveFileName(filter='PNG Images (*.png)')[0]
+        if filename is not None and len(filename)>0:
+            cv2.imwrite(filename, cv2.cvtColor(self.displayedImage, cv2.COLOR_BGRA2RGBA))
+
 
     def findAnnoByID(self):
         if (self.db.isOpen() == False):
