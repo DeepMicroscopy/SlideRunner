@@ -40,7 +40,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.28.3'
+version = '1.28.4'
 
 SLIDERUNNER_DEBUG = False
 
@@ -1146,7 +1146,6 @@ class SlideRunnerUI(QMainWindow):
             convert screen coordinates to slide coordinates
         """
         p1 = self.region[0]
-        print('CO:',co, 'p1',p1)
         xpos = int(co[0] * self.getZoomValue() + p1[0])
         ypos = int(co[1] * self.getZoomValue() + p1[1])
         return (xpos,ypos)
