@@ -306,7 +306,7 @@ class SlideRunnerUI(QMainWindow):
 
     def checkSettings(self):
         if (self.settings.value('OverlayColorMap') == None):
-            self.settings.setValue('OverlayColorMap', 'Greens')
+            self.settings.setValue('OverlayColorMap', 'hot')
         if (self.settings.value('SpotCircleRadius') == None):
             self.settings.setValue('SpotCircleRadius', 25)
         if (self.settings.value('GuidedScreeningThreshold') == None):
