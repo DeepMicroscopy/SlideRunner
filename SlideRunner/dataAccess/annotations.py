@@ -26,6 +26,7 @@ class ViewingProfile(object):
                   [166, 10, 168,255],
                   [166,168,10,255]]
     spotCircleRadius = 25
+    minimumAnnotationLabelZoom = 4
     majorityClassVote = False
     activeClasses = dict()
 
@@ -73,6 +74,7 @@ class annotation():
           self.uid = uid
           self.text = text
           self.agreedClass = None
+          self.minimumAnnotationLabelZoom = 1
           self.pluginAnnotationLabel = None
           if (pluginAnnotationLabel is not None):
               if (isinstance(pluginAnnotationLabel, SlideRunnerPlugin.PluginAnnotationLabel)):
@@ -119,6 +121,8 @@ class annotation():
 
       def positionInAnnotationHandle(self, position: tuple) -> int:
           return None
+    
+          
           
       def getDescription(self, db, micronsPerPixel=None) -> list:
             if (self.pluginAnnotationLabel is None):
@@ -226,12 +230,13 @@ class annotation():
 
 
 class rectangularAnnotation(annotation):
-      def __init__(self, uid, x1, y1, x2, y2, text='', pluginAnnotationLabel=None):
+      def __init__(self, uid, x1, y1, x2, y2, text='', pluginAnnotationLabel=None, minimumAnnotationLabelZoom=1):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
             self.x1 = x1
             self.y1 = y1
             self.x2 = x2
             self.y2 = y2
+            self.minimumAnnotationLabelZoom = minimumAnnotationLabelZoom
             self.annotationType = AnnotationType.AREA
       
       def minCoordinates(self) -> annoCoordinate:
@@ -267,14 +272,15 @@ class rectangularAnnotation(annotation):
 
             image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.getColor(vp), lineType=cv2.LINE_AA)
 
-            if (len(self.text)>0):
+            if (len(self.text)>0) and (zoomLevel < self.minimumAnnotationLabelZoom):
                   cv2.putText(image, self.text, (xpos1+3, ypos2+10), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
 class polygonAnnotation(annotation):
-    def __init__(self, uid:int, coordinates: np.ndarray = None, text='', pluginAnnotationLabel=None):
+    def __init__(self, uid:int, coordinates: np.ndarray = None, text='', pluginAnnotationLabel=None, minimumAnnotationLabelZoom=1):
         super().__init__(uid=uid, pluginAnnotationLabel=pluginAnnotationLabel, text=text)
         self.annotationType = AnnotationType.POLYGON
         self.annoHandles = list()
+        self.minimumAnnotationLabelZoom = minimumAnnotationLabelZoom
         if (coordinates is not None):
             self.coordinates = coordinates
     
@@ -361,7 +367,7 @@ class polygonAnnotation(annotation):
 
         cv2.line(img=image, pt1=anno, pt2=slideToScreen(self.coordinates[0]), thickness=2, color=self.getColor(vp), lineType=cv2.LINE_AA)       
 
-        if (len(self.text)>0):
+        if (len(self.text)>0) and (zoomLevel < self.minimumAnnotationLabelZoom):
                 xpos1=int(0.5*(np.max(self.coordinates[:,0])+np.min(self.coordinates[:,0]) ))
                 ypos1=int(0.5*(np.max(self.coordinates[:,1])+np.min(self.coordinates[:,1])))
                 cv2.putText(image, self.text, slideToScreen((xpos1+3, ypos1+10)), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
@@ -370,10 +376,10 @@ class polygonAnnotation(annotation):
 
 class circleAnnotation(annotation):
       
-      def __init__(self, uid, x1, y1, x2 = None, y2 = None, r = None, text='', pluginAnnotationLabel=None):
+      def __init__(self, uid, x1, y1, x2 = None, y2 = None, r = None, text='', pluginAnnotationLabel=None, minimumAnnotationLabelZoom=1):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
             self.annotationType = AnnotationType.CIRCLE
-
+            self.minimumAnnotationLabelZoom = minimumAnnotationLabelZoom
             if (r is None):
                 self.x1 = int(0.5*(x1+x2))
                 self.y1 = int(0.5*(y1+y2))
@@ -409,18 +415,19 @@ class circleAnnotation(annotation):
             radius = int(self.r/zoomLevel)
             if (radius>=0):
                   image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=self.getColor(vp), lineType=cv2.LINE_AA)
-            if (len(self.text)>0):
+            if (len(self.text)>0) and (zoomLevel < self.minimumAnnotationLabelZoom):
                     cv2.putText(image, self.text, (xpos1,ypos1), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
 class spotAnnotation(annotation):
 
-      def __init__(self, uid, x1, y1, isSpecialSpot : bool = False,text='', pluginAnnotationLabel=None):
+      def __init__(self, uid, x1, y1, isSpecialSpot : bool = False,text='', pluginAnnotationLabel=None, minimumAnnotationLabelZoom=1):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
             self.annotationType = AnnotationType.SPOT
             self.x1 = x1
             self.y1 = y1
             if (isSpecialSpot):
                 self.annotationType = AnnotationType.SPECIAL_SPOT
+            self.minimumAnnotationLabelZoom = minimumAnnotationLabelZoom
 
       def minCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1-25, self.y1-25)
@@ -438,7 +445,7 @@ class spotAnnotation(annotation):
             radius=int(int(vp.spotCircleRadius)/zoomLevel)
             if (radius>=0):
                   image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=self.getColor(vp), lineType=cv2.LINE_AA)
-            if (len(self.text)>0):
+            if (len(self.text)>0) and (zoomLevel < self.minimumAnnotationLabelZoom):
                     cv2.putText(image, self.text, (xpos1+3, ypos1+10), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
       def getDescription(self,db, micronsPerPixel=None) -> list:

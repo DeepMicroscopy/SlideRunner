@@ -56,13 +56,13 @@ def settingsDialog(settingsObject):
     layout.addWidget(c1, 0,1)
 
     l2 = QtWidgets.QLabel("Radius of spot annotations")
-    l3 = QtWidgets.QLabel("%d px" %settingsObject.value('SpotCircleRadius') )
+    l3 = QtWidgets.QLabel("%d px" % int(settingsObject.value('SpotCircleRadius') ))
     layout.addWidget(l2, 1,0)
     layout.addWidget(l3, 1,2)
     newSlider = QtWidgets.QSlider()
     newSlider.setMinimum(1)
     newSlider.setMaximum(100)
-    newSlider.setValue(settingsObject.value('SpotCircleRadius'))
+    newSlider.setValue(int(settingsObject.value('SpotCircleRadius')))
     newSlider.setOrientation(QtCore.Qt.Horizontal)
     layout.addWidget(newSlider, 1,1)
     elem['radiusSlider'] = newSlider

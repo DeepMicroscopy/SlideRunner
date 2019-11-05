@@ -47,7 +47,7 @@ def mypercentile(x, p):
 
 
 #
-def normalize(I, Iselection = None):
+def normalize(I, Iselection = None, job=None):
     """
     Macenko Normalization (includes, mypercentile, quantile):
 
@@ -172,12 +172,19 @@ def normalize(I, Iselection = None):
     C_norm = np.reshape(np.asarray(C_norm), (C.shape))
     print('CNorm: ',C_norm.shape)
 
+
     C_norm_compl = list()
 
     C_norm_compl.append([[(Ccompl[0] / maxC[0]) * maxCRef[0]], [(Ccompl[1] / maxC[1]) * maxCRef[1]]])
     C_norm_compl = np.reshape(np.asarray(C_norm_compl), (Ccompl.shape))
     print('CNormcompl: ',C_norm_compl.shape)
 
+    if (job.configuration['mode']==1):
+        C_norm_compl[0,:]=0
+        print('CNormcompl: ',C_norm_compl.shape)
+    elif (job.configuration['mode']==2):
+        C_norm_compl[1,:]=0
+        print('CNormcompl: ',C_norm_compl.shape)
 
 
     # _________________________________________________________________________________
@@ -205,7 +212,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     outputType = SlideRunnerPlugin.PluginOutputType.RGB_IMAGE
     description = 'H&E Image normalization (Method by Macenko)'
     pluginType = SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN
-    configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Normalize on annotation', ctype=SlideRunnerPlugin.PluginConfigurationType.ANNOTATIONACTION),))
+    configurationList = list((SlideRunnerPlugin.ComboboxPluginConfigurationEntry(uid='mode', name='Mode', options=['show H&E', 'only E','only H'], selected_value=0),))
 
     def __init__(self, statusQueue:Queue):
         self.statusQueue = statusQueue
@@ -242,13 +249,14 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                     maxC = np.array((min(job.currentImage.shape[1],int((maxC.x-job.coordinates[0])/scaleX)), min(job.currentImage.shape[0],int((maxC.y-job.coordinates[1])/scaleY))))
 
                     rgb = np.copy(image[:,:,0:3])
-                    rgb = normalize(rgb, np.reshape(rgb[minC[1]:maxC[1],minC[0]:maxC[0],:], (-1,3)))
+                    rgb = normalize(rgb, np.reshape(rgb[minC[1]:maxC[1],minC[0]:maxC[0],:], (-1,3)), job=job)
 
 
             else:
 
                 rgb = np.copy(image[:,:,0:3])
-                rgb = normalize(rgb)
+                rgb = normalize(rgb, job=job)
+            print('Stats: ',np.max(np.float32(rgb)), np.min(np.float32(rgb)), np.mean(np.float32(rgb)), np.float32(rgb).shape)
 
             self.returnImage(np.float32(rgb), job.procId)
             self.setMessage('Macenko normalization: done.')

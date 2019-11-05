@@ -117,6 +117,7 @@ def defineMenu(self, MainWindow):
         self.actionSettings.setText(("Settings"))
 
         self.menuItemView = self.menuAnnotation.addAction('Find by ID', MainWindow.findAnnoByID)
+        self.saveSnapshot = zoomMenu.addAction('Create snapshot of current view', MainWindow.savescreenshot)
 
         self.saveto = self.menuDatabase.addAction('Copy To ...')
         self.saveto.setEnabled(False)

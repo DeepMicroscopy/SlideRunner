@@ -40,7 +40,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.28.1'
+version = '1.28.4'
 
 SLIDERUNNER_DEBUG = False
 
@@ -122,6 +122,8 @@ class PluginStatusReceiver(threading.Thread):
                 self.selfObj.updatePluginConfig.emit(value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.UPDATE_LABELS):
                 self.selfObj.updatePluginLabels.emit()
+            elif (msgId == SlideRunnerPlugin.StatusInformation.REFRESH_VIEW):
+                self.selfObj.refreshReceived.emit()
 
 
 class SlideRunnerUI(QMainWindow):
@@ -136,6 +138,7 @@ class SlideRunnerUI(QMainWindow):
     setCenterReceived = pyqtSignal(tuple)
     updatePluginConfig = pyqtSignal(SlideRunnerPlugin.PluginConfigUpdate)
     updatePluginLabels = pyqtSignal()
+    refreshReceived = pyqtSignal()
     pluginPopupMessageReceived = pyqtSignal(str)
     annotator = bool # ID of curent annotator
     db = Database()
@@ -213,6 +216,7 @@ class SlideRunnerUI(QMainWindow):
         self.showImageRequest.connect(self.showImage_part2)
         self.showImage3Request.connect(self.showImage_part3)
         self.annotationReceived.connect(self.receiveAnno)
+        self.refreshReceived.connect(self.receiveRefresh)
         self.updatePluginConfig.connect(self.updatePluginConfiguration)
         self.updatePluginLabels.connect(self.showDatabaseUIelements)
         self.updatedCacheAvailable.connect(self.updateCache)
@@ -302,7 +306,7 @@ class SlideRunnerUI(QMainWindow):
 
     def checkSettings(self):
         if (self.settings.value('OverlayColorMap') == None):
-            self.settings.setValue('OverlayColorMap', 'Greens')
+            self.settings.setValue('OverlayColorMap', 'hot')
         if (self.settings.value('SpotCircleRadius') == None):
             self.settings.setValue('SpotCircleRadius', 25)
         if (self.settings.value('GuidedScreeningThreshold') == None):
@@ -334,6 +338,9 @@ class SlideRunnerUI(QMainWindow):
             if (entry.getType()==SlideRunnerPlugin.PluginConfigurationType.SLIDER_WITH_FLOAT_VALUE):
                 self.pluginParameterSliders[entry.uid].setValue(1000*entry.value)
         self.triggerPluginConfigChanged()
+
+    def receiveRefresh(self):
+        self.showImage()
 
     def receiveAnno(self, anno):
         self.pluginAnnos = anno
@@ -503,6 +510,8 @@ class SlideRunnerUI(QMainWindow):
 
                     self.ui.tab3Layout.addWidget(cb)
                     self.pluginComboboxes[pluginConfig.uid] = cb
+                    if (isinstance(pluginConfig.selected_value,int)):
+                        cb.setCurrentIndex(pluginConfig.selected_value)
                     cb.currentIndexChanged.connect(partial(self.pluginComboboxChanged, pluginConfig, cb))
 
                 
@@ -1137,7 +1146,6 @@ class SlideRunnerUI(QMainWindow):
             convert screen coordinates to slide coordinates
         """
         p1 = self.region[0]
-        print('CO:',co, 'p1',p1)
         xpos = int(co[0] * self.getZoomValue() + p1[0])
         ypos = int(co[1] * self.getZoomValue() + p1[1])
         return (xpos,ypos)
@@ -1628,7 +1636,7 @@ class SlideRunnerUI(QMainWindow):
 
     def showImage_part3(self, npi, id):
         if (len(npi.shape)==1): # empty was given as parameter - i.e. trigger comes from plugin
-            npi = self.cachedLastImage
+            npi = np.copy(self.cachedLastImage)
 
         if (self.overlayMap is not None) and (self.activePlugin is not None):
                 if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.BINARY_MASK):
@@ -1636,14 +1644,15 @@ class SlideRunnerUI(QMainWindow):
                     if ((len(olm.shape)==2) or ((len(olm.shape)==3) and (olm.shape[2]==1))) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
                         self.overlayExtremes = [np.min(olm), np.max(olm)+np.finfo(np.float32).eps]
                         # Normalize overlay
-                        olm = cv2.resize(self.overlayMap, dsize=(npi.shape[1],npi.shape[0]))
-                        olm = (olm - self.overlayExtremes[0]) / (np.diff(np.array(self.overlayExtremes)))
-                        
-                        cm = matplotlib.cm.get_cmap(self.settings.value('OverlayColorMap'))
+                        if (self.overlayMap is not None):
+                            olm = cv2.resize(self.overlayMap, dsize=(npi.shape[1],npi.shape[0]))
+                            olm = (olm - self.overlayExtremes[0]) / (np.diff(np.array(self.overlayExtremes)))
+                            
+                            cm = matplotlib.cm.get_cmap(self.settings.value('OverlayColorMap'))
 
-                        colorMap = cm(olm)
-                        # alpha blend
-                        npi = np.uint8(npi * (1-self.opacity) + colorMap * 255 * (self.opacity))
+                            colorMap = cm(olm)
+                            # alpha blend
+                            npi = np.uint8(npi * (1-self.opacity) + colorMap * 255 * (self.opacity))
 
                     else:
                         print('Overlay map shape not proper')
@@ -1902,6 +1911,12 @@ class SlideRunnerUI(QMainWindow):
         dbinfo = '<html>'+self.db.getDBname()+'(%d entries)' % (num) +'<br><html>'
         self.ui.databaseLabel.setText(dbinfo)
         self.showDBstatistics()
+
+    def savescreenshot(self):
+        filename = QFileDialog.getSaveFileName(filter='PNG Images (*.png)')[0]
+        if filename is not None and len(filename)>0:
+            cv2.imwrite(filename, cv2.cvtColor(self.displayedImage, cv2.COLOR_BGRA2RGBA))
+
 
     def findAnnoByID(self):
         if (self.db.isOpen() == False):
