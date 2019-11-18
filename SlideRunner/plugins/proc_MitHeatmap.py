@@ -143,7 +143,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                     allClasses = self.newDB.getAllClasses()
                     mitosisClass=-1
                     for clsname,clsuid in allClasses:
-                        if (mitosisClass==-1) and ('MITO' in clsname.upper()):
+                        if (mitosisClass==-1) and ('MITO' in clsname.upper()) and ('LOOK' not in clsname.upper()):
                             mitosisClass=clsuid
 
                     pname,fname = os.path.split(job.slideFilename)
