@@ -4,11 +4,10 @@ import numpy as np
 class SlideReader(multiprocessing.Process):
     queue = multiprocessing.Queue()
     outputQueue = multiprocessing.Queue()
-    def __init__(self, SlideRunnerObject):
+    def __init__(self):
         multiprocessing.Process.__init__(self)
         self.sl = None
         self.slidename = None
-        self.SlideRunnerObject = SlideRunnerObject
         self.slide = None
 
     def run(self):

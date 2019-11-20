@@ -227,7 +227,7 @@ class SlideRunnerUI(QMainWindow):
         self.pluginStatusReceiver.start()
 
         
-        self.slideReaderThread = SlideReader(self)
+        self.slideReaderThread = SlideReader()
 #        self.slideReaderThread.setDaemon(True)
         self.slideReaderThread.start()
 
