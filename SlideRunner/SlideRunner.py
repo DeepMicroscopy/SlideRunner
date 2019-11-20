@@ -40,7 +40,7 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.28.4'
+version = '1.29.0'
 
 SLIDERUNNER_DEBUG = False
 
@@ -60,6 +60,7 @@ splash = splashScreen.splashScreen(app, version)
 
 from SlideRunner.general.dependencies import *
 from SlideRunner.dataAccess.annotations import ViewingProfile
+from SlideRunner.dataAccess.openslide import SlideReader
 from PyQt5.QtCore import QSettings
 
 # Thread for receiving images from the plugin
@@ -77,22 +78,18 @@ class imageReceiverThread(threading.Thread):
             print('Received an image from the plugin queue')
             self.selfObj.overlayMap = img
             self.selfObj.showImage3Request.emit(np.empty(0), procId)
+                        
 
-class SlideReaderThread(threading.Thread):
-    queue = queue.Queue()
-    def __init__(self, SlideRunnerObject):
+class SlideImageReceiverThread(threading.Thread):
+    def __init__(self, selfObj, readerqueue):
         threading.Thread.__init__(self)
-        self.SlideRunnerObject = SlideRunnerObject
-    
+        self.queue = readerqueue
+        self.selfObj = selfObj
+
     def run(self):
-        while (True):
-            (location, level, size, id) = self.queue.get()
-            img = self.SlideRunnerObject.read_region(location, level, size)
-            if (self.queue.empty()): # new request pending
-                if (img is not None):
-                    self.SlideRunnerObject.readRegionCompleted.emit(img,id)
-
-
+        while True:
+            (img, procId) = self.queue.get()
+            self.selfObj.readRegionCompleted.emit(img,procId)
 
 # Thread for receiving progress bar events
 class PluginStatusReceiver(threading.Thread):
@@ -229,9 +226,14 @@ class SlideRunnerUI(QMainWindow):
         self.pluginStatusReceiver.setDaemon(True)
         self.pluginStatusReceiver.start()
 
-        self.slideReaderThread = SlideReaderThread(self)
-        self.slideReaderThread.setDaemon(True)
+        
+        self.slideReaderThread = SlideReader(self)
+#        self.slideReaderThread.setDaemon(True)
         self.slideReaderThread.start()
+
+        self.slideImageReceiverThread = SlideImageReceiverThread(self, readerqueue=self.slideReaderThread.outputQueue)
+        self.slideImageReceiverThread.setDaemon(True)
+        self.slideImageReceiverThread.start()
 
 
         self.wheelEvent = partial(mouseEvents.wheelEvent,self)
@@ -1594,7 +1596,11 @@ class SlideRunnerUI(QMainWindow):
             npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
             self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(npi)))
             
-            self.slideReaderThread.queue.put((location_im, act_level, size_im, self.processingStep))
+            self.slideReaderThread.queue.put((self.slidepathname, location_im, act_level, size_im, self.processingStep))
+
+    def closeEvent(self, event):
+        self.slideReaderThread.queue.put((-1,0,0,0,0))
+        event.accept()
 
     def showImage_part2(self, npi, id):
 
@@ -2301,8 +2307,7 @@ def main():
     if (myapp.activePlugin is not None):
         myapp.activePlugin.inQueue.put(None)
         myapp.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(description=SlideRunnerPlugin.JobDescription.QUIT_PLUGIN_THREAD))
-
-    sys.exit(app.exec_())
+    app.exec_()
 
 if __name__ == "__main__":
 
