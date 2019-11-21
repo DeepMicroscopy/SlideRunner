@@ -1572,27 +1572,17 @@ class SlideRunnerUI(QMainWindow):
         location_im = (int(imgarea_p1[0]), int(imgarea_p1[1]))
 
         # Read from Whole Slide Image Overview
-        npi = self.prepare_region_from_overview(location_im, act_level, size_im)
+#        npi = self.prepare_region_from_overview(location_im, act_level, size_im)
 
         self.processingStep += 1
-        outOfCache,_ = self.image_in_cache(location_im, act_level, size_im)
+#        outOfCache,_ = self.image_in_cache(location_im, act_level, size_im)
 
         if 32 in self.slide.level_downsamples:
             level_overview = np.where(np.array(self.slide.level_downsamples)==32)[0][0] # pick overview at 32x
         else:
             level_overview = self.slide.level_count-1
 
-#        npi = self.read_region(location=location_im,level=act_level,size=size_im)
-        if (act_level == level_overview): # overview image is always correct from cache
-            self.showImage_part2(npi, self.processingStep)
-        elif not (outOfCache): # image in cache --> read from cache
-            npi = self.read_region(location_im, act_level, size_im)
-            self.showImage_part2(npi, self.processingStep)
-
-        else:  # neither cached nor on outer level -> put into queue 
-            npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
-            self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(npi)))
-            self.slideReaderThread.queue.put((self.slidepathname, location_im, act_level, size_im, self.processingStep))
+        self.slideReaderThread.queue.put((self.slidepathname, location_im, act_level, size_im, self.processingStep))
 
     def closeEvent(self, event):
         self.slideReaderThread.queue.put((-1,0,0,0,0))
