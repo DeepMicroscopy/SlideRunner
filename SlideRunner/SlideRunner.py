@@ -40,12 +40,13 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.28.4'
 
 SLIDERUNNER_DEBUG = False
 
 from SlideRunner.general import dependencies
 import sys
+import multiprocessing
+from multiprocessing import freeze_support
 
 dependencies.check_qt_dependencies()
 
@@ -53,13 +54,12 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from SlideRunner.gui import splashScreen, menu, style
 from PyQt5.QtWidgets import QMainWindow
 
-app = QtWidgets.QApplication(sys.argv)
-splash = splashScreen.splashScreen(app, version)
 
 # Splash screen is displayed, go on with the rest.
 
 from SlideRunner.general.dependencies import *
 from SlideRunner.dataAccess.annotations import ViewingProfile
+from SlideRunner.dataAccess.openslide import SlideReader
 from PyQt5.QtCore import QSettings
 
 # Thread for receiving images from the plugin
@@ -77,22 +77,18 @@ class imageReceiverThread(threading.Thread):
             print('Received an image from the plugin queue')
             self.selfObj.overlayMap = img
             self.selfObj.showImage3Request.emit(np.empty(0), procId)
+                        
 
-class SlideReaderThread(threading.Thread):
-    queue = queue.Queue()
-    def __init__(self, SlideRunnerObject):
+class SlideImageReceiverThread(threading.Thread):
+    def __init__(self, selfObj, readerqueue):
         threading.Thread.__init__(self)
-        self.SlideRunnerObject = SlideRunnerObject
-    
+        self.queue = readerqueue
+        self.selfObj = selfObj
+
     def run(self):
-        while (True):
-            (location, level, size, id) = self.queue.get()
-            img = self.SlideRunnerObject.read_region(location, level, size)
-            if (self.queue.empty()): # new request pending
-                if (img is not None):
-                    self.SlideRunnerObject.readRegionCompleted.emit(img,id)
-
-
+        while True:
+            (img, procId) = self.queue.get()
+            self.selfObj.readRegionCompleted.emit(img,procId)
 
 # Thread for receiving progress bar events
 class PluginStatusReceiver(threading.Thread):
@@ -166,7 +162,7 @@ class SlideRunnerUI(QMainWindow):
     settings = QSettings('Pattern Recognition Lab, FAU Erlangen Nuernberg', 'SlideRunner')
 
 
-    def __init__(self):
+    def __init__(self,slideReaderThread, app, version,pluginList):
         super(SlideRunnerUI, self).__init__()
 
         # Default value initialization
@@ -190,6 +186,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.wandAnnotation = WandAnnotation()
         self.slidename=''
         self.slideUID = 0
+        self.slideReaderThread = slideReaderThread
         self.ui.annotationMode = 0
         self.annotatorsModel = QStringListModel()
         self.classButtons = list()
@@ -229,9 +226,11 @@ class SlideRunnerUI(QMainWindow):
         self.pluginStatusReceiver.setDaemon(True)
         self.pluginStatusReceiver.start()
 
-        self.slideReaderThread = SlideReaderThread(self)
-        self.slideReaderThread.setDaemon(True)
-        self.slideReaderThread.start()
+        
+    
+        self.slideImageReceiverThread = SlideImageReceiverThread(self, readerqueue=self.slideReaderThread.outputQueue)
+        self.slideImageReceiverThread.setDaemon(True)
+        self.slideImageReceiverThread.start()
 
 
         self.wheelEvent = partial(mouseEvents.wheelEvent,self)
@@ -251,7 +250,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.opacitySlider.setHidden(True)
         self.ui.opacityLabel.setHidden(True)
 
-        menu.defineMenu(self.ui, self)
+        menu.defineMenu(self.ui, self, pluginList)
         menu.defineAnnotationMenu(self)
 
         shortcuts.defineMenuShortcuts(self)
@@ -1573,35 +1572,27 @@ class SlideRunnerUI(QMainWindow):
         location_im = (int(imgarea_p1[0]), int(imgarea_p1[1]))
 
         # Read from Whole Slide Image Overview
-        npi = self.prepare_region_from_overview(location_im, act_level, size_im)
+#        npi = self.prepare_region_from_overview(location_im, act_level, size_im)
 
         self.processingStep += 1
-        outOfCache,_ = self.image_in_cache(location_im, act_level, size_im)
+#        outOfCache,_ = self.image_in_cache(location_im, act_level, size_im)
 
         if 32 in self.slide.level_downsamples:
             level_overview = np.where(np.array(self.slide.level_downsamples)==32)[0][0] # pick overview at 32x
         else:
             level_overview = self.slide.level_count-1
 
-#        npi = self.read_region(location=location_im,level=act_level,size=size_im)
-        if (act_level == level_overview): # overview image is always correct from cache
-            self.showImage_part2(npi, self.processingStep)
-        elif not (outOfCache): # image in cache --> read from cache
-            npi = self.read_region(location_im, act_level, size_im)
-            self.showImage_part2(npi, self.processingStep)
+        self.slideReaderThread.queue.put((self.slidepathname, location_im, act_level, size_im, self.processingStep))
 
-        else:  # neither cached nor on outer level -> put into queue 
-            npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
-            self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(npi)))
-            
-            self.slideReaderThread.queue.put((location_im, act_level, size_im, self.processingStep))
+    def closeEvent(self, event):
+        self.slideReaderThread.queue.put((-1,0,0,0,0))
+        self.slideReaderThread.join(0)
+        event.accept()
 
     def showImage_part2(self, npi, id):
 
         self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
 
-        if (id<self.processingStep):
-            return
 
         aspectRatio_image = float(self.slide.level_dimensions[-1][0]) / self.slide.level_dimensions[-1][1]
 
@@ -1614,13 +1605,16 @@ class SlideRunnerUI(QMainWindow):
         # Resize to real image size
         npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
         self.rawImage = np.copy(npi)
+        if (id<self.processingStep):
+            self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.rawImage)))
+            return
 
         # reset timer to reload image
-        from threading import Timer
-        if (self.refreshTimer is not None):
-                self.refreshTimer.cancel()
-        self.refreshTimer = Timer(1, self.updateImageCache)                
-        self.refreshTimer.start()
+#        from threading import Timer
+#        if (self.refreshTimer is not None):
+#                self.refreshTimer.cancel()
+#        self.refreshTimer = Timer(1, self.updateImageCache)                
+#        self.refreshTimer.start()
 
         if ((self.activePlugin is not None) and (self.overlayMap is None) and 
            ((self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE ) or 
@@ -2290,10 +2284,10 @@ class SlideRunnerUI(QMainWindow):
 
 
 
-def main():
+def main(slideReaderThread,app,splash,version,pluginList):
     style.setStyle(app)    
-
-    myapp = SlideRunnerUI()
+    
+    myapp = SlideRunnerUI(slideReaderThread=slideReaderThread, app=app, version=version, pluginList=pluginList)
     myapp.show()
     myapp.raise_()
     splash.finish(myapp)
@@ -2301,9 +2295,5 @@ def main():
     if (myapp.activePlugin is not None):
         myapp.activePlugin.inQueue.put(None)
         myapp.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(description=SlideRunnerPlugin.JobDescription.QUIT_PLUGIN_THREAD))
+    app.exec_()
 
-    sys.exit(app.exec_())
-
-if __name__ == "__main__":
-
-    main()

@@ -39,7 +39,7 @@ setup(name='SlideRunner',
 #                'bar = other_module:some_func',
 #            ],
             'gui_scripts': [
-                'sliderunner = SlideRunner.SlideRunner:main',
+                'sliderunner = SlideRunner.__main__:main',
             ]
         },
       tests_require=['pytest'],

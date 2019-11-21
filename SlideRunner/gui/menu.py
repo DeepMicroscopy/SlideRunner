@@ -22,7 +22,7 @@ import cv2
 import os
 
 import SlideRunner.general.pluginFinder
-def defineMenu(self, MainWindow):
+def defineMenu(self, MainWindow, pluginList):
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 905, 22))
         self.menubar.setObjectName("menubar")
@@ -97,7 +97,7 @@ def defineMenu(self, MainWindow):
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuAnnotation.menuAction())
         self.menubar.addAction(zoomMenu.menuAction())
-        definePluginMenu(MainWindow)
+        definePluginMenu(MainWindow,pluginList)
         self.menubar.addAction(self.menuHelp.menuAction())
         self.menuDatabase.setTitle(("Database"))
         self.menuFile.setTitle(("Slide"))
@@ -128,20 +128,20 @@ def defineMenu(self, MainWindow):
 
 
 
-def definePluginMenu(self):
+def definePluginMenu(self,pluginList):
         pluginMenu = QtWidgets.QMenu(self.ui.menubar)
         pluginMenu.setObjectName('PluginMenu')
         pluginMenu.setTitle('Plugins')
         self.ui.menubar.addAction(pluginMenu.menuAction())
 
         self.ui.pluginItems = list()
-        for plugin in SlideRunner.general.pluginFinder.pluginList:
+        for plugin in pluginList:
                 plugin.instance = plugin.plugin(self.progressBarQueue)
                 menuItem = pluginMenu.addAction(plugin.commonName, partial(self.togglePlugin, plugin))
                 menuItem.setCheckable(True)
                 menuItem.setEnabled(True)
                 self.ui.pluginItems.append(menuItem)
-        self.pluginList = SlideRunner.general.pluginFinder.pluginList
+        self.pluginList = pluginList
 
 def updateOpenRecentSlide(self):
         lastOpenList = self.settings.value('LastSlides', type=list)

@@ -60,7 +60,7 @@ class AnnotationHandle(object):
         self.pt1 = pt1
         self.pt2 = pt2
 
-    def positionWithinRectangle(position:tuple):
+    def positionWithinRectangle(self,position:tuple):
         return ((position[0]>self.pt1.x) and (position[1]>self.pt1.y) and
                 (position[0]<self.pt2.x) and (position[1]<self.pt2.y))
 

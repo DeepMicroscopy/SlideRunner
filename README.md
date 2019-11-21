@@ -16,6 +16,10 @@ If you use the software for research purposes, please cite our paper:
 
 Please find the authors webpage at: https://www5.cs.fau.de/~aubreville/
 
+## A short introduction of the basic tools (NEW!)
+[![Watch the video](https://img.youtube.com/vi/S9GaXPAnyiE/hqdefault.jpg)](https://youtu.be/S9GaXPAnyiE)
+
+
 
 ## Download and Installation 
 
@@ -24,8 +28,7 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 | Operating System | Version | Download link|
 |---|---|---|
 | Windows 10 (google drive)| V. 1.27.1 | [link](https://drive.google.com/file/d/1BPUM3M76qUqW9b8WpMA-p34NEyNyoQec/view?usp=sharing) |
-|Mac OS X (10.14) | V 1.20.0 | currently unavailable |
-
+|Mac OS X (10.15) (google drive) | V 1.28.4 | [link](https://drive.google.com/file/d/1d0T4KwedWSbrJXtu3rtOuVG6g_kYFLCa/view?usp=sharing) |
 ## Updates
 
 Starting V. 1.25.0, SlideRunner features a *magic wand* tool.
