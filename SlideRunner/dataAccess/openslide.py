@@ -20,7 +20,8 @@ class SlideReader(multiprocessing.Process):
             (slidename, location, level, size, id) = self.queue.get()
 
             try:
-                (slidename, location, level, size, id) = self.queue.get(True,0.01)
+                while(True):
+                    (slidename, location, level, size, id) = self.queue.get(True,0.01)
             except queue.Empty:
                 pass
 
