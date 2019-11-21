@@ -1592,7 +1592,6 @@ class SlideRunnerUI(QMainWindow):
         else:  # neither cached nor on outer level -> put into queue 
             npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
             self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(npi)))
-            
             self.slideReaderThread.queue.put((self.slidepathname, location_im, act_level, size_im, self.processingStep))
 
     def closeEvent(self, event):
@@ -1604,8 +1603,6 @@ class SlideRunnerUI(QMainWindow):
 
         self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
 
-        if (id<self.processingStep):
-            return
 
         aspectRatio_image = float(self.slide.level_dimensions[-1][0]) / self.slide.level_dimensions[-1][1]
 
@@ -1618,13 +1615,16 @@ class SlideRunnerUI(QMainWindow):
         # Resize to real image size
         npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
         self.rawImage = np.copy(npi)
+        if (id<self.processingStep):
+            self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.rawImage)))
+            return
 
         # reset timer to reload image
-        from threading import Timer
-        if (self.refreshTimer is not None):
-                self.refreshTimer.cancel()
-        self.refreshTimer = Timer(1, self.updateImageCache)                
-        self.refreshTimer.start()
+#        from threading import Timer
+#        if (self.refreshTimer is not None):
+#                self.refreshTimer.cancel()
+#        self.refreshTimer = Timer(1, self.updateImageCache)                
+#        self.refreshTimer.start()
 
         if ((self.activePlugin is not None) and (self.overlayMap is None) and 
            ((self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE ) or 

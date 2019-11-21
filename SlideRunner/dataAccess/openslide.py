@@ -1,6 +1,9 @@
 import openslide
 import multiprocessing
+import queue
+import time
 import numpy as np
+from PIL import Image
 class SlideReader(multiprocessing.Process):
     def __init__(self):
         multiprocessing.Process.__init__(self)
@@ -8,15 +11,14 @@ class SlideReader(multiprocessing.Process):
         self.slidename = None
         self.slide = None
         self.daemon=True
-        self.queue = multiprocessing.Queue()
+        self.queue = multiprocessing.Queue(50)
         self.outputQueue = multiprocessing.Queue()
-        print('initializing SlideReader')
 
     def run(self):
-        print('running slidereader')
+        img=None
         while (True):
             (slidename, location, level, size, id) = self.queue.get()
-            print('Got new request')
+
 
             if (slidename==-1):
                 print('Exiting SlideReader thread')
@@ -25,10 +27,6 @@ class SlideReader(multiprocessing.Process):
             if (slidename!=self.slidename):
                 self.slide = openslide.open_slide(slidename)
                 self.slidename = slidename
-            
-            if not (self.queue.empty()):
-                # New request pending
-                continue
 
             img = self.slide.read_region(location, level, size)
 
