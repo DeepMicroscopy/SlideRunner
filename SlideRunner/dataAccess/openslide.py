@@ -3,7 +3,7 @@ import multiprocessing
 import queue
 import time
 import numpy as np
-from PIL import Image
+
 class SlideReader(multiprocessing.Process):
     def __init__(self):
         multiprocessing.Process.__init__(self)
