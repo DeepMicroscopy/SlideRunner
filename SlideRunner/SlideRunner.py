@@ -40,7 +40,6 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.29.0alpha'
 
 SLIDERUNNER_DEBUG = False
 
@@ -55,8 +54,6 @@ from PyQt5 import QtWidgets, QtGui, QtCore
 from SlideRunner.gui import splashScreen, menu, style
 from PyQt5.QtWidgets import QMainWindow
 
-app = QtWidgets.QApplication(sys.argv)
-splash = splashScreen.splashScreen(app, version)
 
 # Splash screen is displayed, go on with the rest.
 
@@ -165,7 +162,7 @@ class SlideRunnerUI(QMainWindow):
     settings = QSettings('Pattern Recognition Lab, FAU Erlangen Nuernberg', 'SlideRunner')
 
 
-    def __init__(self,slideReaderThread):
+    def __init__(self,slideReaderThread, app, version,pluginList):
         super(SlideRunnerUI, self).__init__()
 
         # Default value initialization
@@ -253,7 +250,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.opacitySlider.setHidden(True)
         self.ui.opacityLabel.setHidden(True)
 
-        menu.defineMenu(self.ui, self)
+        menu.defineMenu(self.ui, self, pluginList)
         menu.defineAnnotationMenu(self)
 
         shortcuts.defineMenuShortcuts(self)
@@ -2297,16 +2294,10 @@ class SlideRunnerUI(QMainWindow):
 
 
 
-def main():
+def main(slideReaderThread,app,splash,version,pluginList):
     style.setStyle(app)    
-    freeze_support()
-    multiprocessing.set_start_method('spawn',force=True)
-    slideReaderThread = SlideReader()
-    slideReaderThread.start()
-#    p = Process(target=foo)
-#    p.start()
     
-    myapp = SlideRunnerUI(slideReaderThread=slideReaderThread)
+    myapp = SlideRunnerUI(slideReaderThread=slideReaderThread, app=app, version=version, pluginList=pluginList)
     myapp.show()
     myapp.raise_()
     splash.finish(myapp)
@@ -2316,6 +2307,3 @@ def main():
         myapp.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(description=SlideRunnerPlugin.JobDescription.QUIT_PLUGIN_THREAD))
     app.exec_()
 
-if __name__ == "__main__":
-
-    main()
