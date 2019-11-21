@@ -5,3 +5,5 @@
 
 
 pyinstaller --windowed --onefile main_osx.spec
+
+hdiutil create -volname SlideRunner -srcfolder dist/SlideRunner.app -ov -format UDZO SlideRunner.dmg
