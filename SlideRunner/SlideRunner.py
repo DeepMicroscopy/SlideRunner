@@ -40,12 +40,14 @@
 # them into images/[ClassName] folders.
 
 
-version = '1.29.0'
+version = '1.29.0alpha'
 
 SLIDERUNNER_DEBUG = False
 
 from SlideRunner.general import dependencies
 import sys
+import multiprocessing
+from multiprocessing import freeze_support
 
 dependencies.check_qt_dependencies()
 
@@ -163,7 +165,7 @@ class SlideRunnerUI(QMainWindow):
     settings = QSettings('Pattern Recognition Lab, FAU Erlangen Nuernberg', 'SlideRunner')
 
 
-    def __init__(self):
+    def __init__(self,slideReaderThread):
         super(SlideRunnerUI, self).__init__()
 
         # Default value initialization
@@ -187,6 +189,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.wandAnnotation = WandAnnotation()
         self.slidename=''
         self.slideUID = 0
+        self.slideReaderThread = slideReaderThread
         self.ui.annotationMode = 0
         self.annotatorsModel = QStringListModel()
         self.classButtons = list()
@@ -227,10 +230,7 @@ class SlideRunnerUI(QMainWindow):
         self.pluginStatusReceiver.start()
 
         
-        self.slideReaderThread = SlideReader()
-#        self.slideReaderThread.setDaemon(True)
-        self.slideReaderThread.start()
-
+    
         self.slideImageReceiverThread = SlideImageReceiverThread(self, readerqueue=self.slideReaderThread.outputQueue)
         self.slideImageReceiverThread.setDaemon(True)
         self.slideImageReceiverThread.start()
@@ -1600,6 +1600,7 @@ class SlideRunnerUI(QMainWindow):
 
     def closeEvent(self, event):
         self.slideReaderThread.queue.put((-1,0,0,0,0))
+        self.slideReaderThread.join(0)
         event.accept()
 
     def showImage_part2(self, npi, id):
@@ -2298,8 +2299,14 @@ class SlideRunnerUI(QMainWindow):
 
 def main():
     style.setStyle(app)    
-
-    myapp = SlideRunnerUI()
+    freeze_support()
+    multiprocessing.set_start_method('spawn',force=True)
+    slideReaderThread = SlideReader()
+    slideReaderThread.start()
+#    p = Process(target=foo)
+#    p.start()
+    
+    myapp = SlideRunnerUI(slideReaderThread=slideReaderThread)
     myapp.show()
     myapp.raise_()
     splash.finish(myapp)
