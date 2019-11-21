@@ -19,6 +19,11 @@ class SlideReader(multiprocessing.Process):
         while (True):
             (slidename, location, level, size, id) = self.queue.get()
 
+            try:
+                (slidename, location, level, size, id) = self.queue.get(True,0.01)
+            except queue.Empty:
+                pass
+
 
             if (slidename==-1):
                 print('Exiting SlideReader thread')
