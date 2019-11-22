@@ -259,7 +259,7 @@ class SlideRunnerPlugin:
             annoKeys=np.array([x.uid for x in labels])[np.where(pluginVP.activeClasses)[0]].tolist()
             for idx,anno in enumerate(self.getAnnotations()):
                   if (anno.pluginAnnotationLabel is None) or (anno.pluginAnnotationLabel.uid in annoKeys):
-                        if (anno.positionInAnnotation(clickPosition )):
+                        if (anno.positionInAnnotation(clickPosition )) and (anno.clickable):
                               return anno
             return None
 
