@@ -167,7 +167,7 @@ class Database(object):
             database = self.VA            
         for idx,anno in database.items():
             if (vp.activeClasses[anno.agreedLabel()]):
-                if (anno.positionInAnnotation(clickPosition )):
+                if (anno.positionInAnnotation(clickPosition )) and (anno.clickable):
                     if (annoType == anno.annotationType) or (annoType is None):
                         return anno
         return None

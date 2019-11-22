@@ -74,6 +74,7 @@ class annotation():
           self.uid = uid
           self.text = text
           self.agreedClass = None
+          self.clickable = True
           self.minimumAnnotationLabelZoom = 1
           self.pluginAnnotationLabel = None
           if (pluginAnnotationLabel is not None):
