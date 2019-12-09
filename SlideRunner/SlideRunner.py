@@ -1128,6 +1128,18 @@ class SlideRunnerUI(QMainWindow):
         self.saveLastViewport()
         self.showImage()
 
+    def changeAnnoID(self, annoId):
+        """
+            Callback if the user wants to change an annotation ID
+        """
+        num,ok = QInputDialog.getInt(self, "Change annotation UID",  "Please give new UID of annotation")
+
+        if (ok):
+            if (self.db.changeAnnotationID(annoId, num)):
+                self.showImage()
+            else:
+                self.popupmessage(f'Error: ID already used. ')
+                
 
     def removeAnnotation(self,annoId):
         """

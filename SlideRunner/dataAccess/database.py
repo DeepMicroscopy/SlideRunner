@@ -630,6 +630,21 @@ class Database(object):
             self.commit()
             self.checkCommonAnnotation(annoIdx)
 
+    def changeAnnotationID(self, annoId:int, newAnnoID:int):
+            self.execute('SELECT COUNT(*) FROM Annotations where uid == (%d)' % newAnnoID)
+            if (self.fetchone()[0] > 0):
+                return False
+
+            self.execute('UPDATE Annotations_label SET annoId = %d WHERE annoId == %d' % (newAnnoID,annoId))
+            self.execute('UPDATE Annotations_coordinates SET annoId = %d WHERE annoId == %d' % (newAnnoID,annoId))
+            self.execute('UPDATE Annotations SET uid= %d WHERE uid == %d ' % (newAnnoID,annoId))
+            self.annotations[annoId].uid = newAnnoID
+            self.annotations[newAnnoID] = self.annotations[annoId]
+            self.annotations.pop(annoId)
+            self.appendToMinMaxCoordsList(self.annotations[newAnnoID])
+            self.commit()
+            return True
+
 
     def removeAnnotation(self, annoId):
             self.execute('DELETE FROM Annotations_label WHERE annoId == %d' % annoId)

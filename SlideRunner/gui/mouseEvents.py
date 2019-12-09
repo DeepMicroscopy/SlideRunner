@@ -175,7 +175,6 @@ def leftClickImage(self, event):
                 self.selectedAnno = None
 
 
-
         if clickedAnno is not None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT):
             # fast annotation on previous anno
             # check: did I annotate this item already?
@@ -413,6 +412,7 @@ def rightClickImage(self, event):
                     menuitems.append(act)
                 menuitems.append(act)
             menu.addAction('Remove annotation', partial(self.removeAnnotation, clickedAnno.uid))
+            menu.addAction('Change ID',partial(self.changeAnnoID,clickedAnno.uid))
 
             if len(previous)>0:
                 addmenu = menu.addMenu('Set agreed class')
