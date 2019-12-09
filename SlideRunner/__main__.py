@@ -5,7 +5,7 @@ from PyQt5 import QtWidgets
 from SlideRunner.gui import splashScreen
 import sys
 
-version = '1.29.0'
+version = '1.30.0git'
 
 rollbar.init('98503f735c5648f5ae21b6c18e04926a')
 def main():

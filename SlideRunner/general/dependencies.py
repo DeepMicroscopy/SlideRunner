@@ -113,6 +113,8 @@ from SlideRunner.gui.SlideRunner_ui import Ui_MainWindow
 from SlideRunner.gui.dialogs.about import aboutDialog
 from SlideRunner.gui.dialogs.question import YesNoAbortDialog
 from SlideRunner.gui.dialogs.settings import settingsDialog
+from SlideRunner.dataAccess.openslide import RotatableOpenSlide
+from SlideRunner.gui.dialogs.getCoordinates import getCoordinatesDialog
 from SlideRunner.gui import shortcuts, toolbar, mouseEvents, annotation
 from SlideRunner.dataAccess.database import Database, annotation
 from SlideRunner.processing import screening, thumbnail

@@ -258,6 +258,7 @@ class SlideRunnerUI(QMainWindow):
         self.checkSettings()
         self.currentVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
         self.currentPluginVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
+        self.rotateImage = self.settings.value('rotateImage',False)
 
 
         if (SLIDERUNNER_DEBUG):
@@ -675,6 +676,13 @@ class SlideRunnerUI(QMainWindow):
 
     """
 
+    def setRotate(self):
+        self.rotateImage = not self.rotateImage
+        self.settings.setValue('rotateImage',self.rotateImage)
+        self.ui.rotate.setChecked(self.settings.value('rotateImage', False))
+        self.slide.rotate = self.rotateImage
+        self.updateOverview()
+        self.showImage()
 
     def previousScreeningStep(self):
         if not (self.imageOpened):
@@ -980,6 +988,8 @@ class SlideRunnerUI(QMainWindow):
                 self.relativeCoords[1]=1.0
 
             self.relativeCoords -= 0.5
+            image_dims=self.slide.level_dimensions[0]
+            self.ui.statusbar.showMessage(self.slidename+': '+str(self.slide.dimensions)+' Position: (%d,%d)' % (int((self.relativeCoords[0]+0.5)*image_dims[0]), int((self.relativeCoords[1]+0.5)*image_dims[1])))
             self.showImage()
             self.updateScrollbars()
 
@@ -1582,10 +1592,10 @@ class SlideRunnerUI(QMainWindow):
         else:
             level_overview = self.slide.level_count-1
 
-        self.slideReaderThread.queue.put((self.slidepathname, location_im, act_level, size_im, self.processingStep))
+        self.slideReaderThread.queue.put((self.slidepathname, location_im, act_level, size_im, self.processingStep, self.rotateImage))
 
     def closeEvent(self, event):
-        self.slideReaderThread.queue.put((-1,0,0,0,0))
+        self.slideReaderThread.queue.put((-1,0,0,0,0,0))
         self.slideReaderThread.join(0)
         event.accept()
 
@@ -1911,6 +1921,12 @@ class SlideRunnerUI(QMainWindow):
         if filename is not None and len(filename)>0:
             cv2.imwrite(filename, cv2.cvtColor(self.displayedImage, cv2.COLOR_BGRA2RGBA))
 
+    def goToCoordinate(self):
+        if (self.imageOpened == False):
+            return
+        retx,rety = getCoordinatesDialog(self)
+        self.setCenterTo(retx,rety)
+        self.showImage()
 
     def findAnnoByID(self):
         if (self.db.isOpen() == False):
@@ -2200,6 +2216,19 @@ class SlideRunnerUI(QMainWindow):
         settingsDialog(self.settings)
         self.currentVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
         self.showImage()
+    
+    def updateOverview(self):
+        self.thumbnail = thumbnail.thumbnail(self.slide)
+
+        # Read overview thumbnail from slide
+        if 32 in self.slide.level_downsamples:
+            level_overview = np.where(np.array(self.slide.level_downsamples)==32)[0][0] # pick overview at 32x
+        else:
+            level_overview = self.slide.level_count-1
+        overview = self.slide.read_region(location=(0,0), level=level_overview, size=self.slide.level_dimensions[level_overview])
+        self.slideOverview = np.asarray(overview)
+        overview = cv2.cvtColor(np.asarray(overview), cv2.COLOR_BGRA2RGB)
+        self.overview = overview
 
     def openSlide(self, filename):
         """
@@ -2210,7 +2239,7 @@ class SlideRunnerUI(QMainWindow):
                            'File not found: %s' % filename, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             return
 
-        self.slide = openslide.open_slide(filename)
+        self.slide = RotatableOpenSlide(filename, rotate=self.rotateImage)
 
         # Clear cache
         self.cachedLocation = None
@@ -2245,20 +2274,10 @@ class SlideRunnerUI(QMainWindow):
         self.screeningHistory = list()
         self.screeningIndex = 0
 
-        self.thumbnail = thumbnail.thumbnail(self.slide)
-
-        # Read overview thumbnail from slide
-        if 32 in self.slide.level_downsamples:
-            level_overview = np.where(np.array(self.slide.level_downsamples)==32)[0][0] # pick overview at 32x
-        else:
-            level_overview = self.slide.level_count-1
-        overview = self.slide.read_region(location=(0,0), level=level_overview, size=self.slide.level_dimensions[level_overview])
-        self.slideOverview = np.asarray(overview)
-        overview = cv2.cvtColor(np.asarray(overview), cv2.COLOR_BGRA2RGB)
-
+        self.updateOverview()
 
         # Initialize a new screening map
-        self.screeningMap = screening.screeningMap(overview, self.mainImageSize, self.slide.level_dimensions, self.thumbnail.size, self.settings.value('GuidedScreeningThreshold'))
+        self.screeningMap = screening.screeningMap(self.overview, self.mainImageSize, self.slide.level_dimensions, self.thumbnail.size, self.settings.value('GuidedScreeningThreshold'))
 
         self.initZoomSlider()
         self.imageCenter=[0,0]
