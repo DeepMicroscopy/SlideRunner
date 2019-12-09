@@ -381,10 +381,14 @@ class circleAnnotation(annotation):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
             self.annotationType = AnnotationType.CIRCLE
             self.minimumAnnotationLabelZoom = minimumAnnotationLabelZoom
+
             if (r is None):
                 self.x1 = int(0.5*(x1+x2))
                 self.y1 = int(0.5*(y1+y2))
-                self.r = int((x2-x1)*0.5)
+                if (x2>x1):
+                    self.r = int((x2-x1)*0.5)
+                else:
+                    self.r = int((x1-x2)*0.5)
             else:
                 self.x1 = int(x1)
                 self.y1 = int(y1)

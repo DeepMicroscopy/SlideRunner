@@ -681,6 +681,7 @@ class SlideRunnerUI(QMainWindow):
         self.settings.setValue('rotateImage',self.rotateImage)
         self.ui.rotate.setChecked(self.settings.value('rotateImage', False))
         self.slide.rotate = self.rotateImage
+        self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
         self.updateOverview()
         self.showImage()
 
@@ -1191,7 +1192,6 @@ class SlideRunnerUI(QMainWindow):
         self.tn_annot = self.thumbnail.getCopy()
         if (self.db.isOpen()):
             tnsize = np.float32(self.thumbnail.shape[1::-1])*self.thumbnail.downsamplingFactor
-#            self.tn_annot = self.overlayAnnotations(self.tn_annot, region=[np.zeros(2),tnsize], zoomLevel=self.thumbnail.downsamplingFactor, thickness=1, adjustList = False)
 
 
 
@@ -1221,92 +1221,6 @@ class SlideRunnerUI(QMainWindow):
             # show DB overview
             self.showDatabaseUIelements()
 
-    def overlayAnnotations(self, image, region = None, zoomLevel = None, thickness=2, adjustList = True):
-        """
-            Create annotation overlay for current view. This function is called for both, the current screen
-            and the overview image.
-        """
-        if (region is None):
-            region = self.region
-        if (region is None):
-            print('Region is none - whoopsy.')
-            return image
-        leftUpper = region[0]
-        if (zoomLevel is None):
-            zoomLevel = self.getZoomValue()
-
-
-        if (self.db.isOpen() == True):
-            rightLower = region[0] + region[1]
-            if (adjustList):
-                self.annotationsSpots=list()
-                self.annotationsFlags = list()
-                self.annotationsArea=list()
-                self.annotationsCircle=list()
-            radius=int(25/zoomLevel)
-            if (thickness==1): # thumbnail annotation
-                radius = 1
-
-            allAnnotations = self.db.findSpotAnnotations(leftUpper, rightLower, self.slideUID, self.blindedMode, self.annotator)      
-
-            for annotation in allAnnotations:
-                if (adjustList) and (annotation[5]==4): # flag annotation
-                        xpos=int((annotation[0]-leftUpper[0])/zoomLevel)
-                        ypos=int((annotation[1]-leftUpper[1])/zoomLevel)
-                        image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=14, color=[0, 0, 0], lineType=cv2.LINE_AA)
-                        image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=13, color=[255, 255, 255,255], lineType=cv2.LINE_AA)
-                        image = cv2.line(img=image, pt1=(xpos-10,ypos-10), pt2=(xpos+10,ypos+10), color=[0, 0, 0], lineType=cv2.LINE_AA)
-                        image = cv2.line(img=image, pt1=(xpos-10,ypos+10), pt2=(xpos+10,ypos-10), color=[0, 0, 0], lineType=cv2.LINE_AA)
-                        
-                        self.annotationsFlags.append([xpos,ypos,14,0,annotation[2], annotation[4] ])
-
-                elif (self.itemsSelected[annotation[2]]):
-                    # Normal spot annotations (e.g. cells)
-                    xpos=int((annotation[0]-leftUpper[0])/zoomLevel)
-                    ypos=int((annotation[1]-leftUpper[1])/zoomLevel)
-                    if (thickness == 1 ):
-                        image[ypos,xpos,:] = self.get_color(annotation[2])[0:3]
-                    else:
-                        image = cv2.circle(image, thickness=thickness, center=(xpos, ypos), radius=radius, color=self.get_color(annotation[2]), lineType=cv2.LINE_AA)
-
-                    if (adjustList):
-                        self.annotationsSpots.append([xpos,ypos,int(25/zoomLevel),0,annotation[2], annotation[4] ])
-
-            # 2nd job: Find area annotations
-            allAnnotations = self.db.findAreaAnnotations(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
-            for annotation in allAnnotations:
-                if (self.itemsSelected[annotation[4]]):
-                    if (annotation[6]==5): # circular type
-                        xpos1=((annotation[0]-leftUpper[0])/zoomLevel)
-                        ypos1=((annotation[1]-leftUpper[1])/zoomLevel)
-                        xpos2=((annotation[2]-leftUpper[0])/zoomLevel)
-                        ypos2=((annotation[3]-leftUpper[1])/zoomLevel)
-                        circCenter = (int(0.5*(xpos1+xpos2)), int(0.5*(ypos1+ypos2)))
-                        radius = int((xpos2-xpos1)*0.5)
-                        if (radius<0):
-                            print('Error with data set / Radius <0:', xpos1,ypos1,xpos2,ypos2,circCenter,radius)
-                        else:
-                            image = cv2.circle(image, thickness=thickness, center=circCenter, radius=radius,color=self.get_color(annotation[4]), lineType=cv2.LINE_AA)
-                    else:
-                        xpos1=max(0,int((annotation[0]-leftUpper[0])/zoomLevel))
-                        ypos1=max(0,int((annotation[1]-leftUpper[1])/zoomLevel))
-                        xpos2=min(image.shape[1],int((annotation[2]-leftUpper[0])/zoomLevel))
-                        ypos2=min(image.shape[0],int((annotation[3]-leftUpper[1])/zoomLevel))
-                        image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.get_color(annotation[4]), lineType=cv2.LINE_AA)
-                    if (adjustList):
-                        self.annotationsArea.append([xpos1,ypos1,xpos2,ypos2,annotation[4], annotation[5], annotation[6] ])
-
-
-            # finally: find polygons
-#            annotationPolygons = self.db.findPolygonAnnotatinos(leftUpper,rightLower,self.slideUID, self.blindedMode, self.annotator)
-#            for poly in annotationPolygons:
-#                image = self.showPolygon(tempimage=image, polygon=poly[0], color=self.get_color(poly[1]))
-
-            if (adjustList):
-                self.annotationPolygons = annotationPolygons
-
-
-        return image
 
     def changeScrollbars(self):
         """
@@ -1631,13 +1545,6 @@ class SlideRunnerUI(QMainWindow):
             self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.rawImage)))
             return
 
-        # reset timer to reload image
-#        from threading import Timer
-#        if (self.refreshTimer is not None):
-#                self.refreshTimer.cancel()
-#        self.refreshTimer = Timer(1, self.updateImageCache)                
-#        self.refreshTimer.start()
-
         if ((self.activePlugin is not None) and (self.overlayMap is None) and 
            ((self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE ) or 
             self.activePlugin.instance.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN)):
@@ -1705,7 +1612,8 @@ class SlideRunnerUI(QMainWindow):
 
         # Overlay Annotations by the user
         if (self.db.isOpen()):
-            self.db.annotateImage(npi, self.region[0], self.region[0]+self.region[1], self.getZoomValue(), self.currentVP, self.selectedAnno)
+                self.db.annotateImage(npi, self.region[0], self.region[0]+self.region[1], self.getZoomValue(), self.currentVP, self.selectedAnno)
+
 
         # Show the current polygon (if in polygon annotation mode)
         if (self.db.isOpen()) & (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
@@ -1884,7 +1792,7 @@ class SlideRunnerUI(QMainWindow):
             
             if (self.imageOpened):
                 self.findSlideUID(self.slide.dimensions)
-                self.db.loadIntoMemory(self.slideUID)
+                self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
 
 
             lastdatabaseslist.append(filename)
@@ -2278,7 +2186,7 @@ class SlideRunnerUI(QMainWindow):
         if (self.db.isOpen()):
             self.findSlideUID(self.slide.dimensions)
             t = time.time()
-            self.db.loadIntoMemory(self.slideUID)
+            self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
             print('Took: ',time.time()-t)
 
         self.relativeCoords = np.asarray([0,0], np.float32)

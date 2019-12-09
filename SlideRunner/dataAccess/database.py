@@ -172,9 +172,10 @@ class Database(object):
                         return anno
         return None
 
-    def loadIntoMemory(self, slideId):
+    def loadIntoMemory(self, slideId, transformer=None):
         self.annotations = dict()
         self.annotationsSlide = slideId
+        self.transformer = transformer
 
         if (slideId is None):
             return
@@ -184,6 +185,9 @@ class Database(object):
 
         self.dbcur.execute('SELECT coordinateX, coordinateY,annoid FROM Annotations_coordinates where annoId IN (SELECT uid FROM Annotations WHERE slide == %d) ORDER BY orderIdx' % (slideId))
         allCoords = np.asarray(self.dbcur.fetchall())
+
+        if self.transformer is not None:
+            allCoords = self.transformer(allCoords)
 
         for uid, annotype,agreedClass in allAnnos:
             coords = allCoords[allCoords[:,2]==uid,0:2]
@@ -524,14 +528,25 @@ class Database(object):
 
         query = 'DELETE FROM Annotations_coordinates where annoId == %d' % annoId
         self.execute(query)
-
-        for annotation in annoList:
-            query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
-                    % (annotation[0],annotation[1],slideUID, annoId, 1))
-            self.execute(query)
-        
         self.commit()
 
+        self.insertCoordinates(np.array(annoList), slideUID, annoId)
+        
+
+    def insertCoordinates(self, annoList:np.ndarray, slideUID, annoId):
+        """
+                Insert an annotation into the database.
+                annoList must be a numpy array, but can be either 2 columns or 3 columns (3rd is order)
+        """
+        if self.transformer is not None:
+            annoList = self.transformer(annoList, inverse=True)
+
+        for num, annotation in enumerate(annoList.tolist()):
+            print('Inserting coordinate: ',num,annotation)
+            query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
+                    % (annotation[0],annotation[1],slideUID, annoId, annotation[2] if len(annotation)>2 else num+1))
+            self.execute(query)
+        self.commit()
 
 
     def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator):
@@ -544,10 +559,7 @@ class Database(object):
         self.annotations[annoId] = polygonAnnotation(annoId, np.asarray(annoList))
         self.appendToMinMaxCoordsList(self.annotations[annoId])
 
-        for annotation in annoList:
-            query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
-                    % (annotation[0],annotation[1],slideUID, annoId, 1))
-            self.execute(query)
+        self.insertCoordinates(np.array(annoList), slideUID, annoId)
 
         self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId)
 
@@ -580,14 +592,9 @@ class Database(object):
             self.annotations[annoId] = circleAnnotation(annoId, x1,y1,x2,y2)
         self.appendToMinMaxCoordsList(self.annotations[annoId])
 
-        query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
-                 % (x1,y1,slideUID, annoId, 1))
-        self.execute(query)
-
-        query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
-                 % (x2,y2,slideUID, annoId, 2))
-        self.execute(query)
-
+        annoList = np.array([[x1,y1,1],[x2,y2,2]])
+        self.insertCoordinates(np.array(annoList), slideUID, annoId)
+        
         self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId)
 
         self.commit()
@@ -601,9 +608,7 @@ class Database(object):
             self.execute(query)
             annoId = self.fetchone()[0]
 
-            query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
-                    % (xpos_orig,ypos_orig,slideUID, annoId, 1))
-            self.execute(query)
+            self.insertCoordinates(np.array([[xpos_orig, ypos_orig,1]]), slideUID, annoId)
             self.annotations[annoId] = spotAnnotation(annoId, xpos_orig,ypos_orig, (type==4))
 
         else:
@@ -613,8 +618,7 @@ class Database(object):
             self.execute(query)
             annoId = self.fetchone()[0]
 
-            query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
-                    % (xpos_orig,ypos_orig,slideUID, annoId, 1))
+            self.insertCoordinates(np.array([[xpos_orig, ypos_orig,1]]), slideUID, annoId)
             self.execute(query)
 
             self.annotations[annoId] = spotAnnotation(annoId, xpos_orig,ypos_orig, (type==4))

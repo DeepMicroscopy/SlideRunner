@@ -4,6 +4,7 @@ import queue
 import time
 import numpy as np
 
+
 class RotatableOpenSlide(openslide.OpenSlide):
     def __init__(self, filename, rotate=False):
         self.rotate=rotate
@@ -18,6 +19,15 @@ class RotatableOpenSlide(openslide.OpenSlide):
             return super().read_region(location, level, size).rotate(180)
         else:
             return super().read_region(location, level, size)
+
+    def transformCoordinates(self, location, level=0, size=None, inverse=False):
+        if (self.rotate):
+            retarr = np.copy(location)
+            retarr[:,0] = self.dimensions[0]-retarr[:,0]
+            retarr[:,1] = self.dimensions[1]-retarr[:,1]
+            return retarr
+        else:
+            return location
 
     def slide_center(self):
         return [int(x/2) for x in self.dimensions]
