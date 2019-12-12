@@ -681,7 +681,8 @@ class SlideRunnerUI(QMainWindow):
         self.settings.setValue('rotateImage',self.rotateImage)
         self.ui.rotate.setChecked(self.settings.value('rotateImage', False))
         self.slide.rotate = self.rotateImage
-        self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
+        if (self.db.isOpen() == True):
+            self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
         self.updateOverview()
         self.showImage()
 
