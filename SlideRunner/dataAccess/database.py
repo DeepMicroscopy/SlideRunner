@@ -22,7 +22,6 @@ class DatabaseField(object):
         self.isAutoincrement = isAutoincrement
         self.defaultValue = defaultValue
         self.isPrimaryKey = primaryKey
-        self.transformer = None
 
     def creationString(self):
         return ("`"+self.key+"` "+self.type+
@@ -111,6 +110,7 @@ class Database(object):
         self.VA = dict()
 
         self.databaseStructure = dict()
+        self.transformer = None
         self.annotations = dict()       
         self.doCommit = True
         self.annotationsSlide = None
