@@ -14,7 +14,7 @@ If you use the software for research purposes, please cite our paper:
 > M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018) SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images. In: Bildverarbeitung für die Medizin 2018. Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314. [link](https://www.springerprofessional.de/sliderunner/15478976) [arXiv:1802.02347](https://arxiv.org/abs/1802.02347) 
 
 
-Please find the authors webpage at: https://www5.cs.fau.de/~aubreville/
+Please find the authors webpage at: https://lme.tf.fau.de/person/aubreville/
 
 ## A short introduction of the basic tools (NEW!)
 [![Watch the video](https://img.youtube.com/vi/S9GaXPAnyiE/hqdefault.jpg)](https://youtu.be/S9GaXPAnyiE)
@@ -119,6 +119,10 @@ The MITOS2012 [http://ludo17.free.fr/mitos_2012/], MITOS-ATYPIA-2014 [https://mi
 ## Tools
 
 Mingrui Jiang has written a tool to extract patches around ROIS. Find it here: https://github.com/mingrui/SlideRunner-ROI-Patch-Maker
+
+## Demo workflows
+
+To get started how to use SlideRunners databases, have a look into this [notebook](https://github.com/maubreville/SlideRunner/blob/master/SlideRunner/doc/DemoWorkflow_WorkingWithSlideRunnerDatabases.ipynb).
 
 ## Plugins
 
