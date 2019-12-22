@@ -572,7 +572,8 @@ class SlideRunnerUI(QMainWindow):
             self.pluginItemsSelected = None
             self.addActivePluginToSidebar(plugin.plugin)
             self.showDatabaseUIelements()
-            if (plugin.plugin.outputType != SlideRunnerPlugin.PluginOutputType.NO_OVERLAY):
+            if ((plugin.plugin.outputType != SlideRunnerPlugin.PluginOutputType.NO_OVERLAY)
+                and (plugin.plugin.outputType != SlideRunnerPlugin.PluginOutputType.RGB_IMAGE)):
                 self.ui.opacitySlider.valueChanged.disconnect(self.changeOpacity)                
                 self.ui.opacitySlider.setValue(int(plugin.plugin.initialOpacity*100))
                 self.opacity = plugin.plugin.initialOpacity
@@ -1542,7 +1543,8 @@ class SlideRunnerUI(QMainWindow):
         # Resize to real image size
         npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
         self.rawImage = np.copy(npi)
-        if (id<self.processingStep):
+        if ((id<self.processingStep) and 
+            ((self.activePlugin is None) or (self.activePlugin.instance.pluginType != SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN))):
             self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.rawImage)))
             return
 
@@ -1561,6 +1563,9 @@ class SlideRunnerUI(QMainWindow):
     def showImage_part3(self, npi, id):
         if (len(npi.shape)==1): # empty was given as parameter - i.e. trigger comes from plugin
             npi = np.copy(self.cachedLastImage)
+
+        if (self.activePlugin is not None) and (self.overlayMap is None) and ((self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE)):
+            return
 
         if (self.overlayMap is not None) and (self.activePlugin is not None):
                 if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.BINARY_MASK):
@@ -1581,12 +1586,17 @@ class SlideRunnerUI(QMainWindow):
                     else:
                         print('Overlay map shape not proper')
                         print('OLM shape: ', olm.shape, 'NPI shape: ', npi.shape)
-                elif (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE):
+                elif ((self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE) or
+                     (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_OVERLAY)):
                     olm = self.overlayMap
                     self.overlayExtremes = None
                     if (len(olm.shape)==3) and (olm.shape[2]==3) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
-                        for c in range(3):
-                            npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
+                        if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE):
+                            for c in range(3):
+                                npi[:,:,c] = olm[:,:,c] 
+                        else:
+                            for c in range(3):
+                                npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
                     
         if(self.activePlugin is not None and hasattr(self.activePlugin.instance, 'overlayHeatmap')):
             try:
@@ -1663,9 +1673,10 @@ class SlideRunnerUI(QMainWindow):
         actualLegendWidth = int(legendMicrons/viewMicronsPerPixel)
 
 
+
         positionLegendX = 40
         positionLegendY = npi.shape[0]-40
-        
+
         npi[positionLegendY:positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,3] = 255
         npi[positionLegendY:positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:] = 255
         npi[positionLegendY:positionLegendY+20,positionLegendX+actualLegendWidth:positionLegendX+actualLegendWidth,:] = np.clip(npi[positionLegendY:positionLegendY+20,positionLegendX+actualLegendWidth:positionLegendX+actualLegendWidth,:]*0.2,0,255)
@@ -1873,7 +1884,17 @@ class SlideRunnerUI(QMainWindow):
             self.setCenterTo(cent[0],cent[1])
             self.setZoomTo(diff[0],diff[1])
 
+    def manageDB(self):
+        if (self.db.isOpen() == False):
+            return
 
+        DBM = DatabaseManager(self.db)
+        DBM.exec_()
+        self.findSlideUID()
+        # reload current slide annotations (in case they were deleted)
+        if (self.slideUID is not None):
+            self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
+        
 
     def showDBstatistics(self):
         """

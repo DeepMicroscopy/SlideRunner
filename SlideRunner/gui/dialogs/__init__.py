@@ -15,4 +15,4 @@
 """
 
 
-__all__ = ['about', 'settings', 'question']
+__all__ = ['about', 'settings', 'question', 'dbmanager']

@@ -628,6 +628,13 @@ class Database(object):
         self.appendToMinMaxCoordsList(self.annotations[annoId])
         self.commit()
 
+    def removeFileFromDatabase(self, fileUID:str):
+        self.execute('DELETE FROM Annotations_label where annoID IN (SELECT uid FROM Annotations where slide == %d)' % fileUID)
+        self.execute('DELETE FROM Annotations_coordinates where annoID IN (SELECT uid FROM Annotations where slide == %d)' % fileUID)
+        self.execute('DELETE FROM Annotations where slide == %d' % fileUID)
+        self.execute('DELETE FROM Slides where uid == %d' % fileUID)
+        self.commit()
+
     def removeAnnotationLabel(self, labelIdx, annoIdx):
             q = 'DELETE FROM Annotations_label WHERE uid == %d' % labelIdx
             self.execute(q)

@@ -78,9 +78,13 @@ def defineMenu(self, MainWindow, pluginList):
         self.actionSettings = QtWidgets.QAction(MainWindow)
         self.action_setMPP = QtWidgets.QAction(MainWindow)
         self.actionSettings.setObjectName("actionSettings")
+        self.actionManageDatabase = QtWidgets.QAction(MainWindow)
+        self.actionManageDatabase.setText('Overview')
         self.menuDatabase.addAction(self.actionCreate_new)
         self.menuDatabase.addAction(self.action_Open)
         self.menuDatabase.addAction(self.actionOpen_custom)
+
+        self.menuDatabase.addAction(self.actionManageDatabase)
         defineOpenRecentDatabase(MainWindow)
         self.menuDatabase.addSeparator()
         self.menuDatabase.addAction(self.actionAdd_annotator)
@@ -128,6 +132,7 @@ def defineMenu(self, MainWindow, pluginList):
         self.saveto.setEnabled(False)
         self.saveto.triggered.connect(MainWindow.saveDBto)
         self.action_setMPP.triggered.connect(MainWindow.setMPP)
+        self.actionManageDatabase.triggered.connect(MainWindow.manageDB)
 
         self.actionSettings.triggered.connect(MainWindow.settingsDialog)
 
