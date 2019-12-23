@@ -3,13 +3,24 @@ import multiprocessing
 import queue
 import time
 import numpy as np
+import os
 
+class RotatableOpenSlide(object):
 
-class RotatableOpenSlide(openslide.OpenSlide):
+    def __new__(cls, filename, rotate):
+        if cls is RotatableOpenSlide:
+            bname, ext = os.path.splitext(filename)
+            if ext.upper() in ['.PNG','.JPG','.GIF', '.BMP']: return type("ImageSlide", (RotatableOpenSlide,openslide.ImageSlide), {})(filename, rotate)
+            else: return type("OpenSlide", (RotatableOpenSlide,openslide.OpenSlide), {})(filename, rotate)
+        else:
+            return object.__new__(cls)
+
     def __init__(self, filename, rotate=False):
         self.rotate=rotate
+        self.type=0
         return super().__init__(filename)
-    
+
+
     # Implements 180 degree rotated version of read_region
     def read_region(self, location, level, size):
     #    print('reading from: ',location)
