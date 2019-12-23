@@ -270,7 +270,8 @@ def releaseImage(self, event):
         
         if (self.ui.wandAnnotation.mask is not None):
             polygons = cv2.findContours(self.ui.wandAnnotation.mask, cv2.RETR_LIST,
-                                          cv2.CHAIN_APPROX_SIMPLE)[1]
+                                          cv2.CHAIN_APPROX_SIMPLE)
+            polygons = polygons[0]
 
             lenpoly = [len(x) for x in polygons]
             polygon = polygons[np.argmax(lenpoly)]
