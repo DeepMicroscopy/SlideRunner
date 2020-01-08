@@ -12,6 +12,11 @@ import os
 import time
 import numpy as np
 import random
+import uuid
+
+def generate_uuid():
+    return str(uuid.uuid4())
+
 
 class DatabaseField(object):
     def __init__(self, keyStr:str, typeStr:str, isNull:int=0, isUnique:bool=False, isAutoincrement:bool=False, defaultValue:str='', primaryKey:int=0):
@@ -116,6 +121,7 @@ class Database(object):
         self.annotationsSlide = None
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
         self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT'))
+        self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER')).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time())))
 
     def isOpen(self):
         return self.dbOpened
@@ -231,10 +237,18 @@ class Database(object):
         if os.path.isfile(dbfilename):
             self.db = sqlite3.connect(dbfilename)
             self.dbcur = self.db.cursor()
+            self.db.create_function("generate_uuid",0, generate_uuid)
+            self.db.create_function("pycurrent_time",0, time.time)
 
             # Check structure of database and ammend if not proper
             if not self.checkTableStructure('Slides'):
                 sql_statements = self.checkTableStructure('Slides','ammend')
+                for sql in sql_statements:
+                    self.dbcur.execute(sql)
+                self.db.commit()
+
+            if not self.checkTableStructure('Annotations'):
+                sql_statements = self.checkTableStructure('Annotations','ammend')
                 for sql in sql_statements:
                     self.dbcur.execute(sql)
                 self.db.commit()
@@ -244,6 +258,38 @@ class Database(object):
                 self.dbcur.execute('DROP TABLE if exists `Log`')
                 self.dbcur.execute(self.databaseStructure['Log'].getCreateStatement())
                 self.db.commit()
+            
+            # Migrating vom V0 to V1 needs proper filling of GUIDs
+            DBversion = self.dbcur.execute('PRAGMA user_version').fetchone()
+            if (DBversion[0]==0):
+                self.dbcur.execute('UPDATE Annotations set guid=generate_uuid() where guid is NULL')
+
+                for event in ['UPDATE','INSERT']:
+                    self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS updateAnnotation_fromLabel{event}
+                                AFTER {event} ON Annotations_label
+                                BEGIN
+                                    UPDATE Annotations SET lastModified=pycurrent_time() where uid==new.annoId;
+                                END
+                                ;
+                                """)
+
+                    self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS updateAnnotation_fromCoords{event}
+                                AFTER {event} ON Annotations_coordinates
+                                BEGIN
+                                    UPDATE Annotations SET lastModified=pycurrent_time() where uid==new.annoId;
+                                END
+                                ;
+                                """)
+                    self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS updateAnnotation_{event}
+                                AFTER {event} ON Annotations
+                                BEGIN
+                                    UPDATE Annotations SET lastModified=pycurrent_time() where uid==new.uid;
+                                END
+                                ;
+                                """)
+                DBversion = self.execute('PRAGMA user_version = 1')
+                print('Successfully migrated DB to version 1')
+                self.commit()
 
             self.dbOpened = True
             self.dbfilename = dbfilename
@@ -510,6 +556,10 @@ class Database(object):
         query = 'INSERT INTO Log (dateTime, labelId) VALUES (%d, %d)' % (time.time(), labelId)
         self.execute(query)
 
+    def touchAnnotation(self, annoId):
+        date = str(time.time())
+        DB.execute(f'UPDATE Annotations SET lastModified={date} where uid=={annoId}')
+
     def addAnnotationLabel(self,classId,  person, annoId):
         query = ('INSERT INTO Annotations_label (person, class, annoId) VALUES (%d,%d,%d)'
                  % (person, classId, annoId))
@@ -520,6 +570,7 @@ class Database(object):
         self.logLabel(newid)
         self.annotations[annoId].addLabel(AnnotationLabel(person, classId, newid))
         self.checkCommonAnnotation( annoId)
+        self.touchAnnotation(annoId)
         self.commit()
 
     def exchangePolygonCoordinates(self, annoId, slideUID, annoList):
