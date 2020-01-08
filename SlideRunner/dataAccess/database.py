@@ -556,9 +556,6 @@ class Database(object):
         query = 'INSERT INTO Log (dateTime, labelId) VALUES (%d, %d)' % (time.time(), labelId)
         self.execute(query)
 
-    def touchAnnotation(self, annoId):
-        date = str(time.time())
-        DB.execute(f'UPDATE Annotations SET lastModified={date} where uid=={annoId}')
 
     def addAnnotationLabel(self,classId,  person, annoId):
         query = ('INSERT INTO Annotations_label (person, class, annoId) VALUES (%d,%d,%d)'
@@ -570,7 +567,6 @@ class Database(object):
         self.logLabel(newid)
         self.annotations[annoId].addLabel(AnnotationLabel(person, classId, newid))
         self.checkCommonAnnotation( annoId)
-        self.touchAnnotation(annoId)
         self.commit()
 
     def exchangePolygonCoordinates(self, annoId, slideUID, annoList):
