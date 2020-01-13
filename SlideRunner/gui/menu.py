@@ -32,6 +32,11 @@ def defineMenu(self, MainWindow, pluginList):
         self.menuFile.setObjectName("menuFile")
         self.menuAnnotation = QtWidgets.QMenu(self.menubar)
         self.menuAnnotation.setObjectName("menuAnnotation")
+
+#        self.exactMenu = QtWidgets.QMenu('EXACT', self.menubar)
+#        self.exactMenuUploadImage = self.exactMenu.addAction('Upload slide')
+#        self.exactMenuUploadAnnos = self.exactMenu.addAction('Upload annotations')
+
         zoomMenu = QtWidgets.QMenu(self.menubar)
         zoomMenu.setObjectName('zoomMenu')
         zoomMenu.setTitle('View')
@@ -80,9 +85,13 @@ def defineMenu(self, MainWindow, pluginList):
         self.actionSettings.setObjectName("actionSettings")
         self.actionManageDatabase = QtWidgets.QAction(MainWindow)
         self.actionManageDatabase.setText('Overview')
+        self.action_CloseDB = QtWidgets.QAction('Close')
+        self.action_CloseDB.setEnabled(False)
         self.menuDatabase.addAction(self.actionCreate_new)
         self.menuDatabase.addAction(self.action_Open)
         self.menuDatabase.addAction(self.actionOpen_custom)
+        self.menuDatabase.addAction(self.action_CloseDB)
+        self.action_CloseDB.triggered.connect(MainWindow.closeDatabase)
 
         self.menuDatabase.addAction(self.actionManageDatabase)
         defineOpenRecentDatabase(MainWindow)

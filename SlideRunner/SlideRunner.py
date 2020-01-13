@@ -1810,6 +1810,7 @@ class SlideRunnerUI(QMainWindow):
             lastdatabaseslist.append(filename)
             lastdatabaseslist = lastdatabaseslist[-11:]
             self.settings.setValue('lastDatabases', lastdatabaseslist)
+            self.ui.action_CloseDB.setEnabled(True)
 
             menu.updateOpenRecentDatabase(self)
 
@@ -1884,6 +1885,22 @@ class SlideRunnerUI(QMainWindow):
             self.setCenterTo(cent[0],cent[1])
             self.setZoomTo(diff[0],diff[1])
 
+    def closeDatabase(self):
+        self.ui.action_CloseDB.setEnabled(False)
+        self.db = Database()
+        self.ui.annotatorComboBox.currentIndexChanged.disconnect()
+        self.ui.actionAdd_annotator.setEnabled(False)
+        self.ui.actionAdd_cell_class.setEnabled(False)
+        self.ui.annotatorComboBox.setVisible(False)
+        self.ui.databaseLabel.setText('')
+        self.showDBstatistics()
+        personList=[]
+        self.annotatorsModel.setStringList([])
+        self.ui.annotatorComboBox.setVisible(False)
+        self.ui.annotatorComboBox.setEnabled(False)
+        self.ui.inspectorTableView.setVisible(False)
+        self.ui.categoryView.setVisible(False)
+
     def manageDB(self):
         if (self.db.isOpen() == False):
             return
@@ -1901,6 +1918,7 @@ class SlideRunnerUI(QMainWindow):
             Show class-based statistics of current database
         """
         if (self.db.isOpen() == False):
+            self.ui.statisticView.setVisible(False)
             return
         table_model = QtGui.QStandardItemModel()
         table_model.setColumnCount(3)
@@ -1916,6 +1934,7 @@ class SlideRunnerUI(QMainWindow):
             table_model.appendRow([txt,col1,col2])
 
         self.ui.statisticView.setModel(table_model)
+        self.ui.statisticView.setVisible(True)
         self.ui.statisticView.resizeRowsToContents()
         self.ui.statisticView.resizeColumnsToContents()
     
@@ -1967,6 +1986,7 @@ class SlideRunnerUI(QMainWindow):
             self.ui.annotatorComboBox.setVisible(True)
             self.ui.annotatorComboBox.setEnabled(True)
             self.ui.annotatorComboBox.currentIndexChanged.connect(self.changeAnnotator)
+
 
         if (self.db.isOpen() or (self.activePlugin is not None)):
             self.ui.inspectorTableView.setVisible(True)
@@ -2123,6 +2143,13 @@ class SlideRunnerUI(QMainWindow):
         self.addAnnotator()
         self.addCellClass()
 
+        
+        lastdatabaseslist = self.settings.value('lastDatabases', type=list)
+        if dbfilename in (lastdatabaseslist):
+            lastdatabaseslist.remove(dbfilename)
+        lastdatabaseslist.append(dbfilename)
+        lastdatabaseslist = lastdatabaseslist[-11:]
+        self.settings.setValue('lastDatabases', lastdatabaseslist)
 
         self.showDatabaseUIelements()
 
