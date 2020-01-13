@@ -287,7 +287,7 @@ class Database(object):
                                 END
                                 ;
                                 """)
-                DBversion = self.execute('PRAGMA user_version = 1')
+                DBversion = self.dbcur.execute('PRAGMA user_version = 1')
                 print('Successfully migrated DB to version 1')
                 self.commit()
 
