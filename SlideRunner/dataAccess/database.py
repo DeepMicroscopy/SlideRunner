@@ -121,7 +121,7 @@ class Database(object):
         self.annotationsSlide = None
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
         self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT'))
-        self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER')).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time())))
+        self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time())))
 
     def isOpen(self):
         return self.dbOpened
@@ -156,7 +156,7 @@ class Database(object):
         annos = self.getVisibleAnnotations(leftUpper, rightLower)
         self.VA = annos
         for idx,anno in annos.items():
-            if (isActiveClass(activeClasses=vp.activeClasses,label=anno.agreedLabel())):
+            if (isActiveClass(activeClasses=vp.activeClasses,label=anno.agreedLabel())) and not anno.deleted:
                 anno.draw(img, leftUpper, zoomLevel, thickness=2, vp=vp, selected=(selectedAnnoID==anno.uid))
     
     def findIntersectingAnnotation(self, anno:annotation, vp: ViewingProfile, database=None, annoType = None):    
@@ -182,13 +182,15 @@ class Database(object):
     def loadIntoMemory(self, slideId, transformer=None):
         self.annotations = dict()
         self.annotationsSlide = slideId
+        self.guids = dict()
         self.transformer = transformer
 
         if (slideId is None):
             return
 
-        self.dbcur.execute('SELECT uid, type,agreedClass FROM Annotations WHERE slide == %d'% slideId)
+        self.dbcur.execute('SELECT uid, type,agreedClass,guid,lastModified,deleted FROM Annotations WHERE slide == %d'% slideId)
         allAnnos = self.dbcur.fetchall()
+
 
         self.dbcur.execute('SELECT coordinateX, coordinateY,annoid FROM Annotations_coordinates where annoId IN (SELECT uid FROM Annotations WHERE slide == %d) ORDER BY orderIdx' % (slideId))
         allCoords = np.asarray(self.dbcur.fetchall())
@@ -196,7 +198,7 @@ class Database(object):
         if self.transformer is not None:
             allCoords = self.transformer(allCoords)
 
-        for uid, annotype,agreedClass in allAnnos:
+        for uid, annotype,agreedClass,guid,lastModified,deleted in allAnnos:
             coords = allCoords[allCoords[:,2]==uid,0:2]
             if (annotype == AnnotationType.SPOT):
                 self.annotations[uid] = spotAnnotation(uid, coords[0][0], coords[0][1])
@@ -211,7 +213,10 @@ class Database(object):
             else:
                 print('Unknown annotation type %d found :( ' % annotype)
             self.annotations[uid].agreedClass = agreedClass
-            
+            self.annotations[uid].guid = guid
+            self.annotations[uid].lastModified = lastModified
+            self.annotations[uid].deleted = deleted
+            self.guids[guid] = uid
         # Add all labels
         self.dbcur.execute('SELECT annoid, person, class,uid FROM Annotations_label WHERE annoID in (SELECT uid FROM Annotations WHERE slide == %d)'% slideId)
         allLabels = self.dbcur.fetchall()
@@ -264,29 +269,15 @@ class Database(object):
             if (DBversion[0]==0):
                 self.dbcur.execute('UPDATE Annotations set guid=generate_uuid() where guid is NULL')
 
-                for event in ['UPDATE','INSERT']:
-                    self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS updateAnnotation_fromLabel{event}
-                                AFTER {event} ON Annotations_label
-                                BEGIN
-                                    UPDATE Annotations SET lastModified=pycurrent_time() where uid==new.annoId;
-                                END
-                                ;
-                                """)
+                self.addTriggers()
 
-                    self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS updateAnnotation_fromCoords{event}
-                                AFTER {event} ON Annotations_coordinates
-                                BEGIN
-                                    UPDATE Annotations SET lastModified=pycurrent_time() where uid==new.annoId;
-                                END
-                                ;
-                                """)
-                    self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS updateAnnotation_{event}
-                                AFTER {event} ON Annotations
-                                BEGIN
-                                    UPDATE Annotations SET lastModified=pycurrent_time() where uid==new.uid;
-                                END
-                                ;
-                                """)
+                # Add last polygon point (close the line)
+                allpolys = self.dbcur.execute('SELECT uid from Annotations where type==3').fetchall()
+                for [polyid,] in allpolys:
+                    coords = self.dbcur.execute(f'SELECT coordinateX, coordinateY,slide FROM Annotations_coordinates where annoid=={polyid} and orderidx==1').fetchone()
+                    maxidx = self.dbcur.execute(f'SELECT MAX(orderidx) FROM Annotations_coordinates where annoid=={polyid}').fetchone()[0]+1
+                    self.dbcur.execute(f'INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES ({coords[0]},{coords[1]},{coords[2]},{polyid},{maxidx} )')
+
                 DBversion = self.dbcur.execute('PRAGMA user_version = 1')
                 print('Successfully migrated DB to version 1')
                 self.commit()
@@ -300,6 +291,37 @@ class Database(object):
             return self
         else:
             return False
+    
+    def deleteTriggers(self):
+        for event in ['UPDATE','INSERT']:
+            self.dbcur.execute(f'DROP TRIGGER IF EXISTS updateAnnotation_fromLabel{event}')
+            self.dbcur.execute(f'DROP TRIGGER IF EXISTS updateAnnotation_fromCoords{event}')
+            self.dbcur.execute(f'DROP TRIGGER IF EXISTS updateAnnotation_{event}')
+
+    def addTriggers(self):
+        for event in ['UPDATE','INSERT']:
+            self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS updateAnnotation_fromLabel{event}
+                        AFTER {event} ON Annotations_label
+                        BEGIN
+                            UPDATE Annotations SET lastModified=pycurrent_time() where uid==new.annoId;
+                        END
+                        ;
+                        """)
+
+            self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS updateAnnotation_fromCoords{event}
+                        AFTER {event} ON Annotations_coordinates
+                        BEGIN
+                            UPDATE Annotations SET lastModified=pycurrent_time() where uid==new.annoId;
+                        END
+                        ;
+                        """)
+            self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS updateAnnotation_{event}
+                        AFTER {event} ON Annotations
+                        BEGIN
+                            UPDATE Annotations SET lastModified=pycurrent_time() where uid==new.uid;
+                        END
+                        ;
+                        """)
     
     # copy database to new file
     def saveTo(self, dbfilename):
@@ -586,32 +608,37 @@ class Database(object):
                 Insert an annotation into the database.
                 annoList must be a numpy array, but can be either 2 columns or 3 columns (3rd is order)
         """
+
         if self.transformer is not None:
             annoList = self.transformer(annoList, inverse=True)
 
         for num, annotation in enumerate(annoList.tolist()):
-            print('Inserting coordinate: ',num,annotation)
             query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
                     % (annotation[0],annotation[1],slideUID, annoId, annotation[2] if len(annotation)>2 else num+1))
             self.execute(query)
         self.commit()
 
 
-    def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator):
+    def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator, closed:bool=True):
         query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,3)' % (slideUID,classID)
 #        query = 'INSERT INTO Annotations (coordinateX1, coordinateY1, coordinateX2, coordinateY2, slide, class1, person1) VALUES (%d,%d,%d,%d,%d,%d, %d)' % (x1,y1,x2,y2,slideUID,classID,annotator)
+        if (isinstance(annoList, np.ndarray)):
+            annoList=annoList.tolist()
+        if (closed):
+            annoList.append(annoList[0])
         self.execute(query)
         query = 'SELECT last_insert_rowid()'
         self.execute(query)
         annoId = self.fetchone()[0]
+        assert(len(annoList)>0)
         self.annotations[annoId] = polygonAnnotation(annoId, np.asarray(annoList))
         self.appendToMinMaxCoordsList(self.annotations[annoId])
-
         self.insertCoordinates(np.array(annoList), slideUID, annoId)
 
         self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId)
 
         self.commit()
+        return annoId
 
     def addAnnotationToDatabase(self, anno:annotation, slideUID:int, classID:int, annotatorID:int):
         if (anno.annotationType == AnnotationType.AREA):
@@ -626,8 +653,13 @@ class Database(object):
             self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, type=4)
         
 
+    def getGUID(self, annoid) -> str:
+        try:
+            return self.execute(f'SELECT guid from Annotations where uid=={annoid}').fetchone()[0]
+        except:
+            return None
 
-    def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2):
+    def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2, uuid=None):
         query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,%d)' % (slideUID,classID, typeId)
 #        query = 'INSERT INTO Annotations (coordinateX1, coordinateY1, coordinateX2, coordinateY2, slide, class1, person1) VALUES (%d,%d,%d,%d,%d,%d, %d)' % (x1,y1,x2,y2,slideUID,classID,annotator)
         self.execute(query)
@@ -638,6 +670,7 @@ class Database(object):
             self.annotations[annoId] = rectangularAnnotation(annoId, x1,y1,x2,y2)
         else:
             self.annotations[annoId] = circleAnnotation(annoId, x1,y1,x2,y2)
+        
         self.appendToMinMaxCoordsList(self.annotations[annoId])
 
         annoList = np.array([[x1,y1,1],[x2,y2,2]])
@@ -646,6 +679,21 @@ class Database(object):
         self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId)
 
         self.commit()
+        return annoId
+
+    def setLastModified(self, annoid:int, lastModified:float):
+        self.execute(f'UPDATE Annotations SET lastModified="{lastModified}" where uid={annoid}')
+        self.annotations[annoid].lastModified = lastModified
+
+    def setGUID(self, annoid:int, guid:str):
+        self.execute(f'UPDATE Annotations SET guid="{guid}" where uid={annoid}')
+        self.guids[guid]=annoid
+    
+    def last_inserted_id() -> int:
+            query = 'SELECT last_insert_rowid()'
+            self.execute(query)
+            return self.fetchone()[0]
+
 
     def insertNewSpotAnnotation(self,xpos_orig,ypos_orig, slideUID, classID, annotator, type = 1):
 
@@ -674,6 +722,7 @@ class Database(object):
 
         self.appendToMinMaxCoordsList(self.annotations[annoId])
         self.commit()
+        return annoId
 
     def removeFileFromDatabase(self, fileUID:str):
         self.execute('DELETE FROM Annotations_label where annoID IN (SELECT uid FROM Annotations where slide == %d)' % fileUID)
@@ -705,11 +754,15 @@ class Database(object):
             return True
 
 
-    def removeAnnotation(self, annoId):
-            self.execute('DELETE FROM Annotations_label WHERE annoId == %d' % annoId)
-            self.execute('DELETE FROM Annotations_coordinates WHERE annoId == %d' % annoId)
-            self.execute('DELETE FROM Annotations WHERE uid == '+str(annoId))
-            self.annotations.pop(annoId)
+    def removeAnnotation(self, annoId, onlyMarkDeleted:bool=True):
+            if (onlyMarkDeleted):
+                self.execute('UPDATE Annotations SET deleted=1 WHERE uid == '+str(annoId))
+                self.annotations[annoId].deleted = 1
+            else:
+                self.execute('DELETE FROM Annotations_label WHERE annoId == %d' % annoId)
+                self.execute('DELETE FROM Annotations_coordinates WHERE annoId == %d' % annoId)
+                self.execute('DELETE FROM Annotations WHERE uid == '+str(annoId))
+                self.annotations.pop(annoId)
             self.commit()
             
 
@@ -858,7 +911,7 @@ class Database(object):
             '	`class`	INTEGER,'
             '	`annoId`	INTEGER'
             ');')
-
+        
         tempcur.execute('CREATE TABLE `Annotations_coordinates` ('
             '`uid`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,'
             '`coordinateX`	INTEGER,'
@@ -871,6 +924,9 @@ class Database(object):
         tempcur.execute('CREATE TABLE `Annotations` ('
             '`uid`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,'
             '`slide`	INTEGER,'
+           	'`guid`	TEXT,'
+            f'`lastModified`	REAL DEFAULT {time.time()},'
+         	'`deleted`	INTEGER DEFAULT 0,'
             '`type`	INTEGER,'
             '`agreedClass`	INTEGER'
             ');')
@@ -896,11 +952,15 @@ class Database(object):
         tempdb.commit()
         self.db = tempdb
         self.dbcur = self.db.cursor()
+        self.dbcur.execute('PRAGMA user_version = 1')
+        self.db.create_function("generate_uuid",0, generate_uuid)
+        self.db.create_function("pycurrent_time",0, time.time)
         self.dbfilename = dbfilename
         self.dbcur.execute(self.databaseStructure['Log'].getCreateStatement())
         self.annotations = dict()
         self.dbname = os.path.basename(dbfilename)
         self.dbOpened=True
         self.generateMinMaxCoordsList()
+        self.addTriggers()
 
-        return True
+        return self
