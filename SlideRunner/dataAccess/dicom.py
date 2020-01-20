@@ -114,7 +114,7 @@ class ReadableDicomDataset():
         if pos < self._dsstore[level].NumberOfFrames:
             return np.array(Image.open(io.BytesIO(self._dsequence[level][pos])))
         else:
-            return np.empty((*self.geometry_tilesize[level], self.channels))
+            return np.zeros((*self.geometry_tilesize[level], self.channels))
 
     def get_id(self, pixelX:int, pixelY:int, level:int) -> (int, int, int):
 
