@@ -79,6 +79,10 @@ class ReadableDicomDataset():
         self.channels = self._ds[0x0028, 0x0002].value
 
     @property
+    def seriesInstanceUID(self) -> str:
+        return self._sequenceInstanceUID
+
+    @property
     def level_downsamples(self):
         return [self._dsstore[0].TotalPixelMatrixColumns/self._dsstore[k].TotalPixelMatrixColumns for k in self.levels]        
 

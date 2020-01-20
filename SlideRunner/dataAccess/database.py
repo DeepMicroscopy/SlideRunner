@@ -120,7 +120,7 @@ class Database(object):
         self.doCommit = True
         self.annotationsSlide = None
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
-        self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT'))
+        self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT')).add(DatabaseField('uuid','TEXT'))
         self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time())))
 
     def isOpen(self):
@@ -514,21 +514,23 @@ class Database(object):
         self.execute('UPDATE Slides set width=%d, height=%d WHERE uid=%d' % (dimensions[0],dimensions[1],slideuid))
         self.db.commit()
 
-    def findSlideWithFilename(self,slidename,slidepath):
+    def findSlideWithFilename(self,slidename,slidepath, uuid:str=None):
         if (len(slidepath.split(os.sep))>1):
             directory = slidepath.split(os.sep)[-2]
         else:
             directory = ''
-        self.execute('SELECT uid,directory from Slides WHERE filename == "'+slidename+'"')
-        ret = self.fetchall()
+        ret = self.execute('SELECT uid,directory,uuid,filename from Slides ').fetchall()
         secondBest=None
-        for (uid,slidedir) in ret:
-            if slidedir is None:
-                secondBest=uid
-            elif (slidedir.upper() == directory.upper()):
+        for (uid,slidedir,suuid,fname) in ret:
+            if (uuid is not None) and (suuid==uuid):
                 return uid
-            else:
-                secondBest=uid
+            elif (fname==slidename):
+                if slidedir is None:
+                    secondBest=uid
+                elif (slidedir.upper() == directory.upper()):
+                    return uid
+                else:
+                    secondBest=uid
         return secondBest
     
     def insertAnnotator(self, name):
@@ -766,12 +768,12 @@ class Database(object):
             self.commit()
             
 
-    def insertNewSlide(self,slidename,slidepath):
+    def insertNewSlide(self,slidename:str,slidepath:str,uuid:str=""):
             if (len(slidepath.split(os.sep))>1):
                 directory = slidepath.split(os.sep)[-2]
             else:
                 directory = ''
-            self.execute('INSERT INTO Slides (filename,directory) VALUES ("%s","%s")' % (slidename,directory))
+            self.execute('INSERT INTO Slides (filename,directory,uuid) VALUES ("%s","%s", "%s")' % (slidename,directory,uuid))
             self.commit()
 
 
@@ -946,7 +948,8 @@ class Database(object):
             '`filename`	TEXT,'
             '`width`	INTEGER,'
             '`height`	INTEGER,'
-            '`directory` TEXT'
+            '`directory` TEXT,'
+            '`uuid` TEXT' 
             ');')
 
         tempdb.commit()

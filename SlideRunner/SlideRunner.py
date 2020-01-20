@@ -1273,13 +1273,19 @@ class SlideRunnerUI(QMainWindow):
             Find slide in the database. If not found, ask if it should be added
         """
         if (self.db.isOpen()) and (self.imageOpened):
-            slideUID = self.db.findSlideWithFilename(self.slidename,self.slidepathname)
+            
+            if hasattr(self.slide, 'seriesInstanceUID'):
+                uid = self.slide.seriesInstanceUID
+            else:
+                uid = None
+            
+            slideUID = self.db.findSlideWithFilename(self.slidename,self.slidepathname, uuid=uid)
 
             if (slideUID is None):
                 msg = "Slide is not in database. Do you wish to add it?"
                 reply = YesNoAbortDialog('Question',msg,'Yes, add it.','No, open other slide', 'No, open other DB')
                 if reply == QtWidgets.QMessageBox.Yes:
-                    self.db.insertNewSlide(self.slidename,self.slidepathname)
+                    self.db.insertNewSlide(self.slidename,self.slidepathname, uid)
                     self.findSlideUID(dimensions)
                     self.db.setSlideDimensions(slideUID, dimensions)
                     return
@@ -2158,7 +2164,7 @@ class SlideRunnerUI(QMainWindow):
         """
             Callback function to select a slide
         """
-        filename = QFileDialog.getOpenFileName(filter='OpenSlide files (*.svs *.tif *.png *.bif *.svslide *.mrxs *.scn *.vms *.vmu *.ndpi *.tiff *.bmp);;Aperio SVS format (*.svs);;All files (*.*)')[0]
+        filename = QFileDialog.getOpenFileName(filter='WSI files (*.svs *.tif *.png *.bif *.svslide *.mrxs *.scn *.vms *.vmu *.ndpi *.tiff *.bmp *.dcm);;Aperio SVS format (*.svs);;DICOM format (*.dcm);;All files (*.*)')[0]
         if (len(filename)==0):
             return ''
         self.openSlide(filename)
