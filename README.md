@@ -31,6 +31,8 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 |Mac OS X (10.15) (google drive) | V 1.29.0 | [link](https://drive.google.com/file/d/1IEkmvJIbf0s50cFDBhpe1eQdWtT2tW-q/view?usp=sharing) |
 ## Updates
 
+Starting V. 1.31.0, SlideRunner has support for the DICOM WSI image format (thanks, pydicom team, for your support!). Use wsi2dcm to convert images into dicom format.
+
 Starting V. 1.25.0, SlideRunner features a *magic wand* tool.
 
 [![Watch the video](https://img.youtube.com/vi/X8NGDqVj3o0/hqdefault.jpg)](https://youtu.be/X8NGDqVj3o0)

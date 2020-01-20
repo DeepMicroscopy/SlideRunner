@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 import os
 import sys
 
-version = '1.28.0'
+version = '1.31.0'
 
 if sys.argv[-1] == 'publish':
   if (os.system("python setup.py test") == 0):
