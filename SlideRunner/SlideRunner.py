@@ -2227,6 +2227,8 @@ class SlideRunnerUI(QMainWindow):
 
         if (openslide.PROPERTY_NAME_MPP_X in self.slide.properties):
             self.slideMicronsPerPixel = self.slide.properties[openslide.PROPERTY_NAME_MPP_X]
+        elif (hasattr(self.slide,'mpp_x')):
+            self.slideMicronsPerPixel = self.slide.mpp_x
         else:
             self.slideMicronsPerPixel = 1E-6
         self.slidename = os.path.basename(filename)

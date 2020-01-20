@@ -77,6 +77,8 @@ class ReadableDicomDataset():
         self.geometry_columns = [round(0.5+(self.geometry_imsize[k][0]/self.geometry_tilesize[k][0])) for k in self.levels]
         self.geometry_rows = [round(0.5 + (self.geometry_imsize[k][1] / self.geometry_tilesize[k][1] )) for k in self.levels]
         self.channels = self._ds[0x0028, 0x0002].value
+        self.mpp_x = float(self._dsstore[0].SharedFunctionalGroupsSequence[0][0x028,0x9110][0][0x028,0x030][0])*1000
+        self.mpp_y = float(self._dsstore[0].SharedFunctionalGroupsSequence[0][0x028,0x9110][0][0x028,0x030][1])*1000
 
     @property
     def seriesInstanceUID(self) -> str:
