@@ -1,11 +1,11 @@
 import rollbar
 import multiprocessing
-from SlideRunner.dataAccess.openslide import SlideReader
+from SlideRunner.dataAccess.slide import SlideReader
 from PyQt5 import QtWidgets
 from SlideRunner.gui import splashScreen
 import sys
 
-version = '1.30.0git'
+version = '1.31.0'
 
 rollbar.init('98503f735c5648f5ae21b6c18e04926a')
 def main():

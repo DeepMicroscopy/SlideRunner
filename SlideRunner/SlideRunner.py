@@ -59,7 +59,7 @@ from PyQt5.QtWidgets import QMainWindow
 
 from SlideRunner.general.dependencies import *
 from SlideRunner.dataAccess.annotations import ViewingProfile
-from SlideRunner.dataAccess.openslide import SlideReader
+from SlideRunner.dataAccess.slide import SlideReader
 from PyQt5.QtCore import QSettings
 
 # Thread for receiving images from the plugin

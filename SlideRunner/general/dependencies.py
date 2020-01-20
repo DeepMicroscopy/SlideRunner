@@ -114,7 +114,7 @@ from SlideRunner.gui.dialogs.about import aboutDialog
 from SlideRunner.gui.dialogs.question import YesNoAbortDialog
 from SlideRunner.gui.dialogs.settings import settingsDialog
 from SlideRunner.gui.dialogs.dbmanager import DatabaseManager
-from SlideRunner.dataAccess.openslide import RotatableOpenSlide
+from SlideRunner.dataAccess.slide import RotatableOpenSlide
 from SlideRunner.gui.dialogs.getCoordinates import getCoordinatesDialog
 from SlideRunner.gui import shortcuts, toolbar, mouseEvents, annotation
 from SlideRunner.dataAccess.database import Database, annotation

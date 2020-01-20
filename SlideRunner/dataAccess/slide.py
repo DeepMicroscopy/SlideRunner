@@ -4,12 +4,14 @@ import queue
 import time
 import numpy as np
 import os
+from . import dicom
 
 class RotatableOpenSlide(object):
 
     def __new__(cls, filename, rotate):
         if cls is RotatableOpenSlide:
             bname, ext = os.path.splitext(filename)
+            if ext.upper() == '.DCM': return type("RotatableOpenSlide", (RotatableOpenSlide, dicom.ReadableDicomDataset,openslide.ImageSlide), {})(filename, rotate)
             if ext.upper() in ['.PNG','.JPG','.GIF', '.BMP']: return type("ImageSlide", (RotatableOpenSlide,openslide.ImageSlide), {})(filename, rotate)
             else: return type("OpenSlide", (RotatableOpenSlide,openslide.OpenSlide), {})(filename, rotate)
         else:

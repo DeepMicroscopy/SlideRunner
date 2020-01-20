@@ -4,3 +4,4 @@ openslide-python==1.1.1
 matplotlib==3.1.1
 numpy==1.17.3
 opencv-python==4.1.1.26
+pydicom==1.4.0
