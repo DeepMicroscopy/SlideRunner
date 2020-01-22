@@ -14,4 +14,4 @@
 
 """
 
-__all__ = ['database', 'openslide']
+__all__ = ['database', 'slide', 'dicom', 'annotations']
