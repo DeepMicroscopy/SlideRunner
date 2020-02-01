@@ -321,6 +321,16 @@ class ExactManager():
                 break
             if (dbanno.guid in annodict.keys()):
                 print('Annotation exists remotely')
+                lastedit = datetime.datetime.strptime(annodict[dbanno.guid]['last_edit_time'], "%Y-%m-%dT%H:%M:%S.%f")
+                if (lastedit.timestamp()>dbanno.lastModified):
+                    # more recent version exists online
+                    print('More recent version is online -> do not push')
+                    # TODO: Implement storing of my version in case of creation
+                elif (lastedit.timestamp()<dbanno.lastModified):
+                    print('Older version is online -> push!')
+                    # TODO: Implement                    
+                else:
+                    print('Equal time stamps --> ignore')
             else:
                 print('Annotation does not yet exist')
                 for classToSend in labelToSend:

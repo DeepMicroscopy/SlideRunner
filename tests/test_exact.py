@@ -168,6 +168,16 @@ def test_pushannos():
     for dbanno, anno in zip(DB.annotations, exm.retrieve_annotations(imageid)):
         assert(anno['unique_identifier']==DB.annotations[dbanno].guid)
 
+    # Sync again
+    exm.retrieve_and_upload(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
+
+    # No change
+    assert(len(exm.retrieve_annotations(imageid))==2)
+
+    # All were created with correct guid
+    for dbanno, anno in zip(DB.annotations, exm.retrieve_annotations(imageid)):
+        assert(anno['unique_identifier']==DB.annotations[dbanno].guid)
+
     # Clean up --> remove all annotations
     annos = exm.retrieve_annotations(imageid)
     for anno in annos:
