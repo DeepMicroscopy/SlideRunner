@@ -164,9 +164,10 @@ def test_pushannos():
     # Only 2 annotations have been inserted
     assert(len(exm.retrieve_annotations(imageid))==2)
 
+    uuids = [x['unique_identifier'] for x in exm.retrieve_annotations(imageid)]
     # All were created with correct guid
-    for dbanno, anno in zip(DB.annotations, exm.retrieve_annotations(imageid)):
-        assert(anno['unique_identifier']==DB.annotations[dbanno].guid)
+    for dbanno in list(DB.annotations.keys())[:-1]:
+        assert(DB.annotations[dbanno].guid in uuids)
 
     # Sync again
     exm.retrieve_and_upload(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
@@ -175,8 +176,9 @@ def test_pushannos():
     assert(len(exm.retrieve_annotations(imageid))==2)
 
     # All were created with correct guid
-    for dbanno, anno in zip(DB.annotations, exm.retrieve_annotations(imageid)):
-        assert(anno['unique_identifier']==DB.annotations[dbanno].guid)
+    uuids = [x['unique_identifier'] for x in exm.retrieve_annotations(imageid)]
+    for dbanno in list(DB.annotations.keys())[:-1]:
+        assert(DB.annotations[dbanno].guid in uuids)
 
     # Clean up --> remove all annotations
     annos = exm.retrieve_annotations(imageid)
@@ -192,5 +194,5 @@ def test_pushannos():
 
 if __name__ == "__main__":
 #    test_setup()
-#    test_images() 
+    test_images() 
     test_pushannos()    
