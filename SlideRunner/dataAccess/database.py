@@ -120,8 +120,9 @@ class Database(object):
         self.doCommit = True
         self.annotationsSlide = None
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
-        self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT')).add(DatabaseField('uuid','TEXT'))
+        self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('EXACTUSER','INTEGER',defaultValue=0)).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT')).add(DatabaseField('uuid','TEXT'))
         self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time())))
+        self.databaseStructure['Persons'] = DatabaseTable('Persons').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('isExactUser','INTEGER', defaultValue=0))
 
     def isOpen(self):
         return self.dbOpened
@@ -151,6 +152,13 @@ class Database(object):
         self.execute('SELECT uid,filename from Slides')
         return self.fetchall()
 
+    def getExactPerson(self):
+        return self.exactUser if self.exactUser>0 else self.execute('SELECT uid from Persons where isExactUser=1 LIMIT 1').fetchone()[0]
+
+    def setExactPerson(self, uid):
+        self.execute(f'UPDATE Persons set isExactUser=0 where uid != {uid}')
+        self.execute(f'UPDATE Persons set isExactUser=1 where uid == {uid}')
+        self.exactUser=uid
 
     def annotateImage(self, img: np.ndarray, leftUpper: list, rightLower:list, zoomLevel:float, vp : ViewingProfile, selectedAnnoID:int):
         annos = self.getVisibleAnnotations(leftUpper, rightLower)
@@ -252,6 +260,12 @@ class Database(object):
                     self.dbcur.execute(sql)
                 self.db.commit()
 
+            if not self.checkTableStructure('Persons'):
+                sql_statements = self.checkTableStructure('Persons','ammend')
+                for sql in sql_statements:
+                    self.dbcur.execute(sql)
+                self.db.commit()
+
             if not self.checkTableStructure('Annotations'):
                 sql_statements = self.checkTableStructure('Annotations','ammend')
                 for sql in sql_statements:
@@ -322,6 +336,14 @@ class Database(object):
                         END
                         ;
                         """)
+
+        self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS updateAnnotation_ins
+                    AFTER INSERT ON Annotations
+                    BEGIN
+                        UPDATE Annotations SET guid=generate_uuid() where uid==new.uid and guid is Null;
+                    END
+                    ;
+                    """)
     
     # copy database to new file
     def saveTo(self, dbfilename):
@@ -940,7 +962,8 @@ class Database(object):
         
         tempcur.execute('CREATE TABLE `Persons` ('
             '`uid`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,'
-            '`name`	TEXT'
+            '`name`	TEXT,'
+            '`isExactUser` INTEGER DEFAULT 0'
             ');')
 
         tempcur.execute('CREATE TABLE `Slides` ('
