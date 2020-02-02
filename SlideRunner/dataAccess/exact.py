@@ -7,6 +7,16 @@ import time
 import datetime
 import re
 
+EPS_TIME_CONVERSION = 0.001 # epsilon for time conversion uncertainty
+
+annotationtype_to_vectortype = {
+    AnnotationType.SPOT: 2,
+    AnnotationType.AREA: 1,
+    AnnotationType.POLYGON: 5,
+    AnnotationType.SPECIAL_SPOT: 2,
+    AnnotationType.CIRCLE: 2,
+}
+
 def list_to_exactvector(vector):
     retdict = {f'x{(i+1)}': v[0] for i, v in enumerate(vector)}
     retdict.update({f'y{i+1}': v[1] for i, v in enumerate(vector)} )
@@ -226,6 +236,25 @@ class ExactManager():
         else:
             return False
 
+    def update_annotation(self, annotation_id:int,  image_id:int, annotationtype_id:int, vector:list, last_modified:int, blurred:bool=False, guid:str='', description:str=''):
+        data = {
+            'annotation_id': annotation_id,
+            'image_id' : image_id,
+            'annotation_type_id' : annotationtype_id,
+            'vector' : list_to_exactvector(vector),
+            'unique_identifier' : guid,
+            'last_edit_time' : datetime.datetime.fromtimestamp(last_modified).strftime('%Y-%m-%dT%H:%M:%S.%f'),
+            'blurred' : blurred,
+            'description' : description
+        }
+        print(f'Update of annotation {guid}, ts={data["last_edit_time"]}')
+        status, ret = self.post('annotations/api/annotation/update/', data=json.dumps(data), headers={'content-type':'application/json'})
+        if status==200:
+            return True
+        else: 
+            print('Failed annotation update: ',status,ret)
+            return False
+
     def create_annotation(self, image_id:int, annotationtype_id:int, vector:list, last_modified:int, blurred:bool=False, guid:str='', description:str=''):
         data = {
             'image_id': image_id,
@@ -236,10 +265,9 @@ class ExactManager():
             'blurred' : blurred,
             'description' : description
         }
-        print('Sent lastedittime: ',datetime.datetime.fromtimestamp(last_modified).strftime('%Y-%m-%dT%H:%M:%S.%f'))
+        print(f'Creating annotation {guid} with ts = {data["last_edit_time"]}')
         status, ret = self.post('annotations/api/annotation/create/', data=json.dumps(data), headers={'content-type':'application/json'})
         if status==201:
-            print(ret)
             return True
         else: 
 #            print(ret)
@@ -269,13 +297,51 @@ class ExactManager():
 
         return self.post('administration/api/annotation_type/create/', data=data)
 
+
     def retrieve_and_upload(self, dataset_id:int,imageset_id:int, product_id:int, filename:str, database:Database, image_id:str=None, **kwargs ):
+
+        annotypedict = dict()
+
         def getAnnotationTypes():
             annotypes = self.retrieve_annotationtypes(imageset_id)
 
-            annotypedict = {annotype['name']:annotype for annotype in annotypes}
-            return annotypedict 
+            annotypedictret = {annotype['name']:annotype for annotype in annotypes}
+            return annotypedictret 
 
+        def get_or_create_annotationtype(name:str, annotationType:AnnotationType) -> id:
+
+            """
+                Retrieve the correct annotation_type_id from the annotation type dictionary. If non-existent,
+                create it.
+            """
+            nonlocal annotypedict
+            annotationType_names = { AnnotationType.AREA: 'rect',
+                                    AnnotationType.POLYGON: 'poly',
+                                    AnnotationType.SPOT: 'circ',
+                                    AnnotationType.SPECIAL_SPOT: 'circ',
+                                    AnnotationType.CIRCLE: 'circ'}
+            name_alt = name+annotationType_names[annotationType] # alternative name
+            if (name in annotypedict.keys()) and (annotypedict[name]['vector_type'] == annotationtype_to_vectortype[annotationType]):
+                # name and vector type match --> return id of annotation type
+                return annotypedict[name]['id']
+            elif ((name in annotypedict.keys()) and (annotypedict[name]['vector_type'] != annotationtype_to_vectortype[annotationType])
+                and (name_alt in annotypedict.keys()) and (annotypedict[name_alt]['vector_type'] == annotationtype_to_vectortype[annotationType])):
+                return annotypedict[name_alt]['id'] # alternative name matches 
+            elif (name not in annotypedict.keys()):
+                # nonexistant type --> create
+                self.create_annotationtype(product_id=product_id,name=name, vector_type=annotationtype_to_vectortype[annotationType], color_code=get_hex_color(classToSend), sort_order=classToSend)
+                annotypedict = getAnnotationTypes()
+                print('Created annotation type: ',name)
+#                annotationtype_to_vectortype[annotationType]==annotypedict[classes[classToSend]]['vector_type']
+                return annotypedict[name]['id'] 
+            elif (name_alt not in annotypedict.keys()): # non matching type for original name -> create alterntive name
+                self.create_annotationtype(product_id=product_id,name=name_alt, vector_type=annotationtype_to_vectortype[annotationType], color_code=get_hex_color(classToSend), sort_order=classToSend)
+                print('Created annotation type: ',name_alt)
+                annotypedict = getAnnotationTypes()
+#                annotationtype_to_vectortype[annotationType]==annotypedict[classes[classToSend]]['vector_type']
+                return annotypedict[name_alt]['id'] 
+            else:
+                raise ExactProcessError('Unable to create annotation type for class'+name)
 
         imageset_details = self.retrieve_imageset(imageset_id)
 #        print(imageset_details)
@@ -300,13 +366,6 @@ class ExactManager():
         if (slideuid is None):
             raise ExactProcessError('Slide not in database. Please add it first.')
 
-        annotationtype_to_vectortype = {
-            AnnotationType.SPOT: 2,
-            AnnotationType.AREA: 1,
-            AnnotationType.POLYGON: 5,
-            AnnotationType.SPECIAL_SPOT: 2,
-            AnnotationType.CIRCLE: 2,
-        }
 
         database.loadIntoMemory(slideuid)
 
@@ -315,6 +374,8 @@ class ExactManager():
 
         uidToSend = database.getExactPerson()
         
+        # TODO: Write a function to get or create annotation types
+
         for annokey in database.annotations.keys():
             dbanno = database.annotations[annokey]
             # look through annotations
@@ -323,37 +384,23 @@ class ExactManager():
                 # not from expert marked as exact user --> ignore
                 break
             if (dbanno.guid in annodict.keys()):
-                print('Annotation exists remotely')
+                #print(f'Annotation {dbanno.guid} exists remotely ts =',annodict[dbanno.guid]['last_edit_time'])
                 lastedit = datetime.datetime.strptime(annodict[dbanno.guid]['last_edit_time'], "%Y-%m-%dT%H:%M:%S.%f")
                 if (lastedit.timestamp()>dbanno.lastModified):
                     # more recent version exists online
                     print('More recent version is online -> do not push')
                     # TODO: Implement storing of my version in case of creation
-                elif (lastedit.timestamp()<dbanno.lastModified):
-                    print('Older version is online -> push!')
-                    # TODO: Implement                    
+                elif (lastedit.timestamp()+EPS_TIME_CONVERSION<dbanno.lastModified):
+                    for classToSend in labelToSend:
+                        self.update_annotation(image_id=image_id,annotation_id=annodict[dbanno.guid]['id'], annotationtype_id=get_or_create_annotationtype(classes[classToSend],dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)                 
                 else:
-                    print('Equal time stamps --> ignore')
+                    # Equal time stamps --> ignore
+                    pass
             else:
-                print('Annotation does not yet exist')
+#                print('Annotation does not yet exist')
                 for classToSend in labelToSend:
-                    if ((classes[classToSend] in annotypedict.keys())
-                    and (annotationtype_to_vectortype[dbanno.annotationType]==annotypedict[classes[classToSend]]['vector_type'])):
-                        self.create_annotation(image_id=image_id, annotationtype_id=annotypedict[classes[classToSend]]['id'], last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
-                    elif (classes[classToSend] in annotypedict.keys()):
-                        # class exists but is of wrong type
-                        print('Class exists')
-                        # TODO --> create new class with new type and new name OR use class created with this step
-                        pass
-                    else:
-                        # class does not exist --> create
-                        self.create_annotationtype(product_id=product_id,name=classes[classToSend], vector_type=annotationtype_to_vectortype[dbanno.annotationType], color_code=get_hex_color(classToSend), sort_order=classToSend)
-                        annotypedict = getAnnotationTypes()
-                        self.create_annotation(image_id=image_id, annotationtype_id=annotypedict[classes[classToSend]]['id'], last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                    self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(classes[classToSend], dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
 
-                        pass
-
-#                print(classes, annotypedict.keys())
 
 
     def delete(self, url, **kwargs):

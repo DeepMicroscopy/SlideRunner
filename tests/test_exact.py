@@ -52,6 +52,7 @@ EXACT_UNITTEST_URL = 'https://exact.cs.fau.de/srut/'
 
 
 def test_setup():
+    cleanup()
     exm = ExactManager('sliderunner_unittest','unittestpw', EXACT_UNITTEST_URL)
     imageset=1
     product_id=1
@@ -107,6 +108,29 @@ def test_images():
     assert(len(list(allImagesInSet.dict().keys()))==0) # all images gone
 
     os.remove('dummy.tiff')
+
+def cleanup():
+    exm = ExactManager('sliderunner_unittest','unittestpw', EXACT_UNITTEST_URL)
+
+    # loop through dataset, delete all annotations and images
+    imageset=1
+    allImagesInSet = exm.retrieve_imagelist(imageset)
+    # select first image in imageset
+    for imageid in list(allImagesInSet.dict().keys()):
+        annos = exm.retrieve_annotations(imageid)
+        for anno in annos:
+            exm.delete_annotation(anno['id'], keep_deleted_element=False)
+        exm.delete_image(imageid)
+    
+    product_id=1
+
+    # Delete all previous annotation types
+    annoTypes = exm.retrieve_annotationtypes(product_id)
+    for at in annoTypes:
+        http_status, res = exm.delete_annotationtype(at['id'])
+        assert(http_status==200)
+
+
 
 def test_pushannos():
     imageset=1
@@ -180,6 +204,13 @@ def test_pushannos():
     for dbanno in list(DB.annotations.keys())[:-1]:
         assert(DB.annotations[dbanno].guid in uuids)
 
+    # Now let's create a local update
+    DB.setAnnotationLabel(classId=1, person=1, annoIdx=1, entryId=DB.annotations[1].labels[0].uid)
+
+    # Sync again
+    exm.retrieve_and_upload(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
+
+
     # Clean up --> remove all annotations
     annos = exm.retrieve_annotations(imageid)
     for anno in annos:
@@ -195,5 +226,7 @@ def test_pushannos():
 
 if __name__ == "__main__":
 #    test_setup()
+    cleanup()
     test_images() 
     test_pushannos()    
+    cleanup()
