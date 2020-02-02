@@ -191,6 +191,7 @@ def test_pushannos():
     # Now delete image
     exm.delete_image(imageid)
 
+    os.remove(imagename)
 
 if __name__ == "__main__":
 #    test_setup()
