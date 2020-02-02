@@ -226,17 +226,20 @@ class ExactManager():
         else:
             return False
 
-    def create_annotation(self, image_id:int, annotationtype_id:int, vector:list, blurred:bool=False, guid:str='', description:str=''):
+    def create_annotation(self, image_id:int, annotationtype_id:int, vector:list, last_modified:int, blurred:bool=False, guid:str='', description:str=''):
         data = {
             'image_id': image_id,
             'annotation_type_id' : annotationtype_id,
             'vector' : list_to_exactvector(vector),
             'unique_identifier' : guid,
+            'last_edit_time' : datetime.datetime.fromtimestamp(last_modified).strftime('%Y-%m-%dT%H:%M:%S.%f'),
             'blurred' : blurred,
             'description' : description
         }
+        print('Sent lastedittime: ',datetime.datetime.fromtimestamp(last_modified).strftime('%Y-%m-%dT%H:%M:%S.%f'))
         status, ret = self.post('annotations/api/annotation/create/', data=json.dumps(data), headers={'content-type':'application/json'})
         if status==201:
+            print(ret)
             return True
         else: 
 #            print(ret)
@@ -336,7 +339,7 @@ class ExactManager():
                 for classToSend in labelToSend:
                     if ((classes[classToSend] in annotypedict.keys())
                     and (annotationtype_to_vectortype[dbanno.annotationType]==annotypedict[classes[classToSend]]['vector_type'])):
-                        self.create_annotation(image_id=image_id, annotationtype_id=annotypedict[classes[classToSend]]['id'], vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                        self.create_annotation(image_id=image_id, annotationtype_id=annotypedict[classes[classToSend]]['id'], last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
                     elif (classes[classToSend] in annotypedict.keys()):
                         # class exists but is of wrong type
                         print('Class exists')
@@ -346,7 +349,7 @@ class ExactManager():
                         # class does not exist --> create
                         self.create_annotationtype(product_id=product_id,name=classes[classToSend], vector_type=annotationtype_to_vectortype[dbanno.annotationType], color_code=get_hex_color(classToSend), sort_order=classToSend)
                         annotypedict = getAnnotationTypes()
-                        self.create_annotation(image_id=image_id, annotationtype_id=annotypedict[classes[classToSend]]['id'], vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                        self.create_annotation(image_id=image_id, annotationtype_id=annotypedict[classes[classToSend]]['id'], last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
 
                         pass
 
