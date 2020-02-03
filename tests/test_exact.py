@@ -215,6 +215,36 @@ def test_pushannos():
     # Sync again
     exm.sync(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
 
+    # check if remote has been updated
+    annos = exm.retrieve_annotations(imageid)
+    for anno in annos:
+        if (anno['id']==DB.annotations[1].labels[0].exact_id):
+            assert(anno['annotation_type']['name']=='BB')
+            annotype_id = anno['annotation_type']['id']
+
+    # Now update remotely and see if changes are reflected
+    newguid = str(uuid.uuid4())
+    created = exm.create_annotation(image_id=imageid, annotationtype_id=annotype_id, vector=[[90,80],[20,30]], last_modified=time.time(), guid=newguid )
+
+    exm.sync(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
+    found=False
+    for annoI in DB.annotations:
+        anno=DB.annotations[annoI]
+        if (anno.guid == newguid):
+            found=True
+            assert(anno.annotationType==AnnotationType.POLYGON)
+            assert(anno.labels[0].exact_id==created['annotations']['id'])
+    
+    assert(found)
+    
+    # also check in stored database
+    DB.loadIntoMemory(1)
+    for annoI in DB.annotations:
+        anno=DB.annotations[annoI]
+        if (anno.guid == newguid):
+            found=True
+            assert(anno.annotationType==AnnotationType.POLYGON)
+            assert(anno.labels[0].exact_id==created['annotations']['id'])
 
     # Clean up --> remove all annotations
     annos = exm.retrieve_annotations(imageid)
