@@ -7,6 +7,7 @@ import time
 import datetime
 import re
 import sys
+import queue
 
 EPS_TIME_CONVERSION = 0.001 # epsilon for time conversion uncertainty
 
@@ -68,17 +69,32 @@ class ExactProcessError(Exception):
 class ExactManager():
 
     def log(self,level, *args):
+        logmsg=' '.join([str(x) for x in args])
         if level>=self.loglevel:
-            self.logfile.write( '%s ' % str(datetime.datetime.now()) + ' '.join([str(x) for x in args])+'\n')
+            self.logfile.write( '%s ' % str(datetime.datetime.now()) + logmsg +'\n')
+        if (self.statusqueue is not None) and (level>1):
+            self.statusqueue.put((1, logmsg))
 
-    def __init__(self, username:str=None, password:str=None, serverurl:str=None, logfile=sys.stdout, loglevel=1):
+    def progress(self, value:float):
+        if (self.statusqueue is not None):
+            self.statusqueue.put((0, value))
+
+
+    def __init__(self, username:str=None, password:str=None, serverurl:str=None, logfile=sys.stdout, loglevel:int=1, statusqueue:queue.Queue=None):
         self.username = username
         self.password = password
         self.serverurl = serverurl
+        self.statusqueue = statusqueue
 
         self.logfile = logfile
         self.loglevel = loglevel
         self.log(0,f'Created EXM with username {username}, serverurl: {serverurl}')        
+        stat, ret = self.get('timesync/')
+        timeoffset = abs(json.loads(ret)['unixtime']-time.time())
+        if (stat==200) and (timeoffset>10):
+            raise ExactProcessError('Your computer''s clock is incorrect')
+        else:
+            self.log(1,f'Time offset to server is: {timeoffset} seconds.')
 
     def json_post_request(self,url) -> dict:
         req = requests.post(url, auth = (self.username, self.password))
@@ -182,7 +198,7 @@ class ExactManager():
                 database.removeAnnotation(database.guids[uuid],onlyMarkDeleted=True)
             
             return annoId
-
+        self.progress(0)
         annos = np.array(self.retrieve_annotations(dataset_id))
 
         createClasses = True if 'createClasses' not in kwargs else kwargs['createClasses']
@@ -205,7 +221,8 @@ class ExactManager():
         annodict = {uuid:annos[np.where(uuids==uuid)] for uuid in uuids}
         # TODO: resolve conflict if one guid has multiple shapes
 
-        for uuid in uuids:
+        for cntr, uuid in enumerate(uuids):
+            self.progress(cntr*0.5/(len(uuids)+0.001))
             le_array = [datetime.datetime.strptime(sanno['last_edit_time'], "%Y-%m-%dT%H:%M:%S.%f") for sanno in annodict[uuid]]
             lastedit = np.max(le_array) # maximum last_edit time is most recent for uuid
 
@@ -346,7 +363,7 @@ class ExactManager():
         
         status, ret =  self.post('administration/api/annotation_type/create/', data=data)
         if (status==201):
-            return True
+            return ret
         else:
             self.log(10,'Unable to create annotation, message was: '+ret)
             raise ExactProcessError('Unable to create annotation')
@@ -429,7 +446,8 @@ class ExactManager():
         
         # TODO: Write a function to get or create annotation types
 
-        for annokey in database.annotations.keys():
+        for cntr,annokey in enumerate(database.annotations.keys()):
+            self.progress(0.5+cntr*0.5/(len(uuids)+0.0001))
             dbanno = database.annotations[annokey]
             # look through annotations
             labelToSend = [lab.classId for lab in dbanno.labels if lab.annnotatorId==uidToSend]
