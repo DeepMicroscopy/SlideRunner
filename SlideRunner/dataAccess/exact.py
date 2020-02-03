@@ -242,7 +242,7 @@ class ExactManager():
 
                 if (uuid not in database.guids.keys()) and (vlen>0):
                     # Is new - woohay!
-                    self.log(f'Importing remote object with guid {uuid}')
+                    self.log(1, f'Importing remote object with guid {uuid}')
                     annoId = createDatabaseObject()
                     database.setGUID(annoid=annoId, guid=uuid)
                     database.setLastModified(annoid=annoId, lastModified=lastedit.timestamp())
