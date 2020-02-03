@@ -64,7 +64,7 @@ def test_setup():
         assert(http_status==200)
 
     # Add new annotation type
-    assert(exm.create_annotationtype(product_id, 'bogus', vector_type=1))
+    ret = exm.create_annotationtype(product_id, 'bogus', vector_type=1)
 
     assert(len(exm.retrieve_annotationtypes(product_id))==1)
 
@@ -77,7 +77,7 @@ def test_images():
 
     # Delete all images
 
-    imageset=1
+    imageset = exm.retrieve_imagesets()[0]['id']
     product_id=1
 
     allImagesInSet = exm.retrieve_imagelist(imageset)
@@ -93,6 +93,10 @@ def test_images():
     cv2.imwrite('dummy.tiff', dummy)
 
     exm.upload_image_to_imageset(imageset_id=1, filename='dummy.tiff')
+
+    imagesets= exm.retrieve_imagesets()
+    assert(len(imagesets[0]['images'])==1)
+    assert(imagesets[0]['images'][0]['name']=='dummy.tiff')
 
     allImagesInSet = exm.retrieve_imagelist(imageset)
     # select first image in imageset
@@ -111,8 +115,9 @@ def test_images():
 def cleanup():
     exm = ExactManager('sliderunner_unittest','unittestpw', EXACT_UNITTEST_URL)
 
+    imageset = exm.retrieve_imagesets()[0]['id']
+
     # loop through dataset, delete all annotations and images
-    imageset=1
     allImagesInSet = exm.retrieve_imagelist(imageset)
     # select first image in imageset
     for imageid in list(allImagesInSet.dict().keys()):

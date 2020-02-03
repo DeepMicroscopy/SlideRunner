@@ -80,6 +80,7 @@ class ExactManager():
             self.statusqueue.put((0, value))
 
 
+
     def __init__(self, username:str=None, password:str=None, serverurl:str=None, logfile=sys.stdout, loglevel:int=1, statusqueue:queue.Queue=None):
         self.username = username
         self.password = password
@@ -134,6 +135,12 @@ class ExactManager():
             return target_folder+os.sep+filename
         else:
             return ''
+
+    def retrieve_imagesets(self):
+        status, obj = self.get('images/api/list_imagesets/')
+        if (status != 200):
+            raise ExactProcessError('Unable to retrieve list of image sets')
+        return json.loads(obj)
 
     def retrieve_annotations(self,dataset_id:int) -> list:
         obj = self.json_get_request(self.serverurl+'annotations/api/annotation/load/?image_id=%d' % dataset_id)
