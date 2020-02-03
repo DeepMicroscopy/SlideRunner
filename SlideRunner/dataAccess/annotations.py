@@ -33,10 +33,11 @@ class ViewingProfile(object):
 
 
 class AnnotationLabel(object):
-    def __init__(self,annotatorId:int, classId:int, uid:int):
+    def __init__(self,annotatorId:int, classId:int, uid:int, exact_id:int=None):
         self.annnotatorId = annotatorId
         self.classId = classId
         self.uid = uid
+        self.exact_id = exact_id
     
 
 class annoCoordinate(object):

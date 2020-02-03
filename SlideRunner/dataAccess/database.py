@@ -123,6 +123,7 @@ class Database(object):
         self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('EXACTUSER','INTEGER',defaultValue=0)).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT')).add(DatabaseField('uuid','TEXT'))
         self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time())))
         self.databaseStructure['Persons'] = DatabaseTable('Persons').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('isExactUser','INTEGER', defaultValue=0))
+        self.databaseStructure['Annotations_label'] = DatabaseTable('Annotations_label').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('exact_id','INTEGER')).add(DatabaseField('person','INTEGER',defaultValue=0)).add(DatabaseField('class','INTEGER')).add(DatabaseField('annoId','INTEGER'))
 
     def isOpen(self):
         return self.dbOpened
@@ -226,11 +227,11 @@ class Database(object):
             self.annotations[uid].deleted = deleted
             self.guids[guid] = uid
         # Add all labels
-        self.dbcur.execute('SELECT annoid, person, class,uid FROM Annotations_label WHERE annoID in (SELECT uid FROM Annotations WHERE slide == %d)'% slideId)
+        self.dbcur.execute('SELECT annoid, person, class,uid, exact_id FROM Annotations_label WHERE annoID in (SELECT uid FROM Annotations WHERE slide == %d)'% slideId)
         allLabels = self.dbcur.fetchall()
 
-        for (annoId, person, classId,uid) in allLabels:
-            self.annotations[annoId].addLabel(AnnotationLabel(person, classId, uid), updateAgreed=False)
+        for (annoId, person, classId,uid, exact_id) in allLabels:
+            self.annotations[annoId].addLabel(AnnotationLabel(person, classId, uid, exact_id), updateAgreed=False)
 
 
         self.generateMinMaxCoordsList()
@@ -268,6 +269,12 @@ class Database(object):
 
             if not self.checkTableStructure('Annotations'):
                 sql_statements = self.checkTableStructure('Annotations','ammend')
+                for sql in sql_statements:
+                    self.dbcur.execute(sql)
+                self.db.commit()
+
+            if not self.checkTableStructure('Annotations_label'):
+                sql_statements = self.checkTableStructure('Annotations_label','ammend')
                 for sql in sql_statements:
                     self.dbcur.execute(sql)
                 self.db.commit()
@@ -572,8 +579,8 @@ class Database(object):
         self.commit()
          
 
-    def setAnnotationLabel(self,classId,  person, entryId, annoIdx):
-        q = 'UPDATE Annotations_label SET person==%d, class=%d WHERE uid== %d' % (person,classId,entryId)
+    def setAnnotationLabel(self,classId,  person, entryId, annoIdx, exact_id="Null"):
+        q = f'UPDATE Annotations_label SET person=={person}, class={classId}, exact_id={exact_id} WHERE uid== {entryId}'
         self.execute(q)
         self.commit()
         self.annotations[annoIdx].changeLabel(entryId, person, classId)
@@ -603,15 +610,15 @@ class Database(object):
         self.execute(query)
 
 
-    def addAnnotationLabel(self,classId,  person, annoId):
-        query = ('INSERT INTO Annotations_label (person, class, annoId) VALUES (%d,%d,%d)'
-                 % (person, classId, annoId))
+    def addAnnotationLabel(self,classId,  person, annoId, exact_id:int=None):
+        query = ('INSERT INTO Annotations_label (person, class, annoId, exact_id) '
+                  f'VALUES ({person},{classId},{annoId},{exact_id})')
         self.execute(query)
         query = 'SELECT last_insert_rowid()'
         self.execute(query)
         newid = self.fetchone()[0]
         self.logLabel(newid)
-        self.annotations[annoId].addLabel(AnnotationLabel(person, classId, newid))
+        self.annotations[annoId].addLabel(AnnotationLabel(person, classId, newid, exact_id))
         self.checkCommonAnnotation( annoId)
         self.commit()
 
@@ -643,7 +650,7 @@ class Database(object):
         self.commit()
 
 
-    def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator, closed:bool=True):
+    def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator, closed:bool=True, exact_id="Null"):
         query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,3)' % (slideUID,classID)
 #        query = 'INSERT INTO Annotations (coordinateX1, coordinateY1, coordinateX2, coordinateY2, slide, class1, person1) VALUES (%d,%d,%d,%d,%d,%d, %d)' % (x1,y1,x2,y2,slideUID,classID,annotator)
         if (isinstance(annoList, np.ndarray)):
@@ -659,7 +666,7 @@ class Database(object):
         self.appendToMinMaxCoordsList(self.annotations[annoId])
         self.insertCoordinates(np.array(annoList), slideUID, annoId)
 
-        self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId)
+        self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId, exact_id=exact_id)
 
         self.commit()
         return annoId
@@ -683,7 +690,7 @@ class Database(object):
         except:
             return None
 
-    def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2, uuid=None):
+    def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2, uuid=None, exact_id="Null"):
         query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,%d)' % (slideUID,classID, typeId)
 #        query = 'INSERT INTO Annotations (coordinateX1, coordinateY1, coordinateX2, coordinateY2, slide, class1, person1) VALUES (%d,%d,%d,%d,%d,%d, %d)' % (x1,y1,x2,y2,slideUID,classID,annotator)
         self.execute(query)
@@ -700,7 +707,7 @@ class Database(object):
         annoList = np.array([[x1,y1,1],[x2,y2,2]])
         self.insertCoordinates(np.array(annoList), slideUID, annoId)
         
-        self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId)
+        self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId, exact_id=exact_id)
 
         self.commit()
         return annoId
@@ -719,7 +726,7 @@ class Database(object):
             return self.fetchone()[0]
 
 
-    def insertNewSpotAnnotation(self,xpos_orig,ypos_orig, slideUID, classID, annotator, type = 1):
+    def insertNewSpotAnnotation(self,xpos_orig,ypos_orig, slideUID, classID, annotator, type = 1, exact_id="Null"):
 
         if (type == 4):
             query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,0,%d)' % (slideUID, type)
@@ -742,7 +749,7 @@ class Database(object):
             self.execute(query)
 
             self.annotations[annoId] = spotAnnotation(annoId, xpos_orig,ypos_orig, (type==4))
-            self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId)
+            self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId, exact_id=exact_id)
 
         self.appendToMinMaxCoordsList(self.annotations[annoId])
         self.commit()
@@ -813,7 +820,11 @@ class Database(object):
 
     def execute(self, query):
         if (self.isOpen()):
-            return self.dbcur.execute(query)
+            try:
+                return self.dbcur.execute(query)
+            except Exception as e:
+                print('Failed query was: ',query)
+                raise(e)
         else:
             print('Warning: DB not opened.')
 
@@ -933,6 +944,7 @@ class Database(object):
             '	`uid`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,'
             '	`person`	INTEGER,'
             '	`class`	INTEGER,'
+            '   `exact_id` INTEGER,'
             '	`annoId`	INTEGER'
             ');')
         
