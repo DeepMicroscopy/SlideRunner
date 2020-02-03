@@ -64,8 +64,7 @@ def test_setup():
         assert(http_status==200)
 
     # Add new annotation type
-    http_status, res = exm.create_annotationtype(product_id, 'bogus', vector_type=1)
-    assert(http_status==201)
+    assert(exm.create_annotationtype(product_id, 'bogus', vector_type=1))
 
     assert(len(exm.retrieve_annotationtypes(product_id))==1)
 
@@ -154,7 +153,8 @@ def test_pushannos():
             imageid=imset['id']
 
 
-    DB = Database().create(':memory:')
+#    DB = Database().create(':memory:')
+    DB = Database().create('test.sqlite')
     # Add slide to database
     DB.insertNewSlide(imagename,'')
     DB.insertClass('BB')
@@ -183,7 +183,7 @@ def test_pushannos():
     # All annotations have been removed
     assert(len(exm.retrieve_annotations(imageid))==0)
 
-    exm.retrieve_and_upload(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
+    exm.sync(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
 
     # Only 2 annotations have been inserted
     assert(len(exm.retrieve_annotations(imageid))==2)
@@ -193,8 +193,10 @@ def test_pushannos():
     for dbanno in list(DB.annotations.keys())[:-1]:
         assert(DB.annotations[dbanno].guid in uuids)
 
+    print('--- resync ---')
+
     # Sync again
-    exm.retrieve_and_upload(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
+    exm.sync(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
 
     # No change
     assert(len(exm.retrieve_annotations(imageid))==2)
@@ -204,11 +206,14 @@ def test_pushannos():
     for dbanno in list(DB.annotations.keys())[:-1]:
         assert(DB.annotations[dbanno].guid in uuids)
 
-    # Now let's create a local update
-    DB.setAnnotationLabel(classId=1, person=1, annoIdx=1, entryId=DB.annotations[1].labels[0].uid)
+    print('--- local update created ---')
+
+    # Now let's create a local update - keep same exact_id (crucial!)
+    DB.loadIntoMemory(1)
+    DB.setAnnotationLabel(classId=1, person=1, annoIdx=1, entryId=DB.annotations[1].labels[0].uid, exact_id=DB.annotations[1].labels[0].exact_id)
 
     # Sync again
-    exm.retrieve_and_upload(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
+    exm.sync(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
 
 
     # Clean up --> remove all annotations
