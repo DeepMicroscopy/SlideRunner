@@ -14,9 +14,22 @@ import numpy as np
 import random
 import uuid
 
+def hex_to_rgb(value):
+    value = value.lstrip('#')
+    lv = len(value)
+    return tuple(int(value[i:i + lv // 3], 16) for i in range(0, lv, lv // 3))
+
 def generate_uuid():
     return str(uuid.uuid4())
 
+def rgb_to_hex(col):
+    """
+        Assigns one of sliderunners colors to a class
+    """
+    return '#{:02x}{:02x}{:02x}'.format( *col[0:3] )
+
+def random_color():
+    return rgb_to_hex([random.randrange(30,255),random.randrange(30,255),random.randrange(30,255)])
 
 class DatabaseField(object):
     def __init__(self, keyStr:str, typeStr:str, isNull:int=0, isUnique:bool=False, isAutoincrement:bool=False, defaultValue:str='', primaryKey:int=0):
@@ -124,6 +137,7 @@ class Database(object):
         self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('EXACTUSER','INTEGER',defaultValue=0)).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT')).add(DatabaseField('uuid','TEXT')).add(DatabaseField('exactImageID', 'TEXT'))
         self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time())))
         self.databaseStructure['Persons'] = DatabaseTable('Persons').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('isExactUser','INTEGER', defaultValue=0))
+        self.databaseStructure['Classes'] = DatabaseTable('Classes').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('color','TEXT'))
         self.databaseStructure['Annotations_label'] = DatabaseTable('Annotations_label').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('exact_id','INTEGER')).add(DatabaseField('person','INTEGER',defaultValue=0)).add(DatabaseField('class','INTEGER')).add(DatabaseField('annoId','INTEGER'))
 
     def isOpen(self):
@@ -150,6 +164,12 @@ class Database(object):
         ids = self.maxCoords[potentiallyVisible,2]
         return dict(filter(lambda i:i[0] in ids, self.annotations.items()))
 
+    def setClassColor(self, classId, color:str):
+        """
+            color: valid hex rgb string, e.g. #AABBCC
+            classId: Class ID
+        """
+        self.execute(f'UPDATE Classes set COLOR="{color}" where uid=={classId}')
 
     def listOfSlides(self):
         self.execute('SELECT uid,filename from Slides')
@@ -171,11 +191,18 @@ class Database(object):
         self.execute(f'UPDATE Persons set isExactUser=1 where uid == {uid}')
         self.exactUser=uid
 
+    def updateViewingProfile(self, vp:ViewingProfile):
+        classes = self.getAllClasses()
+        vp.COLORS_CLASSES = { 0: [0,0,0,0] }
+        for name,id,color in classes:
+            vp.COLORS_CLASSES[id] = [*hex_to_rgb(color),255]
+        return vp
+
     def annotateImage(self, img: np.ndarray, leftUpper: list, rightLower:list, zoomLevel:float, vp : ViewingProfile, selectedAnnoID:int):
         annos = self.getVisibleAnnotations(leftUpper, rightLower)
         self.VA = annos
         for idx,anno in annos.items():
-            if (isActiveClass(activeClasses=vp.activeClasses,label=anno.agreedLabel())) and not anno.deleted:
+            if (isActiveClass(activeClasses=vp.activeClasses,label=self.classPosition(anno.agreedLabel()))) and not anno.deleted:
                 anno.draw(img, leftUpper, zoomLevel, thickness=2, vp=vp, selected=(selectedAnnoID==anno.uid))
     
     def findIntersectingAnnotation(self, anno:annotation, vp: ViewingProfile, database=None, annoType = None):    
@@ -188,18 +215,26 @@ class Database(object):
                         return DBanno
         return None
 
+    def classPosition(self, classId):
+        for pos, (name,uid,color) in enumerate(self._allclasses):
+            if (uid==classId):
+                return pos+1
+
     def findClickAnnotation(self, clickPosition, vp : ViewingProfile, database=None, annoType = None):
         if (database is None):
             database = self.VA            
         for idx,anno in database.items():
-            if (vp.activeClasses[anno.agreedLabel()]):
+            if (vp.activeClasses[self.classPosition(anno.agreedLabel())]):
                 if (anno.positionInAnnotation(clickPosition )) and (anno.clickable):
                     if (annoType == anno.annotationType) or (annoType is None):
                         return anno
         return None
 
     def getExactIDforSlide(self, slide):
-        return self.execute(f'SELECT exactImageID from Slides where uid=={slide}').fetchone()[0]
+        try:
+            return self.execute(f'SELECT exactImageID from Slides where uid=={slide}').fetchone()[0]
+        except:
+            return 0
 
     def loadIntoMemory(self, slideId, transformer=None):
         self.annotations = dict()
@@ -238,6 +273,8 @@ class Database(object):
             self.annotations[uid].guid = guid
             self.annotations[uid].lastModified = lastModified
             self.annotations[uid].deleted = deleted
+            if (deleted):
+                self.annotations[uid].clickable = False
             self.guids[guid] = uid
         # Add all labels
         self.dbcur.execute('SELECT annoid, person, class,uid, exact_id FROM Annotations_label WHERE annoID in (SELECT uid FROM Annotations WHERE slide == %d)'% slideId)
@@ -260,12 +297,15 @@ class Database(object):
         elif (action=='ammend'):
             return self.databaseStructure[tableName].addMissingTableInfo(ti, tableName)
 
+    
+
     def open(self, dbfilename):
         if os.path.isfile(dbfilename):
             self.db = sqlite3.connect(dbfilename)
             self.dbcur = self.db.cursor()
             self.db.create_function("generate_uuid",0, generate_uuid)
             self.db.create_function("pycurrent_time",0, time.time)
+            self.db.create_function("randcolor",0, random_color)
 
             # Check structure of database and ammend if not proper
             if not self.checkTableStructure('Slides'):
@@ -277,6 +317,13 @@ class Database(object):
             if not self.checkTableStructure('Persons'):
                 sql_statements = self.checkTableStructure('Persons','ammend')
                 for sql in sql_statements:
+                    self.dbcur.execute(sql)
+                self.db.commit()
+
+            if not self.checkTableStructure('Classes'):
+                sql_statements = self.checkTableStructure('Classes','ammend')
+                for sql in sql_statements:
+                    print(sql)
                     self.dbcur.execute(sql)
                 self.db.commit()
 
@@ -315,22 +362,34 @@ class Database(object):
                 DBversion = self.dbcur.execute('PRAGMA user_version = 1')
                 print('Successfully migrated DB to version 1')
                 self.commit()
+                DBversion = self.dbcur.execute('PRAGMA user_version').fetchone()
+
+            if (DBversion[0]==1):
+                self.dbcur.execute('UPDATE Classes set color=randcolor() where color is NULL')
+
+                self.addTriggers()
+
+                DBversion = self.dbcur.execute('PRAGMA user_version = 2')
+                print('Successfully migrated DB to version 2')
+                self.commit()
 
             self.dbOpened = True
             self.dbfilename = dbfilename
             self.dbname = os.path.basename(dbfilename)
-
+            self.getAllClasses()
 
 
             return self
         else:
             return False
     
+
     def deleteTriggers(self):
         for event in ['UPDATE','INSERT']:
             self.dbcur.execute(f'DROP TRIGGER IF EXISTS updateAnnotation_fromLabel{event}')
             self.dbcur.execute(f'DROP TRIGGER IF EXISTS updateAnnotation_fromCoords{event}')
             self.dbcur.execute(f'DROP TRIGGER IF EXISTS updateAnnotation_{event}')
+            self.dbcur.execute(f'DROP TRIGGER IF EXISTS updateAnnotation_ins')
 
     def addTriggers(self):
         for event in ['UPDATE','INSERT']:
@@ -361,6 +420,14 @@ class Database(object):
                     AFTER INSERT ON Annotations
                     BEGIN
                         UPDATE Annotations SET guid=generate_uuid() where uid==new.uid and guid is Null;
+                    END
+                    ;
+                    """)
+
+        self.dbcur.execute(f"""CREATE TRIGGER IF NOT EXISTS setRandomcolor
+                    AFTER INSERT ON Classes
+                    BEGIN
+                        UPDATE Classes SET color=randcolor() where uid==new.uid and color is Null;
                     END
                     ;
                     """)
@@ -582,8 +649,8 @@ class Database(object):
         return self.execute(query).fetchone()[0]
 
     def changeAllAnnotationLabelsOfType(self, classId:int, annotationType:int, newClassId:int):
-        self.execute(f'UPDATE Annotations set agreedClass={newClassId} where uid in (SELECT uid from Annotation where type=={annotationType}) and agreedClass=={classId}')
-        self.execute(f'UPDATE Annotations_label set class={newClassId} where uid in (SELECT uid from Annotation where type=={annotationType}) and class=={classId}')
+        self.execute(f'UPDATE Annotations_label set class={newClassId} where annoid in (SELECT uid from Annotations where type=={annotationType}) and class=={classId}')
+        self.execute(f'UPDATE Annotations set agreedClass={newClassId} where uid in (SELECT uid from Annotations where type=={annotationType}) and agreedClass=={classId}')
 
     def insertClass(self, name):
         self.execute('INSERT INTO Classes (name) VALUES ("%s")' % (name))
@@ -598,8 +665,12 @@ class Database(object):
         self.commit()
          
 
-    def setAnnotationLabel(self,classId,  person, entryId, annoIdx, exact_id="Null"):
-        q = f'UPDATE Annotations_label SET person=={person}, class={classId}, exact_id={exact_id} WHERE uid== {entryId}'
+    def setAnnotationLabel(self,classId,  person, entryId, annoIdx, **kwargs):
+        if ('exact_id' in kwargs): # try to keep exact_id, if not explicitly overwritten
+            q = f'UPDATE Annotations_label SET person=={person}, class={classId}, exact_id={kwargs["exact_id"]} WHERE uid== {entryId}'
+        else:
+            q = f'UPDATE Annotations_label SET person=={person}, class={classId} WHERE uid== {entryId}'
+            
         self.execute(q)
         self.commit()
         self.annotations[annoIdx].changeLabel(entryId, person, classId)
@@ -808,6 +879,7 @@ class Database(object):
             if (onlyMarkDeleted):
                 self.execute('UPDATE Annotations SET deleted=1 WHERE uid == '+str(annoId))
                 self.annotations[annoId].deleted = 1
+                self.annotations[annoId].clickable = 0
             else:
                 self.execute('DELETE FROM Annotations_label WHERE annoId == %d' % annoId)
                 self.execute('DELETE FROM Annotations_coordinates WHERE annoId == %d' % annoId)
@@ -878,11 +950,18 @@ class Database(object):
         return self.fetchall()
 
     def getAllClasses(self):
-        self.execute('SELECT name,uid FROM Classes ORDER BY uid')
-        return self.fetchall()
+        self.execute('SELECT name,uid,color FROM Classes ORDER BY uid')
+        self._allclasses = self.fetchall() # save for later
+        return self._allclasses
     
     def renameClass(self, classID, name):
         self.execute('UPDATE Classes set name="%s" WHERE uid ==  %d' % (name, classID))
+        self.commit()
+
+    def deleteClass(self, classID):
+        self.execute('DELETE FROM Classes WHERE uid ==  %d' % ( classID))
+        self.execute('UPDATE Annotations set agreedClass=0 WHERE agreedClass ==  %d' % ( classID))
+        self.execute('DELETE FROM Annotations_label WHERE class ==  %d' % ( classID))
         self.commit()
 
     def commit(self):
@@ -960,6 +1039,7 @@ class Database(object):
             return False
 
         tempcur = tempdb.cursor()
+        tempdb.create_function("randcolor",0, random_color)
 
         tempcur.execute('CREATE TABLE `Annotations_label` ('
             '	`uid`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,'
@@ -990,7 +1070,8 @@ class Database(object):
 
         tempcur.execute('CREATE TABLE `Classes` ('
             '`uid`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,'
-            '`name`	TEXT'
+            '`name`	TEXT,'
+            '`color` TEXT'
             ');')
         
         tempcur.execute('CREATE TABLE `Persons` ('

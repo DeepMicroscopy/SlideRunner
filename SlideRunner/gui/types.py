@@ -32,9 +32,10 @@ class ClassRowItemId (enumerate):
     ITEM_PLUGIN = 1
 
 class ClassRowItem(object):
-    def __init__(self,  itemID: ClassRowItemId, classID, uid:int = None):
+    def __init__(self,  itemID: ClassRowItemId, classID, uid:int = None, color:str='#000000'):
         self.itemID = itemID
         self.uid = uid
+        self.color = color
         self.classID = classID
 
 

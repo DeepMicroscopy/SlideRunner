@@ -17,6 +17,8 @@
 import numpy as np
 from SlideRunner.gui import mouseEvents as mouseEvents
 from PyQt5 import QtWidgets
+from PyQt5.QtGui import QColor
+from SlideRunner.dataAccess.database import hex_to_rgb, rgb_to_hex
 from shapely.geometry import * 
 
 
@@ -47,6 +49,28 @@ def renameClass(self, classID, event = None):
     if (ok):
         self.db.renameClass(classID, name)
         self.showDatabaseUIelements()
+
+def changeClassColor(self,oldcolor, classID, event = None):
+    text = self.db.getClassByID(classID)
+    replyCol = QtWidgets.QColorDialog.getColor(QColor.fromRgb(*hex_to_rgb(oldcolor)))
+
+    if (replyCol.isValid()):
+        self.db.setClassColor(classID, rgb_to_hex([replyCol.red(), replyCol.green(), replyCol.blue()]))
+        self.showDatabaseUIelements()
+        self.showImage()
+
+
+def deleteClass(self, classID, event = None):
+    text = self.db.getClassByID(classID)
+    reply = QtWidgets.QMessageBox.question(self, 'Question',
+                                    'Do you really wish to delete this class and all of its objects?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+    if reply == QtWidgets.QMessageBox.No:
+        return
+
+    self.db.deleteClass(classID)
+    self.showDatabaseUIelements()
+
 
 def deleteAllFromClassOnSlide(self, classID, event = None):
     if not (self.db.isOpen()):
@@ -87,7 +111,6 @@ def copyAllAnnotations(self, pluginAnnoClass, classID, event = None):
     
     self.showImage()
     self.showDBentryCount()
-
 
 def copyAnnotation(self,pluginAnno, classID,event):
     self.db.addAnnotationToDatabase(pluginAnno, slideUID=self.slideUID, classID=classID, annotatorID=self.retrieveAnnotator(event))

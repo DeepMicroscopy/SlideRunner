@@ -28,6 +28,7 @@ def test_database():
     assert((classes[0][1]==1))
     assert((classes[1][0]=='Crap'))
     assert((classes[1][1]==2))
+    assert((classes[1][2][0]=='#')) # some color
 
     DB.insertNewSlide('BLA.tiff','blub/BLA.tiff')
     DB.insertNewSlide('BLU.tiff','blub/BLU.tiff')

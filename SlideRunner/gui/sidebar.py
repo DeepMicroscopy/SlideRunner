@@ -22,8 +22,9 @@ class ClassSelectTableWidget(QTableWidget):
                 addAction.triggered.connect(self.parentObject.addCellClass)
                 if (rowId > 0):
                         if (self.parentObject.classList[rowId].itemID == ClassRowItemId.ITEM_DATABASE):
+                                changeColorAction = menu.addAction('Change color', partial(GUIannotation.changeClassColor, self.parentObject, self.parentObject.classList[rowId].color, self.parentObject.classList[rowId].uid))                
                                 renameAction = menu.addAction('Rename class',partial(GUIannotation.renameClass,self.parentObject, self.parentObject.classList[rowId].uid))                
-                                removeAction = menu.addAction('Remove class')                
+                                removeAction = menu.addAction('Remove class', partial(GUIannotation.deleteClass, self.parentObject, self.parentObject.classList[rowId].uid))                
 
                                 removeAllOfClassAction = menu.addAction('Remove all of this class from slide', partial(GUIannotation.deleteAllFromClassOnSlide,self.parentObject, self.parentObject.classList[rowId].uid))
 

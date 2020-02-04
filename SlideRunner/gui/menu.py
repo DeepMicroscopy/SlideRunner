@@ -151,7 +151,7 @@ def defineMenu(self, MainWindow, pluginList):
         self.exactMenuImport.triggered.connect(MainWindow.downloadSlideFromExact)
         self.exactMenuSyncImage.triggered.connect(MainWindow.syncWithExact)
         self.actionSettings.triggered.connect(MainWindow.settingsDialog)
-
+        self.exactMenuExportImage.triggered.connect(MainWindow.exportToExact)
 
 
 def definePluginMenu(self,pluginList):

@@ -160,9 +160,9 @@ class ExactManager():
         status, obj = self.post('images/image/upload/%d/'%imageset_id, data={}, headers={'referer': self.serverurl}, files={'files[]': open(filename, 'rb')}, timeout=20)
         self.log(1, 'Uploading image',filename,'to',imageset_id)
         if (status==200):
-            return True
+            return obj
         else:
-            return False
+            raise ExactProcessError('Unable to upload, response is: '+str(obj))
 
     def add_product_to_imageset(self, product_id:int, imageset_id:int):
         data = {'image_set_id':imageset_id,
@@ -217,8 +217,9 @@ class ExactManager():
 
         database.loadIntoMemory(slideuid)
         database.deleteTriggers()
-        classes = {y:x for x,y in database.getAllClasses()}
-        classes_rev = {x:y for x,y in database.getAllClasses()}
+        classes = {y:x for x,y,col in database.getAllClasses()}
+        classes_rev = {x:y for x,y,col in database.getAllClasses()}
+        classes_col = {y:col for x,y,col in database.getAllClasses()}
 
         persons = {x:y for x,y in database.getAllPersons()}
         
@@ -256,8 +257,9 @@ class ExactManager():
                         raise AccessViolationError('Not permitted to create new classes, but class %d not found' % anno['annotation_type']['name'])
                     else:
                         database.insertClass(class_name)
-                        classes = {x:y for y,x in database.getAllClasses()}
-                        classes_rev = {x:y for x,y in database.getAllClasses()}
+                        classes = {x:y for y,x,col in database.getAllClasses()}
+                        classes_rev = {x:y for x,y,col in database.getAllClasses()}
+                        classes_col = {y:col for x,y,col in database.getAllClasses()}
                 
                 vector_type = anno['annotation_type']['vector_type']
                 vlen = int(len(anno['vector'])/2)
@@ -284,8 +286,11 @@ class ExactManager():
                         #TODO: recreate
                         createDatabaseObject()
                         
-                    elif (lastedit.timestamp()+EPS_TIME_CONVERSION<database.annotations[database.guids[uuid]].lastModified):
+                    elif abs(lastedit.timestamp()-database.annotations[database.guids[uuid]].lastModified)<EPS_TIME_CONVERSION:
                         # equal time stamp --> maybe further annotation with same guid, let's check.
+                        print('Time stamps difference: ', lastedit.timestamp()-database.annotations[database.guids[uuid]].lastModified)
+                        print('Last edit (online): ',lastedit.timestamp())
+                        print('Last modified (DB): ',database.annotations[database.guids[uuid]].lastModified)
                         labels_exactids = [lab.exact_id for lab in database.annotations[database.guids[uuid]].labels]
                         if anno['id'] not in labels_exactids: 
                             # need to create in local DB
@@ -333,12 +338,13 @@ class ExactManager():
             self.log(10,'Unable to update annotation, message was: '+ret)
             raise ExactProcessError('Unable to update annotation')
 
-    def create_annotation(self, image_id:int, annotationtype_id:int, vector:list, last_modified:int, blurred:bool=False, guid:str='', description:str=''):
+    def create_annotation(self, image_id:int, annotationtype_id:int, vector:list, last_modified:int, blurred:bool=False, guid:str='', description:str='', deleted:bool=False):
         data = {
             'image_id': image_id,
             'annotation_type_id' : annotationtype_id,
             'vector' : list_to_exactvector(vector),
             'unique_identifier' : guid,
+            'deleted' : deleted,
             'last_edit_time' : datetime.datetime.fromtimestamp(last_modified).strftime('%Y-%m-%dT%H:%M:%S.%f'),
             'blurred' : blurred,
             'description' : description
@@ -416,11 +422,11 @@ class ExactManager():
                 return annotypedict[name_alt]['id'] # alternative name matches 
             elif (name not in annotypedict.keys()):
                 # nonexistant type --> create
-                self.create_annotationtype(product_id=product_id,name=name, vector_type=annotationtype_to_vectortype[annotationType], color_code=get_hex_color(classToSend), sort_order=classToSend)
+                self.create_annotationtype(product_id=product_id,name=name, vector_type=annotationtype_to_vectortype[annotationType], color_code=classes_col[classToSend], sort_order=classToSend)
                 annotypedict = getAnnotationTypes()
                 return annotypedict[name]['id']
             elif (name_alt not in annotypedict.keys()): # non matching type for original name -> create alterntive name
-                self.create_annotationtype(product_id=product_id,name=name_alt, vector_type=annotationtype_to_vectortype[annotationType], color_code=get_hex_color(classToSend), sort_order=classToSend)
+                self.create_annotationtype(product_id=product_id,name=name_alt, vector_type=annotationtype_to_vectortype[annotationType], color_code=classes_col[classToSend], sort_order=classToSend)
                 annotypedict = getAnnotationTypes()
                 mergeLocalClasses[(annotationType,labelId)] = name_alt
                 return annotypedict[name_alt]['id'] 
@@ -454,8 +460,9 @@ class ExactManager():
 
         database.loadIntoMemory(slideuid)
 
-        classes = {y:x for x,y in database.getAllClasses()}
-        classes_rev = {x:y for x,y in database.getAllClasses()}
+        classes = {y:x for x,y,col in database.getAllClasses()}
+        classes_col = {y:col for x,y,col in database.getAllClasses()}
+        classes_rev = {x:y for x,y,col in database.getAllClasses()}
 
         uidToSend, nameToSend = database.getExactPerson()
 
@@ -492,7 +499,7 @@ class ExactManager():
                             # can have the following causes:
                             # 1. label is new for annotation --> in this case, it has to be created
                             # 2. exact_id is missing in database --> avoided by first receiving from server
-                            det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(lts, dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                            det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(lts, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
                             # add new exact_id to DB field
                             label = dbanno.labels[i]
                             database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
@@ -503,7 +510,7 @@ class ExactManager():
                     pass
             else:
                 for i, classToSend in zip(labelToSendIdx,labelToSend):
-                    det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(classToSend, dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                    det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(classToSend, dbanno.annotationType), deleted=dbanno.deleted, last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
                     # add new exact_id to DB field
                     label = dbanno.labels[i]
                     # for local update, do not set Annotation.lastModified
@@ -522,7 +529,7 @@ class ExactManager():
                 if (database.findClassidOfClass(newname) is not None):
                     # we need to add the new class
                     newId = database.insertClass(newname)
-
+                    self.log(1,f'Changing all annotation labels of old type = {oldId}, with annotation Type={annoType}, to new type: {newId}')
                     database.changeAllAnnotationLabelsOfType(oldId, annoType, newId)
                     # reload slide
                     database.loadIntoMemory(database.annotationsSlide)

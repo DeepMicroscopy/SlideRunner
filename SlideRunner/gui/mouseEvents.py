@@ -35,7 +35,7 @@ def doubleClick(self, event):
     if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON):
         menu = QMenu(self)
         DBclasses=self.db.getAllClasses()
-        DBclassToName = {classId:className for className,classId in DBclasses}
+        DBclassToName = {classId:className for className,classId,color in DBclasses}
         if (self.lastAnnotationClass>0):
             act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
             act.setShortcut(Qt.Key_Enter)
@@ -292,7 +292,7 @@ def releaseImage(self, event):
                 addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno, self.ui.wandAnnotation.polygon))
 
             DBclasses=self.db.getAllClasses()
-            DBclassToName = {classId:className for className,classId in DBclasses}
+            DBclassToName = {classId:className for className,classId,color in DBclasses}
             if (self.lastAnnotationClass>0):
                 act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.wandAnnotation.polygon))
                 act.setShortcut(Qt.Key_Enter)
@@ -356,7 +356,7 @@ def rightClickImage(self, event):
                 addmenu.addAction('Remove area from existing annotation', partial(GUIannotation.removeFromPolygon,self,clickedAnno, self.ui.annotationsList))
                 addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno, self.ui.annotationsList))
             DBclasses=self.db.getAllClasses()
-            DBclassToName = {classId:className for className,classId in DBclasses}
+            DBclassToName = {classId:className for className,classId,color in DBclasses}
             if (self.lastAnnotationClass>0):
                 act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
                 act.setShortcut(Qt.Key_Enter)

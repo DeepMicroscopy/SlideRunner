@@ -30,7 +30,7 @@ import matplotlib.colors
 import pickle
 import SlideRunner.dataAccess.annotations as annotations 
 import matplotlib.path as path
-from SlideRunner.dataAccess.database import Database
+from SlideRunner.dataAccess.database import Database, hex_to_rgb
 
 
 class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
@@ -101,8 +101,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             self.annos = list()
             self.annotationLabels = dict()
 
-            for key, (label, annoId) in enumerate(self.secondaryDB.getAllClasses()):
-                self.annotationLabels[annoId] = SlideRunnerPlugin.PluginAnnotationLabel(0,'%s' % label, self.COLORS[key % len(self.COLORS)])
+            for key, (label, annoId,col) in enumerate(self.secondaryDB.getAllClasses()):
+                self.annotationLabels[annoId] = SlideRunnerPlugin.PluginAnnotationLabel(0,'%s' % label, [*hex_to_rgb(col), 0])
             
             pname,fname = os.path.split(job.slideFilename)
             self.slideUID = self.secondaryDB.findSlideWithFilename(fname,pname)

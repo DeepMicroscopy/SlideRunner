@@ -219,11 +219,11 @@ class annotation():
           if (self.pluginAnnotationLabel is not None):
               return self.pluginAnnotationLabel.color
           if (vp.blindMode):
-            return vp.COLORS_CLASSES[self.labelBy(vp.annotator) % len(vp.COLORS_CLASSES)]
+            return vp.COLORS_CLASSES[self.labelBy(vp.annotator) ]
           elif (vp.majorityClassVote):
-            return vp.COLORS_CLASSES[self.majorityLabel() % len(vp.COLORS_CLASSES)]
+            return vp.COLORS_CLASSES[self.majorityLabel() ]
           else:
-            return vp.COLORS_CLASSES[self.agreedLabel() % len(vp.COLORS_CLASSES)]
+            return vp.COLORS_CLASSES[self.agreedLabel()]
       
       def minCoordinates(self) -> annoCoordinate:
             print('Whopsy... you need to overload this.')
