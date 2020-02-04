@@ -244,6 +244,10 @@ class rectangularAnnotation(annotation):
             self.minimumAnnotationLabelZoom = minimumAnnotationLabelZoom
             self.annotationType = AnnotationType.AREA
       
+      @property
+      def coordinates(self):
+          return np.array([[self.x1, self.y1], [self.x2, self.y2]])
+
       def minCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1, self.y1)
       
@@ -398,6 +402,10 @@ class circleAnnotation(annotation):
                 self.y1 = int(y1)
                 self.r = int(r)
 
+      @property
+      def coordinates(self):
+          return np.array([[self.x1-self.r, self.y1-self.r], [self.x1+self.r, self.y1+self.r]])
+
       def minCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x1-self.r, self.y1-self.r)
 
@@ -429,11 +437,12 @@ class circleAnnotation(annotation):
 
 class spotAnnotation(annotation):
 
-      def __init__(self, uid, x1, y1, isSpecialSpot : bool = False,text='', pluginAnnotationLabel=None, minimumAnnotationLabelZoom=1):
+      def __init__(self, uid, x1, y1, isSpecialSpot : bool = False,text='', pluginAnnotationLabel=None, minimumAnnotationLabelZoom=1, radius=None):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
             self.annotationType = AnnotationType.SPOT
             self.x1 = x1
             self.y1 = y1
+            self.r = 25 if radius is None else radius
             if (isSpecialSpot):
                 self.annotationType = AnnotationType.SPECIAL_SPOT
             self.minimumAnnotationLabelZoom = minimumAnnotationLabelZoom
@@ -446,6 +455,10 @@ class spotAnnotation(annotation):
 
       def intersectingWithAnnotation(self, anno) -> bool:
             return False
+
+      @property
+      def coordinates(self):
+          return np.array([[self.x1-self.r, self.y1-self.r], [self.x1+self.r, self.y1+self.r]])
 
 
       def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected=False):
