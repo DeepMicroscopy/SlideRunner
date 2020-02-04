@@ -1908,6 +1908,61 @@ class SlideRunnerUI(QMainWindow):
         self.ui.annotatorComboBox.setEnabled(False)
         self.ui.inspectorTableView.setVisible(False)
         self.ui.categoryView.setVisible(False)
+    
+    def exportToExact(self):
+        if (self.db.isOpen() == False):
+            self.popupmessage('Please open a local database first.')
+            return
+        if (self.db.getExactPerson()[0] == 0):
+            self.popupmessage('Please mark a local expert as EXACT user first.')
+            return
+        if (self.imageOpened == False):
+            self.popupmessage('Please open a slide first.')
+            return
+        try:
+            if (self.db.getExactIDforSlide(self.slideUID) is not None):
+                # already linked to exact --> really push?
+                reply = QtWidgets.QMessageBox.question(self, 'Question',
+                                            'This slide is already linked with an image on exact. Exporting it will create another copy on the server. Realy proceed?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+                if reply == QtWidgets.QMessageBox.No:
+                    return
+
+            exm = ExactManager(self.settings.value('exactUsername', 'Demo'), 
+                                self.settings.value('exactPassword', 'demodemo'),
+                                self.settings.value('exactHostname', 'https://exact.cs.fau.de'),
+                                statusqueue=self.progressBarQueue)
+            imagesets = exm.retrieve_imagesets()
+            items = ['%d: ' % iset['id']+iset['name'] for iset in imagesets]
+            item, ok = QInputDialog.getItem(self, "Select image set", "Image sets", items, 0, False)
+
+            if not (ok):
+                return
+
+            iselect = [k for k,name in enumerate(items) if name==item][0]
+            products = ['%d: ' % p['id']+p['name'] for p in imagesets[iselect]['products']]
+
+            pitem, ok = QInputDialog.getItem(self, "Select a product", "Products in image set", products, 0, False)
+            if not (ok):
+                return
+
+            imageset_id = int(item.split(':')[0])
+            product_id = int(pitem.split(':')[0])
+
+            obj = exm.upload_image_to_imageset(imageset_id=imageset_id, filename=self.slidepathname)
+
+            image_id = obj['files'][0]['id']
+            exact_id = f'{image_id}/{product_id}/{imageset_id}'
+            self.db.execute(f'UPDATE Slides set exactImageID="{exact_id}" where uid=={self.slideUID}')
+            exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, filename=self.slidename, database=self.db)
+            self.popupmessage('Slide exported successfully.')
+                        
+
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
+                                          QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            raise(e)
+            return
 
     def syncWithExact(self):
         if (self.db.isOpen() == False):
@@ -1917,7 +1972,7 @@ class SlideRunnerUI(QMainWindow):
             self.popupmessage('Please mark a local expert as EXACT user first.')
             return
         exact_id=self.db.getExactIDforSlide(self.slideUID)
-        if (len(exact_id) == 0):
+        if (exact_id is None) or (len(exact_id) == 0):
             self.popupmessage('Slide is not linked to any EXACT image.')
             return
         try:
@@ -1932,6 +1987,7 @@ class SlideRunnerUI(QMainWindow):
              self.showDBstatistics()
              self.db.loadIntoMemory(self.slideUID)
              self.showImage()     
+             self.popupmessage('Sync completed.')
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
                                           QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
@@ -2069,6 +2125,8 @@ class SlideRunnerUI(QMainWindow):
             self.ui.annotatorComboBox.setEnabled(True)
             self.ui.annotatorComboBox.currentIndexChanged.connect(self.changeAnnotator)
 
+            self.db.updateViewingProfile(self.currentVP)
+            self.db.updateViewingProfile(self.currentPluginVP)
 
         if (self.db.isOpen() or (self.activePlugin is not None)):
             self.ui.inspectorTableView.setVisible(True)
@@ -2095,7 +2153,7 @@ class SlideRunnerUI(QMainWindow):
             itemcol.setBackground(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
             checkbx = QCheckBox()
             checkbx.setChecked(True)
-            tableRows[0] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, 0, uid=0)
+            tableRows[0] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, 0, uid=0, color='#000000')
             checkbx.stateChanged.connect(self.selectClasses)
             self.ui.categoryView.setItem(0,2, item)
             self.ui.categoryView.setItem(0,1, itemcol)
@@ -2110,7 +2168,7 @@ class SlideRunnerUI(QMainWindow):
                 clsname = classes[clsid]
                 item = QTableWidgetItem(clsname[0])
                 pixmap = QPixmap(10,10)
-                pixmap.fill(QColor.fromRgb(self.get_color(clsid+1)[0],self.get_color(clsid+1)[1],self.get_color(clsid+1)[2]))
+                pixmap.fill(QColor.fromRgb(*hex_to_rgb(clsname[2])))
                 btn = QPushButton('')
 
                 btn.clicked.connect(partial(self.clickAnnoclass, clsid+1))
@@ -2118,7 +2176,7 @@ class SlideRunnerUI(QMainWindow):
                 itemcol = QTableWidgetItem('')
                 checkbx = QCheckBox()
                 checkbx.setChecked(True)
-                itemcol.setBackground(QColor.fromRgb(self.get_color(clsid+1)[0],self.get_color(clsid+1)[1],self.get_color(clsid+1)[2]))
+                itemcol.setBackground(QColor.fromRgb(*hex_to_rgb(clsname[2])))
                 self.modelItems.append(checkbx)
                 self.ui.categoryView.setItem(clsid+1,2, item)
                 self.ui.categoryView.setItem(clsid+1,1, itemcol)
@@ -2126,7 +2184,7 @@ class SlideRunnerUI(QMainWindow):
                 self.ui.categoryView.setCellWidget(clsid+1,3, btn)
                 checkbx.stateChanged.connect(self.selectClasses)
 
-                tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid, clsname[1])
+                tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid, clsname[1], clsname[2])
             
             rowIdx =   len(self.db.getAllClasses())+1 if self.db.isOpen() else 0
             self.itemsSelected = np.ones(rowIdx+1)
@@ -2149,7 +2207,7 @@ class SlideRunnerUI(QMainWindow):
                     self.ui.categoryView.setCellWidget(rowIdx,0, checkbx)
                     checkbx.stateChanged.connect(self.selectPluginClasses)
 
-                    tableRows[rowIdx] = ClassRowItem(ClassRowItemId.ITEM_PLUGIN, label)
+                    tableRows[rowIdx] = ClassRowItem(ClassRowItemId.ITEM_PLUGIN, label,color=label.color)
 
                     rowIdx+=1
 
