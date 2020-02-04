@@ -69,7 +69,7 @@ def test_setup():
     assert(len(exm.retrieve_annotationtypes(product_id))==1)
 
     # And delete it, again
-    http_status, res = exm.delete_annotationtype(int(res['annotationType']['id']))
+    http_status, res = exm.delete_annotationtype(int(ret['annotationType']['id']))
     assert(http_status==200)
 
 def test_images():
@@ -265,7 +265,7 @@ def test_pushannos():
     os.remove(imagename)
 
 if __name__ == "__main__":
-#    test_setup()
+    test_setup()
     cleanup()
     test_images() 
     test_pushannos()    
