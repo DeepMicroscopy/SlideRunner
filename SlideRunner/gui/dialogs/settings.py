@@ -21,7 +21,9 @@ def saveAndClose(ev, d: QDialog, elem:dict, settingsObject):
     thres = GuidedScreeningThresholdOptions[elem['combo_guided'].currentIndex()]
     settingsObject.setValue('GuidedScreeningThreshold', thres)
     settingsObject.setValue('SpotCircleRadius', elem['radiusSlider'].value())
-
+    settingsObject.setValue('exactHostname',elem['exactHostname'].text() )
+    settingsObject.setValue('exactUsername',elem['exactUsername'].text() )
+    settingsObject.setValue('exactPassword',elem['exactPassword'].text() )
 
     d.close()
 
@@ -94,10 +96,29 @@ def settingsDialog(settingsObject):
     c2.setCurrentIndex(ci)
     layout.addWidget(c2, 3,1)
 
+    labelHostname = QtWidgets.QLabel('EXACT server:')
+    editHostname = QtWidgets.QLineEdit(settingsObject.value('exactHostname', 'https://exact.cs.fau.de'))
+    elem['exactHostname'] = editHostname
 
+    layout.addWidget(labelHostname, 4, 0)
+    layout.addWidget(editHostname, 4, 1)
+
+    labelUsername = QtWidgets.QLabel('EXACT username:')
+    editUsername = QtWidgets.QLineEdit(settingsObject.value('exactUsername', 'Demo'))
+    layout.addWidget(labelUsername, 5, 0)
+    layout.addWidget(editUsername, 5, 1)
+    elem['exactUsername'] = editUsername
+
+    labelPassword = QtWidgets.QLabel('EXACT password:')
+    editPassword = QtWidgets.QLineEdit(settingsObject.value('exactPassword', 'demodemo'))
+    editPassword.setEchoMode(QtWidgets.QLineEdit.PasswordEchoOnEdit)
+    elem['exactPassword'] = editPassword
+
+    layout.addWidget(labelPassword, 6, 0)
+    layout.addWidget(editPassword, 6, 1)
 
     b1 = QPushButton("ok",d)
-    layout.addWidget(b1, 4,1)
+    layout.addWidget(b1, 7,1)
     b1.clicked.connect(partial(saveAndClose, d=d, elem=elem, settingsObject=settingsObject))
 
 
