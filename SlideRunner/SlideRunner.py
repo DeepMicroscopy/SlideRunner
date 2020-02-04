@@ -1207,7 +1207,9 @@ class SlideRunnerUI(QMainWindow):
                                         f"{attr} expert name:                               ")
 
         if (ok):
-            self.db.insertAnnotator(name)
+            id = self.db.insertAnnotator(name)
+            if (attr=='first'):
+                self.db.setExactPerson(id) # if only one expert defined, set this to be the EXACT person
             # show DB overview
             self.showDatabaseUIelements()
 
@@ -1907,8 +1909,82 @@ class SlideRunnerUI(QMainWindow):
         self.ui.inspectorTableView.setVisible(False)
         self.ui.categoryView.setVisible(False)
 
+    def syncWithExact(self):
+        if (self.db.isOpen() == False):
+            self.popupmessage('Please open a local database first.')
+            return
+        if (self.db.getExactPerson()[0] == 0):
+            self.popupmessage('Please mark a local expert as EXACT user first.')
+            return
+        exact_id=self.db.getExactIDforSlide(self.slideUID)
+        if (len(exact_id) == 0):
+            self.popupmessage('Slide is not linked to any EXACT image.')
+            return
+        try:
+             exm = ExactManager(self.settings.value('exactUsername', 'Demo'), 
+                                self.settings.value('exactPassword', 'demodemo'),
+                                self.settings.value('exactHostname', 'https://exact.cs.fau.de'),
+                                statusqueue=self.progressBarQueue)
+             (image_id, product_id, imageset_id) = [int(x) for x in exact_id.split('/')]
+             exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, filename=self.slidename, database=self.db)
+
+             self.showDatabaseUIelements()
+             self.showDBstatistics()
+             self.db.loadIntoMemory(self.slideUID)
+             self.showImage()     
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
+                                          QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            return
+        
+
+    def downloadSlideFromExact(self):
+        if (self.db.isOpen() == False):
+            self.popupmessage('Please open a local database first.')
+            return
+        if (self.db.getExactPerson()[0] == 0):
+            self.popupmessage('Please mark a local expert as EXACT user first.')
+            return
+
+        try:
+            ELD = ExactDownloadDialog(self.db, self.settings)
+
+            ELD.exec_()
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
+                                          QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            return
+
+        self.findSlideUID()
+        # reload current slide annotations (in case they were deleted)
+        if (self.slideUID is not None):
+            self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
+
+    def linkSlideToExact(self):
+        if (self.db.isOpen() == False):
+            self.popupmessage('Please open a local database first.')
+            return
+        if (self.imageOpened == False):
+            self.popupmessage('Please open a slide first.')
+            return
+        try:
+            ELD = ExactLinkDialog(self.db, self.settings)
+
+            ELD.exec_()
+        except Exception as e:
+            QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
+                                          QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            return
+
+        self.findSlideUID()
+        # reload current slide annotations (in case they were deleted)
+        if (self.slideUID is not None):
+            self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
+
+
     def manageDB(self):
         if (self.db.isOpen() == False):
+            self.popupmessage('Please open a local database first.')
             return
 
         DBM = DatabaseManager(self.db)

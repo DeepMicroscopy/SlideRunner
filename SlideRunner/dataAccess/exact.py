@@ -77,14 +77,14 @@ class ExactManager():
 
     def progress(self, value:float):
         if (self.statusqueue is not None):
-            self.statusqueue.put((0, value))
+            self.statusqueue.put((0, value*100 if value<1 else -1))
 
 
 
     def __init__(self, username:str=None, password:str=None, serverurl:str=None, logfile=sys.stdout, loglevel:int=1, statusqueue:queue.Queue=None):
         self.username = username
         self.password = password
-        self.serverurl = serverurl
+        self.serverurl = serverurl if serverurl[-1]=='/' else serverurl+'/'
         self.statusqueue = statusqueue
 
         self.logfile = logfile
@@ -221,6 +221,9 @@ class ExactManager():
         classes_rev = {x:y for x,y in database.getAllClasses()}
 
         persons = {x:y for x,y in database.getAllPersons()}
+        
+        exactPersonId, _ = database.getExactPerson()
+        persons[self.username] = exactPersonId
 
         # reformat to dict according to uuid
         uuids = np.array([anno['unique_identifier'] for anno in annos])
@@ -242,7 +245,10 @@ class ExactManager():
                 # check if annotator exists already, if not, create
                 if person_name not in persons.keys():
                     database.insertAnnotator(person_name)
+                    self.log(1,f'Adding annotator {person_name} found in EXACT')
                     persons = {x:y for x,y in database.getAllPersons()}
+                    persons[self.username] = exactPersonId
+                    
 
                 # check if class exists already in DB, if not, create
                 if (class_name not in classes.values()):
@@ -379,6 +385,7 @@ class ExactManager():
     def sync(self, dataset_id:int,imageset_id:int, product_id:int, filename:str, database:Database, image_id:str=None, **kwargs ):
 
         annotypedict = dict()
+        mergeLocalClasses=dict()
         self.retrieve_and_insert(dataset_id=dataset_id, filename=filename, database=database)
 
         def getAnnotationTypes():
@@ -387,19 +394,20 @@ class ExactManager():
             annotypedictret = {annotype['name']:annotype for annotype in annotypes}
             return annotypedictret 
 
-        def get_or_create_annotationtype(name:str, annotationType:AnnotationType) -> id:
+        def get_or_create_annotationtype(labelId:int, annotationType:AnnotationType) -> (int, str):
 
             """
                 Retrieve the correct annotation_type_id from the annotation type dictionary. If non-existent,
                 create it.
             """
-            nonlocal annotypedict, classToSend
+            nonlocal annotypedict, classToSend, mergeLocalClasses
+            name = classes[labelId]
             annotationType_names = { AnnotationType.AREA: 'rect',
                                     AnnotationType.POLYGON: 'poly',
                                     AnnotationType.SPOT: 'circ',
                                     AnnotationType.SPECIAL_SPOT: 'circ',
                                     AnnotationType.CIRCLE: 'circ'}
-            name_alt = name+annotationType_names[annotationType] # alternative name
+            name_alt = name+'_'+annotationType_names[annotationType] # alternative name
             if (name in annotypedict.keys()) and (annotypedict[name]['vector_type'] == annotationtype_to_vectortype[annotationType]):
                 # name and vector type match --> return id of annotation type
                 return annotypedict[name]['id']
@@ -410,10 +418,11 @@ class ExactManager():
                 # nonexistant type --> create
                 self.create_annotationtype(product_id=product_id,name=name, vector_type=annotationtype_to_vectortype[annotationType], color_code=get_hex_color(classToSend), sort_order=classToSend)
                 annotypedict = getAnnotationTypes()
-                return annotypedict[name]['id'] 
+                return annotypedict[name]['id']
             elif (name_alt not in annotypedict.keys()): # non matching type for original name -> create alterntive name
                 self.create_annotationtype(product_id=product_id,name=name_alt, vector_type=annotationtype_to_vectortype[annotationType], color_code=get_hex_color(classToSend), sort_order=classToSend)
                 annotypedict = getAnnotationTypes()
+                mergeLocalClasses[(annotationType,labelId)] = name_alt
                 return annotypedict[name_alt]['id'] 
             else:
                 raise ExactProcessError('Unable to create annotation type for class'+name)
@@ -448,11 +457,9 @@ class ExactManager():
         classes = {y:x for x,y in database.getAllClasses()}
         classes_rev = {x:y for x,y in database.getAllClasses()}
 
-        uidToSend = database.getExactPerson()
+        uidToSend, nameToSend = database.getExactPerson()
 
         
-        # TODO: Write a function to get or create annotation types
-
         for cntr,annokey in enumerate(database.annotations.keys()):
             self.progress(0.5+cntr*0.5/(len(uuids)+0.0001))
             dbanno = database.annotations[annokey]
@@ -479,13 +486,13 @@ class ExactManager():
                         classToSend=lts # used in embedded function
                         if (idts is not None) and (idts>0):
                             print('Remote ID known:',idts,'=> Forcing update, remote is:', lastedit.timestamp(), 'local is:',dbanno.lastModified)
-                            self.update_annotation(image_id=image_id,annotation_id=idts, annotationtype_id=get_or_create_annotationtype(classes[lts],dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), deleted=dbanno.deleted, guid=dbanno.guid)                 
+                            self.update_annotation(image_id=image_id,annotation_id=idts, annotationtype_id=get_or_create_annotationtype(lts,dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), deleted=dbanno.deleted, guid=dbanno.guid)                 
                         else:
                             # case: exact_id is unknown
                             # can have the following causes:
                             # 1. label is new for annotation --> in this case, it has to be created
                             # 2. exact_id is missing in database --> avoided by first receiving from server
-                            det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(classes[lts], dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                            det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(lts, dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
                             # add new exact_id to DB field
                             label = dbanno.labels[i]
                             database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
@@ -496,7 +503,7 @@ class ExactManager():
                     pass
             else:
                 for i, classToSend in zip(labelToSendIdx,labelToSend):
-                    det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(classes[classToSend], dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                    det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(classToSend, dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
                     # add new exact_id to DB field
                     label = dbanno.labels[i]
                     # for local update, do not set Annotation.lastModified
@@ -504,6 +511,24 @@ class ExactManager():
                     database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
                     database.addTriggers()
                     label.exact_id = det['annotations']['id']
+
+        # finally, lets find out if we need to make modifications to the 
+        # local database due to annotation type conversions
+        if len(list(mergeLocalClasses.keys()))>0:
+            self.log(1,'Need to make adjustments to local DB due to annotation type conversion..')
+            for key in mergeLocalClasses:
+                (annoType, oldId) = key
+                newname = mergeLocalClasses[key]
+                if (database.findClassidOfClass(newname) is not None):
+                    # we need to add the new class
+                    newId = database.insertClass(newname)
+
+                    database.changeAllAnnotationLabelsOfType(oldId, annoType, newId)
+                    # reload slide
+                    database.loadIntoMemory(database.annotationsSlide)
+
+
+        self.progress(1)
 
 
 

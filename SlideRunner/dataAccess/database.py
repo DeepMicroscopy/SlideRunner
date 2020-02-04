@@ -119,8 +119,9 @@ class Database(object):
         self.annotations = dict()       
         self.doCommit = True
         self.annotationsSlide = None
+        self.exactUser = 0
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
-        self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('EXACTUSER','INTEGER',defaultValue=0)).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT')).add(DatabaseField('uuid','TEXT'))
+        self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('EXACTUSER','INTEGER',defaultValue=0)).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT')).add(DatabaseField('uuid','TEXT')).add(DatabaseField('exactImageID', 'TEXT'))
         self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time())))
         self.databaseStructure['Persons'] = DatabaseTable('Persons').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('isExactUser','INTEGER', defaultValue=0))
         self.databaseStructure['Annotations_label'] = DatabaseTable('Annotations_label').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('exact_id','INTEGER')).add(DatabaseField('person','INTEGER',defaultValue=0)).add(DatabaseField('class','INTEGER')).add(DatabaseField('annoId','INTEGER'))
@@ -149,12 +150,21 @@ class Database(object):
         ids = self.maxCoords[potentiallyVisible,2]
         return dict(filter(lambda i:i[0] in ids, self.annotations.items()))
 
+
     def listOfSlides(self):
         self.execute('SELECT uid,filename from Slides')
         return self.fetchall()
 
-    def getExactPerson(self):
-        return self.exactUser if self.exactUser>0 else self.execute('SELECT uid from Persons where isExactUser=1 LIMIT 1').fetchone()[0]
+    def listOfSlidesWithExact(self):
+        self.execute('SELECT uid,filename,exactImageID from Slides')
+        return self.fetchall()
+
+    def getExactPerson(self) -> (int,str):
+        ret = self.execute('SELECT uid,name from Persons where isExactUser=1 LIMIT 1').fetchone()
+        if ret is None:
+            return 0, ''
+        else:
+            return ret[0],ret[1]
 
     def setExactPerson(self, uid):
         self.execute(f'UPDATE Persons set isExactUser=0 where uid != {uid}')
@@ -187,6 +197,9 @@ class Database(object):
                     if (annoType == anno.annotationType) or (annoType is None):
                         return anno
         return None
+
+    def getExactIDforSlide(self, slide):
+        return self.execute(f'SELECT exactImageID from Slides where uid=={slide}').fetchone()[0]
 
     def loadIntoMemory(self, slideId, transformer=None):
         self.annotations = dict()
@@ -568,9 +581,15 @@ class Database(object):
         query = 'SELECT last_insert_rowid()'
         return self.execute(query).fetchone()[0]
 
+    def changeAllAnnotationLabelsOfType(self, classId:int, annotationType:int, newClassId:int):
+        self.execute(f'UPDATE Annotations set agreedClass={newClassId} where uid in (SELECT uid from Annotation where type=={annotationType}) and agreedClass=={classId}')
+        self.execute(f'UPDATE Annotations_label set class={newClassId} where uid in (SELECT uid from Annotation where type=={annotationType}) and class=={classId}')
+
     def insertClass(self, name):
         self.execute('INSERT INTO Classes (name) VALUES ("%s")' % (name))
         self.commit()
+        query = 'SELECT last_insert_rowid()'
+        return self.execute(query).fetchone()[0]
     
     def setAgreedClass(self, classId, annoIdx):
         self.annotations[annoIdx].agreedClass = classId
@@ -804,6 +823,8 @@ class Database(object):
                 directory = ''
             self.execute('INSERT INTO Slides (filename,directory,uuid) VALUES ("%s","%s", "%s")' % (slidename,directory,uuid))
             self.commit()
+            query = 'SELECT last_insert_rowid()'
+            return self.execute(query).fetchone()[0]
 
 
     def fetchall(self):
@@ -984,7 +1005,8 @@ class Database(object):
             '`width`	INTEGER,'
             '`height`	INTEGER,'
             '`directory` TEXT,'
-            '`uuid` TEXT' 
+            '`uuid` TEXT,'
+            '`exactImageID` TEXT'
             ');')
 
         tempdb.commit()

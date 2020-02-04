@@ -35,18 +35,19 @@ class DatabaseManager(QDialog):
     def updateTable(self):
         DB = self.DB
         fileToAnnos = {slide:count for slide,count in DB.execute('SELECT slide, COUNT(*) FROM Annotations group by slide').fetchall()}
-        self.tableWidget.setRowCount(len(DB.listOfSlides()))
-        self.los = DB.listOfSlides()
-        for row,(idx,filename) in enumerate(self.los):
+        self.tableWidget.setRowCount(len(DB.listOfSlidesWithExact()))
+        self.los = DB.listOfSlidesWithExact()
+        for row,(idx,filename,exactid) in enumerate(self.los):
             self.tableWidget.setItem(row,0, QTableWidgetItem(str(idx)))
             self.tableWidget.setItem(row,1, QTableWidgetItem(str(filename)))
             self.tableWidget.setItem(row,2, QTableWidgetItem(str(fileToAnnos[int(idx)]) if (int(idx)) in fileToAnnos else '0'))
+            self.tableWidget.setItem(row,3, QTableWidgetItem(str(exactid)))
 
     def createTable(self):
        # Create table
         self.tableWidget = QTableWidget()
-        self.tableWidget.setColumnCount(3)
-        self.tableWidget.setHorizontalHeaderLabels(['ID','Filename','Annotations'])
+        self.tableWidget.setColumnCount(4)
+        self.tableWidget.setHorizontalHeaderLabels(['ID','Filename','Annotations', 'EXACT Image ID'])
         self.updateTable()
         self.tableWidget.move(0,0)
         self.tableWidget.resizeColumnsToContents()

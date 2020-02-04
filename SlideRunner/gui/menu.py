@@ -33,9 +33,6 @@ def defineMenu(self, MainWindow, pluginList):
         self.menuAnnotation = QtWidgets.QMenu(self.menubar)
         self.menuAnnotation.setObjectName("menuAnnotation")
 
-#        self.exactMenu = QtWidgets.QMenu('EXACT', self.menubar)
-#        self.exactMenuUploadImage = self.exactMenu.addAction('Upload slide')
-#        self.exactMenuUploadAnnos = self.exactMenu.addAction('Upload annotations')
 
         zoomMenu = QtWidgets.QMenu(self.menubar)
         zoomMenu.setObjectName('zoomMenu')
@@ -103,6 +100,14 @@ def defineMenu(self, MainWindow, pluginList):
         self.menuFile.addAction(self.action_Close)
         self.menuFile.addAction(self.action_setMPP)
         self.menuFile.addSeparator()
+        self.exactMenuLinkImage = self.menuFile.addAction('Link slide to EXACT image')
+        self.exactMenuSyncImage = self.menuFile.addAction('Sync slide')
+        self.exactMenuImport = self.menuFile.addAction('Import slide from EXACT')
+        self.exactMenuExportImage = self.menuFile.addAction('Export slide to EXACT')
+        self.exactMenuSyncExpert = self.menuDatabase.addAction('Set expert used for EXACT sync')
+
+        self.menuFile.addSeparator()
+
         self.menuFile.addAction(self.action_Quit)
         self.menuHelp.addAction(self.actionAbout)
         self.menuHelp.addAction(self.actionSettings)
@@ -142,7 +147,9 @@ def defineMenu(self, MainWindow, pluginList):
         self.saveto.triggered.connect(MainWindow.saveDBto)
         self.action_setMPP.triggered.connect(MainWindow.setMPP)
         self.actionManageDatabase.triggered.connect(MainWindow.manageDB)
-
+        self.exactMenuLinkImage.triggered.connect(MainWindow.linkSlideToExact)
+        self.exactMenuImport.triggered.connect(MainWindow.downloadSlideFromExact)
+        self.exactMenuSyncImage.triggered.connect(MainWindow.syncWithExact)
         self.actionSettings.triggered.connect(MainWindow.settingsDialog)
 
 
