@@ -81,7 +81,7 @@ def defineMenu(self, MainWindow, pluginList):
         self.action_setMPP = QtWidgets.QAction(MainWindow)
         self.actionSettings.setObjectName("actionSettings")
         self.actionManageDatabase = QtWidgets.QAction(MainWindow)
-        self.actionManageDatabase.setText('Overview')
+        self.actionManageDatabase.setText('Over&view')
         self.action_CloseDB = QtWidgets.QAction('Close')
         self.action_CloseDB.setEnabled(False)
         self.menuDatabase.addAction(self.actionCreate_new)
@@ -152,7 +152,7 @@ def defineMenu(self, MainWindow, pluginList):
         self.exactMenuSyncImage.triggered.connect(MainWindow.syncWithExact)
         self.actionSettings.triggered.connect(MainWindow.settingsDialog)
         self.exactMenuExportImage.triggered.connect(MainWindow.exportToExact)
-
+        self.exactMenuSyncExpert.triggered.connect(MainWindow.setExactUser)
 
 def definePluginMenu(self,pluginList):
         pluginMenu = QtWidgets.QMenu(self.ui.menubar)

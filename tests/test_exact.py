@@ -158,10 +158,10 @@ def test_pushannos():
             imageid=imset['id']
 
 
-#    DB = Database().create(':memory:')
-    DB = Database().create('test.sqlite')
+    DB = Database().create(':memory:')
+#    DB = Database().create('test.sqlite')
     # Add slide to database
-    DB.insertNewSlide(imagename,'')
+    slideuid = DB.insertNewSlide(imagename,'')
     DB.insertClass('BB')
     DB.insertAnnotator('sliderunner_unittest')
     DB.insertAnnotator('otherexpert') # we will only send annotations of the marked expert
@@ -188,7 +188,7 @@ def test_pushannos():
     # All annotations have been removed
     assert(len(exm.retrieve_annotations(imageid))==0)
 
-    exm.sync(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
+    exm.sync(imageid, imageset_id=imageset, product_id=product_id, slideuid=slideuid, database=DB)
 
     # Only 2 annotations have been inserted
     assert(len(exm.retrieve_annotations(imageid))==2)
@@ -201,7 +201,7 @@ def test_pushannos():
     print('--- resync ---')
 
     # Sync again
-    exm.sync(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
+    exm.sync(imageid, imageset_id=imageset, product_id=product_id, slideuid=slideuid, database=DB)
 
     # No change
     assert(len(exm.retrieve_annotations(imageid))==2)
@@ -218,7 +218,7 @@ def test_pushannos():
     DB.setAnnotationLabel(classId=1, person=1, annoIdx=1, entryId=DB.annotations[1].labels[0].uid, exact_id=DB.annotations[1].labels[0].exact_id)
 
     # Sync again
-    exm.sync(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
+    exm.sync(imageid, imageset_id=imageset, product_id=product_id, slideuid=slideuid, database=DB)
 
     # check if remote has been updated
     annos = exm.retrieve_annotations(imageid)
@@ -231,7 +231,7 @@ def test_pushannos():
     newguid = str(uuid.uuid4())
     created = exm.create_annotation(image_id=imageid, annotationtype_id=annotype_id, vector=[[90,80],[20,30]], last_modified=time.time(), guid=newguid )
 
-    exm.sync(imageid, imageset_id=imageset, product_id=product_id, filename=imagename, database=DB)
+    exm.sync(imageid, imageset_id=imageset, product_id=product_id, slideuid=slideuid, database=DB)
     found=False
     for annoI in DB.annotations:
         anno=DB.annotations[annoI]

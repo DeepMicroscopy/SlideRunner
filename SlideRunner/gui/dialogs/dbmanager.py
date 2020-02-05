@@ -4,6 +4,7 @@ from functools import partial
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSlot
 import sys
+import os
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QAction, QTableWidget,QTableWidgetItem,QVBoxLayout
 from PyQt5.QtGui import QIcon
 
@@ -17,6 +18,7 @@ class DatabaseManager(QDialog):
         self.width = 600
         self.height = 500
         self.DB = DB
+        self.loadSlide = ''
         self.setModal(True)
         self.initUI()
         
@@ -37,7 +39,7 @@ class DatabaseManager(QDialog):
         fileToAnnos = {slide:count for slide,count in DB.execute('SELECT slide, COUNT(*) FROM Annotations group by slide').fetchall()}
         self.tableWidget.setRowCount(len(DB.listOfSlidesWithExact()))
         self.los = DB.listOfSlidesWithExact()
-        for row,(idx,filename,exactid) in enumerate(self.los):
+        for row,(idx,filename,exactid,directory) in enumerate(self.los):
             self.tableWidget.setItem(row,0, QTableWidgetItem(str(idx)))
             self.tableWidget.setItem(row,1, QTableWidgetItem(str(filename)))
             self.tableWidget.setItem(row,2, QTableWidgetItem(str(fileToAnnos[int(idx)]) if (int(idx)) in fileToAnnos else '0'))
@@ -53,7 +55,24 @@ class DatabaseManager(QDialog):
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.viewport().installEventFilter(self)
         
-    
+    def loadFile(self, uid):
+        
+        slidepath=(uid[-1]+os.sep+uid[1]) if os.path.exists((uid[-1]+os.sep+uid[1])) else uid[1]
+
+        if (os.path.exists(slidepath)):
+                self.loadSlide = slidepath
+                self.close()
+        else:
+            QtWidgets.QMessageBox.information(self,'Not found',f'The file {slidepath} could not be found.')
+#        reply = QtWidgets.QMessageBox.question(self, 'Question',
+#                                        'Do you really want to delete the file and all annotations from the database?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+#        if reply == QtWidgets.QMessageBox.No:
+#            return
+#        self.DB.removeFileFromDatabase(uid[0])
+#        self.updateTable()
+#        self.show()
+
     def removeFile(self, uid):
         reply = QtWidgets.QMessageBox.question(self, 'Question',
                                         'Do you really want to delete the file and all annotations from the database?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
@@ -71,6 +90,7 @@ class DatabaseManager(QDialog):
             item = self.tableWidget.itemAt(event.pos())
             if item is not None:
                 menu = QMenu(self)
+                menu.addAction('Open '+item.text(), partial(self.loadFile, self.los[item.row()]))         #(QAction('test'))
                 menu.addAction('Remove '+item.text(), partial(self.removeFile, self.los[item.row()]))         #(QAction('test'))
                 menu.exec_(event.globalPos())
         return super(DatabaseManager, self).eventFilter(source, event)

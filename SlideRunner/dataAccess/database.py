@@ -176,7 +176,7 @@ class Database(object):
         return self.fetchall()
 
     def listOfSlidesWithExact(self):
-        self.execute('SELECT uid,filename,exactImageID from Slides')
+        self.execute('SELECT uid,filename,exactImageID,directory from Slides')
         return self.fetchall()
 
     def getExactPerson(self) -> (int,str):
@@ -622,6 +622,12 @@ class Database(object):
         print('Setting dimensions of slide ',slideuid,'to',dimensions)
         self.execute('UPDATE Slides set width=%d, height=%d WHERE uid=%d' % (dimensions[0],dimensions[1],slideuid))
         self.db.commit()
+
+    def slideFilenameForID(self, slideuid):
+        try:
+            return self.execute(f'SELECT filename FROM Slides where uid=={slideuid}').fetchone()[0]
+        except:
+            return ''
 
     def findSlideWithFilename(self,slidename,slidepath, uuid:str=None):
         if (len(slidepath.split(os.sep))>1):

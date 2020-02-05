@@ -44,6 +44,7 @@ def get_filename_from_cd(cd):
         return None
     return fname[0]
 
+
 class ExactImageList():
     def __init__(self, imagelist:list):
         self._list = imagelist
@@ -180,7 +181,7 @@ class ExactManager():
         return ExactImageList([[int(x.split('?')[0].split('/')[-2]),x.split('?')[1]] for x in il if '?' in x])
 
 
-    def retrieve_and_insert(self, dataset_id:int, filename:str, database:Database, **kwargs ):
+    def retrieve_and_insert(self, dataset_id:int, slideuid:int, database:Database, **kwargs ):
 
         def createDatabaseObject():
             if (vector_type == 3): # line
@@ -207,10 +208,9 @@ class ExactManager():
             return annoId
         self.progress(0)
         annos = np.array(self.retrieve_annotations(dataset_id))
+        self.log(0, f'Found {len(annos)} annotations for dataset {dataset_id}')
 
         createClasses = True if 'createClasses' not in kwargs else kwargs['createClasses']
-        
-        slideuid = database.findSlideWithFilename(filename,slidepath='')
         
         if (slideuid is None):
             raise ExactProcessError('Slide not in database. Please add it first.')
@@ -233,7 +233,7 @@ class ExactManager():
         # TODO: resolve conflict if one guid has multiple shapes
 
         for cntr, uuid in enumerate(uuids):
-            self.progress(cntr*0.5/(len(uuids)+0.001))
+            self.progress(float(cntr)*0.5/(len(uuids)+0.001))
             le_array = [datetime.datetime.strptime(sanno['last_edit_time'], "%Y-%m-%dT%H:%M:%S.%f") for sanno in annodict[uuid]]
             lastedit = np.max(le_array) # maximum last_edit time is most recent for uuid
 
@@ -288,9 +288,9 @@ class ExactManager():
                         
                     elif abs(lastedit.timestamp()-database.annotations[database.guids[uuid]].lastModified)<EPS_TIME_CONVERSION:
                         # equal time stamp --> maybe further annotation with same guid, let's check.
-                        print('Time stamps difference: ', lastedit.timestamp()-database.annotations[database.guids[uuid]].lastModified)
-                        print('Last edit (online): ',lastedit.timestamp())
-                        print('Last modified (DB): ',database.annotations[database.guids[uuid]].lastModified)
+#                        print('Time stamps difference: ', lastedit.timestamp()-database.annotations[database.guids[uuid]].lastModified)
+#                        print('Last edit (online): ',lastedit.timestamp())
+#                        print('Last modified (DB): ',database.annotations[database.guids[uuid]].lastModified)
                         labels_exactids = [lab.exact_id for lab in database.annotations[database.guids[uuid]].labels]
                         if anno['id'] not in labels_exactids: 
                             # need to create in local DB
@@ -370,7 +370,7 @@ class ExactManager():
                               default_height:int=50, sort_order:int=0
                               ):
         data = {'product_id': product_id,
-                'name': name,
+                'name': name[0:20],
                 'color_code': color_code,
                 'sort_order':sort_order,
                 'vector_type': vector_type,
@@ -388,11 +388,11 @@ class ExactManager():
             raise ExactProcessError('Unable to create annotation')
 
 
-    def sync(self, dataset_id:int,imageset_id:int, product_id:int, filename:str, database:Database, image_id:str=None, **kwargs ):
+    def sync(self, dataset_id:int,imageset_id:int, product_id:int, slideuid:int, database:Database, image_id:str=None, **kwargs ):
 
         annotypedict = dict()
         mergeLocalClasses=dict()
-        self.retrieve_and_insert(dataset_id=dataset_id, filename=filename, database=database)
+        self.retrieve_and_insert(dataset_id=dataset_id, slideuid=slideuid, database=database)
 
         def getAnnotationTypes():
             annotypes = self.retrieve_annotationtypes(imageset_id)
@@ -407,7 +407,7 @@ class ExactManager():
                 create it.
             """
             nonlocal annotypedict, classToSend, mergeLocalClasses
-            name = classes[labelId]
+            name = classes[labelId][0:20]
             annotationType_names = { AnnotationType.AREA: 'rect',
                                     AnnotationType.POLYGON: 'poly',
                                     AnnotationType.SPOT: 'circ',
@@ -433,6 +433,8 @@ class ExactManager():
             else:
                 raise ExactProcessError('Unable to create annotation type for class'+name)
 
+        filename = database.slideFilenameForID(slideuid)
+
         imageset_details = self.retrieve_imageset(imageset_id)
         for imset in imageset_details['images']:
             if (imset['name']==filename):
@@ -451,13 +453,6 @@ class ExactManager():
 
         annodict = {uuid:annos[np.where(uuids==uuid)] for uuid in uuids}
 
-        # loop through annotations
-        slideuid = database.findSlideWithFilename(filename,slidepath='')
-        
-        if (slideuid is None):
-            raise ExactProcessError('Slide not in database. Please add it first.')
-
-
         database.loadIntoMemory(slideuid)
 
         classes = {y:x for x,y,col in database.getAllClasses()}
@@ -466,16 +461,17 @@ class ExactManager():
 
         uidToSend, nameToSend = database.getExactPerson()
 
+        self.log(0,f'Checking all {len(database.annotations.keys())} entries of DB slide {slideuid}')
         
         for cntr,annokey in enumerate(database.annotations.keys()):
-            self.progress(0.5+cntr*0.5/(len(uuids)+0.0001))
+            self.progress(0.5+(float(cntr)*0.5/(len(database.annotations.keys())+0.0001)))
             dbanno = database.annotations[annokey]
             # look through annotations
             labelToSend = [lab.classId for lab in dbanno.labels if lab.annnotatorId==uidToSend]
             labelToSendIdx = [i for i,lab in enumerate(dbanno.labels) if lab.annnotatorId==uidToSend]
             if len(labelToSend)==0:
                 # not from expert marked as exact user --> ignore
-                break
+                continue
             if (dbanno.guid in annodict.keys()):
                 le_array = [datetime.datetime.strptime(_anno['last_edit_time'], "%Y-%m-%dT%H:%M:%S.%f") for _anno in annodict[dbanno.guid]]
                 lastedit = np.max(le_array) # maximum last_edit time is most recent for uuid

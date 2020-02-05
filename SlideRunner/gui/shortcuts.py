@@ -66,6 +66,8 @@ def defineMenuShortcuts(self):
     self.ui.actionOpen_custom.triggered.connect(self.openCustomDB)
     self.ui.actionAdd_annotator.triggered.connect(self.addAnnotator)
     self.ui.actionAdd_cell_class.triggered.connect(self.addCellClass)
+    self.ui.actionManageDatabase.setShortcut("Ctrl+V")
+    self.ui.exactMenuSyncImage.setShortcut("Ctrl+Y")
     self.ui.action_Quit.setShortcut('Ctrl+Q')
     self.ui.action_Quit.triggered.connect(self.close)
     self.menuItemAnnotateOutline.setShortcut('P')

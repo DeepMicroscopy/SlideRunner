@@ -120,6 +120,8 @@ class PluginStatusReceiver(threading.Thread):
                 self.selfObj.updatePluginLabels.emit()
             elif (msgId == SlideRunnerPlugin.StatusInformation.REFRESH_VIEW):
                 self.selfObj.refreshReceived.emit()
+            elif (msgId == SlideRunnerPlugin.StatusInformation.REFRESH_DATABASE):
+                self.selfObj.refreshDatabase.emit()
 
 
 class SlideRunnerUI(QMainWindow):
@@ -135,6 +137,7 @@ class SlideRunnerUI(QMainWindow):
     updatePluginConfig = pyqtSignal(SlideRunnerPlugin.PluginConfigUpdate)
     updatePluginLabels = pyqtSignal()
     refreshReceived = pyqtSignal()
+    refreshDatabase = pyqtSignal()
     pluginPopupMessageReceived = pyqtSignal(str)
     annotator = bool # ID of curent annotator
     db = Database()
@@ -214,6 +217,7 @@ class SlideRunnerUI(QMainWindow):
         self.showImage3Request.connect(self.showImage_part3)
         self.annotationReceived.connect(self.receiveAnno)
         self.refreshReceived.connect(self.receiveRefresh)
+        self.refreshDatabase.connect(self.reopenDatabase)
         self.updatePluginConfig.connect(self.updatePluginConfiguration)
         self.updatePluginLabels.connect(self.showDatabaseUIelements)
         self.updatedCacheAvailable.connect(self.updateCache)
@@ -341,6 +345,11 @@ class SlideRunnerUI(QMainWindow):
 
     def receiveRefresh(self):
         self.showImage()
+
+    def reopenDatabase(self):
+        self.db.loadIntoMemory(self.slideUID)
+        self.showDatabaseUIelements()
+        self.showDBstatistics()
 
     def receiveAnno(self, anno):
         self.pluginAnnos = anno
@@ -1908,7 +1917,20 @@ class SlideRunnerUI(QMainWindow):
         self.ui.annotatorComboBox.setEnabled(False)
         self.ui.inspectorTableView.setVisible(False)
         self.ui.categoryView.setVisible(False)
-    
+
+    def setExactUser(self):
+        if (self.db.isOpen() == False):
+            self.popupmessage('Please open a local database first.')
+            return
+        exactp=self.db.getExactPerson()[0]
+        allP = self.db.getAllPersons()
+        plist = [f'{uid}:{name}' for name, uid in allP]
+        pitem, ok = QInputDialog.getItem(self, "Select local EXACT expert", "All experts:", plist, 0, False)
+        if ok:
+            uid = int(pitem.split(':')[0])
+            self.db.setExactPerson(uid)
+
+
     def exportToExact(self):
         if (self.db.isOpen() == False):
             self.popupmessage('Please open a local database first.')
@@ -1931,7 +1953,7 @@ class SlideRunnerUI(QMainWindow):
             exm = ExactManager(self.settings.value('exactUsername', 'Demo'), 
                                 self.settings.value('exactPassword', 'demodemo'),
                                 self.settings.value('exactHostname', 'https://exact.cs.fau.de'),
-                                statusqueue=self.progressBarQueue)
+                                statusqueue=self.progressBarQueue, loglevel=0)
             imagesets = exm.retrieve_imagesets()
             items = ['%d: ' % iset['id']+iset['name'] for iset in imagesets]
             item, ok = QInputDialog.getItem(self, "Select image set", "Image sets", items, 0, False)
@@ -1949,20 +1971,47 @@ class SlideRunnerUI(QMainWindow):
             imageset_id = int(item.split(':')[0])
             product_id = int(pitem.split(':')[0])
 
-            obj = exm.upload_image_to_imageset(imageset_id=imageset_id, filename=self.slidepathname)
-
-            image_id = obj['files'][0]['id']
-            exact_id = f'{image_id}/{product_id}/{imageset_id}'
-            self.db.execute(f'UPDATE Slides set exactImageID="{exact_id}" where uid=={self.slideUID}')
-            exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, filename=self.slidename, database=self.db)
-            self.popupmessage('Slide exported successfully.')
-                        
+            from _thread import start_new_thread
+            start_new_thread(self.threadedExportAndSync, (exm,imageset_id,product_id))          
 
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
                                           QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             raise(e)
             return
+    def threadedExportAndSync(self, exm, imageset_id, product_id, **kwargs):
+        try:
+            newDB = Database().open(self.db.dbfilename)
+            newDB.loadIntoMemory(self.db.annotationsSlide)
+            obj = exm.upload_image_to_imageset(imageset_id=imageset_id, filename=self.slidepathname)
+
+            image_id = obj['files'][0]['id']
+            exact_id = f'{image_id}/{product_id}/{imageset_id}'
+            newDB.execute(f'UPDATE Slides set exactImageID="{exact_id}" where uid=={self.slideUID}')
+            exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=self.slideUID, database=newDB)
+            self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.POPUP_MESSAGEBOX,'Slide exported successfully.'))
+            self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.REFRESH_VIEW,None))
+            self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.REFRESH_DATABASE,None))
+        except Exception as e:
+            self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.POPUP_MESSAGEBOX,'Unable to proceed: '+str(e)))
+#            raise(e)
+            return
+        
+    def threadedSync(self, exm, image_id, imageset_id, product_id, **kwargs):
+        try:
+            newDB = Database().open(self.db.dbfilename)
+            newDB.loadIntoMemory(self.db.annotationsSlide)
+
+            exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=self.slideUID, database=newDB)
+            self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.REFRESH_VIEW,None))
+            self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.POPUP_MESSAGEBOX,'Sync completed.'))
+            self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.REFRESH_DATABASE,None))
+
+        except Exception as e:
+            self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.POPUP_MESSAGEBOX,'Unable to proceed: '+str(e)))
+#            raise(e)
+            return
+        
 
     def syncWithExact(self):
         if (self.db.isOpen() == False):
@@ -1979,15 +2028,17 @@ class SlideRunnerUI(QMainWindow):
              exm = ExactManager(self.settings.value('exactUsername', 'Demo'), 
                                 self.settings.value('exactPassword', 'demodemo'),
                                 self.settings.value('exactHostname', 'https://exact.cs.fau.de'),
-                                statusqueue=self.progressBarQueue)
+                                statusqueue=self.progressBarQueue, loglevel=0)
              (image_id, product_id, imageset_id) = [int(x) for x in exact_id.split('/')]
-             exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, filename=self.slidename, database=self.db)
+             from _thread import start_new_thread
+             start_new_thread(self.threadedSync, (exm,image_id,imageset_id,product_id))          
+#             exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=self.slideUID, database=self.db)
 
-             self.showDatabaseUIelements()
-             self.showDBstatistics()
-             self.db.loadIntoMemory(self.slideUID)
-             self.showImage()     
-             self.popupmessage('Sync completed.')
+#             self.showDatabaseUIelements()
+#             self.showDBstatistics()
+#             self.db.loadIntoMemory(self.slideUID)
+#             self.showImage()     
+#             self.popupmessage('Sync completed.')
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
                                           QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
@@ -2045,10 +2096,13 @@ class SlideRunnerUI(QMainWindow):
 
         DBM = DatabaseManager(self.db)
         DBM.exec_()
-        self.findSlideUID()
-        # reload current slide annotations (in case they were deleted)
-        if (self.slideUID is not None):
-            self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
+        if (len(DBM.loadSlide)>0):
+            self.openSlide(DBM.loadSlide)
+        else:
+            self.findSlideUID()
+            # reload current slide annotations (in case they were deleted)
+            if (self.slideUID is not None):
+                self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
         
 
     def showDBstatistics(self):
