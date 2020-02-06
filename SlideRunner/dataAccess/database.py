@@ -210,7 +210,7 @@ class Database(object):
             database = self.VA            
         for idx,DBanno in database.items():
             if (vp.activeClasses[DBanno.agreedLabel()]):
-                if (DBanno.intersectingWithAnnotation(anno )):
+                if (DBanno.intersectingWithAnnotation(anno ))  and (DBanno.clickable):
                     if (annoType == DBanno.annotationType) or (annoType is None):
                         return DBanno
         return None
