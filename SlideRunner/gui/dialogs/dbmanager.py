@@ -80,6 +80,18 @@ class DatabaseManager(QDialog):
         if reply == QtWidgets.QMessageBox.No:
             return
         self.DB.removeFileFromDatabase(uid[0])
+        self.DB.commit()
+        self.updateTable()
+        self.show()
+
+    def removeExactLink(self, uid):
+        reply = QtWidgets.QMessageBox.question(self, 'Question',
+                                        'Do you really want to remove the link to EXACT for this slide?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+        if reply == QtWidgets.QMessageBox.No:
+            return
+        self.DB.execute(f'UPDATE Slides SET exactImageID=Null where uid=={uid[0]}')
+        self.DB.commit()
         self.updateTable()
         self.show()
 
@@ -90,8 +102,9 @@ class DatabaseManager(QDialog):
             item = self.tableWidget.itemAt(event.pos())
             if item is not None:
                 menu = QMenu(self)
-                menu.addAction('Open '+item.text(), partial(self.loadFile, self.los[item.row()]))         #(QAction('test'))
-                menu.addAction('Remove '+item.text(), partial(self.removeFile, self.los[item.row()]))         #(QAction('test'))
+                menu.addAction('Open '+self.los[item.row()][1], partial(self.loadFile, self.los[item.row()]))         #(QAction('test'))
+                menu.addAction('Remove '+self.los[item.row()][1], partial(self.removeFile, self.los[item.row()]))         #(QAction('test'))
+                menu.addAction('Remove EXACT link for '+self.los[item.row()][1], partial(self.removeExactLink, self.los[item.row()]))         #(QAction('test'))
                 menu.exec_(event.globalPos())
         return super(DatabaseManager, self).eventFilter(source, event)
 

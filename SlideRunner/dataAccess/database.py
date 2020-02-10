@@ -175,7 +175,7 @@ class Database(object):
         self.execute('SELECT uid,filename from Slides')
         return self.fetchall()
 
-    def listOfSlidesWithExact(self):
+    def listOfSlidesWithExact(self) -> list:
         self.execute('SELECT uid,filename,exactImageID,directory from Slides')
         return self.fetchall()
 
@@ -215,6 +215,10 @@ class Database(object):
                         return DBanno
         return None
 
+    def updateSlideFolder(self, slideUid:int, slidePath:str):
+        directory = os.path.dirname(os.path.realpath(slidePath))
+        self.execute(f'UPDATE Slides set directory="{directory}" where uid={slideUid}')
+
     def classPosition(self, classId):
         for pos, (name,uid,color) in enumerate(self._allclasses):
             if (uid==classId):
@@ -234,7 +238,7 @@ class Database(object):
         try:
             return self.execute(f'SELECT exactImageID from Slides where uid=={slide}').fetchone()[0]
         except:
-            return 0
+            return ''
 
     def loadIntoMemory(self, slideId, transformer=None):
         self.annotations = dict()
@@ -345,6 +349,7 @@ class Database(object):
                 self.dbcur.execute(self.databaseStructure['Log'].getCreateStatement())
                 self.db.commit()
             
+            self.dbOpened = True
             # Migrating vom V0 to V1 needs proper filling of GUIDs
             DBversion = self.dbcur.execute('PRAGMA user_version').fetchone()
             if (DBversion[0]==0):
@@ -366,6 +371,22 @@ class Database(object):
 
             if (DBversion[0]==1):
                 self.dbcur.execute('UPDATE Classes set color=randcolor() where color is NULL')
+
+                # changed Slides.directory to absolute name
+                allslides = self.dbcur.execute('SELECT uid, filename, directory FROM Slides').fetchall()                
+                for (uid, filename, pathname) in allslides:
+                    candidates = [filename, 
+                                  os.path.dirname(dbfilename)+os.sep+filename,
+                                  pathname+os.sep+filename,
+                                  os.path.dirname(dbfilename)+os.sep+pathname+os.sep+filename]
+                    found=False
+                    for cand in candidates:
+                        if os.path.exists(cand):
+                            fn=filename
+                            found=True
+
+                    if found:
+                        self.updateSlideFolder(uid, fn)
 
                 self.addTriggers()
 
@@ -896,7 +917,7 @@ class Database(object):
 
     def insertNewSlide(self,slidename:str,slidepath:str,uuid:str=""):
             if (len(slidepath.split(os.sep))>1):
-                directory = slidepath.split(os.sep)[-2]
+                directory = os.path.dirname(os.path.realpath(slidepath))
             else:
                 directory = ''
             self.execute('INSERT INTO Slides (filename,directory,uuid) VALUES ("%s","%s", "%s")' % (slidename,directory,uuid))

@@ -77,8 +77,13 @@ class ExactManager():
             self.statusqueue.put((1, logmsg))
 
     def progress(self, value:float):
+        value=value/self.progress_denominator+self.offset
         if (self.statusqueue is not None):
             self.statusqueue.put((0, value*100 if value<1 else -1))
+
+    def set_progress_properties(self, denominator:float, offset:float):
+        self.progress_denominator=float(denominator)
+        self.offset=float(offset)
 
 
 
@@ -87,6 +92,8 @@ class ExactManager():
         self.password = password
         self.serverurl = serverurl if serverurl[-1]=='/' else serverurl+'/'
         self.statusqueue = statusqueue
+        self.progress_denominator = 1
+        self.progress_offset = 0
 
         self.logfile = logfile
         self.loglevel = loglevel
@@ -283,8 +290,9 @@ class ExactManager():
                     if (lastedit.timestamp()-EPS_TIME_CONVERSION>database.annotations[database.guids[uuid]].lastModified):
                         self.log(1,f'Recreating local object with guid {uuid}, remote was more recent')
                         database.removeAnnotation(database.guids[uuid],onlyMarkDeleted=False)
-                        #TODO: recreate
                         createDatabaseObject()
+                        database.setGUID(annoid=annoId, guid=uuid)
+                        database.setLastModified(annoid=annoId, lastModified=lastedit.timestamp())
                         
                     elif abs(lastedit.timestamp()-database.annotations[database.guids[uuid]].lastModified)<EPS_TIME_CONVERSION:
                         # equal time stamp --> maybe further annotation with same guid, let's check.

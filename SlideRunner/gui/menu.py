@@ -95,6 +95,8 @@ def defineMenu(self, MainWindow, pluginList):
         self.menuDatabase.addSeparator()
         self.menuDatabase.addAction(self.actionAdd_annotator)
         self.menuDatabase.addAction(self.actionAdd_cell_class)
+        self.databaseExactMenuExport = self.menuDatabase.addAction('Export all slides to EXACT')
+        self.databaseExactMenuSync = self.menuDatabase.addAction('Sync all slides with EXACT')
         self.menuFile.addAction(self.actionOpen)
         defineOpenRecent(MainWindow)
         self.menuFile.addAction(self.action_Close)
@@ -105,7 +107,7 @@ def defineMenu(self, MainWindow, pluginList):
         self.exactMenuImport = self.menuFile.addAction('Import slide from EXACT')
         self.exactMenuExportImage = self.menuFile.addAction('Export slide to EXACT')
         self.exactMenuSyncExpert = self.menuDatabase.addAction('Set expert used for EXACT sync')
-
+        
         self.menuFile.addSeparator()
 
         self.menuFile.addAction(self.action_Quit)
@@ -149,10 +151,12 @@ def defineMenu(self, MainWindow, pluginList):
         self.actionManageDatabase.triggered.connect(MainWindow.manageDB)
         self.exactMenuLinkImage.triggered.connect(MainWindow.linkSlideToExact)
         self.exactMenuImport.triggered.connect(MainWindow.downloadSlideFromExact)
-        self.exactMenuSyncImage.triggered.connect(MainWindow.syncWithExact)
+        self.exactMenuSyncImage.triggered.connect(partial(MainWindow.syncWithExact, allSlides=False))
         self.actionSettings.triggered.connect(MainWindow.settingsDialog)
-        self.exactMenuExportImage.triggered.connect(MainWindow.exportToExact)
+        self.exactMenuExportImage.triggered.connect(partial(MainWindow.exportToExact, allSlides=False))
         self.exactMenuSyncExpert.triggered.connect(MainWindow.setExactUser)
+        self.databaseExactMenuExport.triggered.connect(partial(MainWindow.exportToExact,  allSlides=True))
+        self.databaseExactMenuSync.triggered.connect(partial(MainWindow.syncWithExact, allSlides=True))
 
 def definePluginMenu(self,pluginList):
         pluginMenu = QtWidgets.QMenu(self.ui.menubar)
