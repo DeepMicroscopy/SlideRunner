@@ -7,6 +7,8 @@ import time
 import datetime
 import re
 import sys
+from functools import partial
+import threading
 import queue
 
 EPS_TIME_CONVERSION = 0.001 # epsilon for time conversion uncertainty
@@ -86,6 +88,14 @@ class ExactManager():
         self.offset=float(offset)
 
 
+    def queueWorker(self):
+        while (True):
+            status, newjob, context = self.jobqueue.get()
+            if (status==-1):
+                print('Stopping worker')
+                break
+            ret = newjob()
+            self.resultQueue.put((ret, context))
 
     def __init__(self, username:str=None, password:str=None, serverurl:str=None, logfile=sys.stdout, loglevel:int=1, statusqueue:queue.Queue=None):
         self.username = username
@@ -94,6 +104,15 @@ class ExactManager():
         self.statusqueue = statusqueue
         self.progress_denominator = 1
         self.progress_offset = 0
+        self.multi_threaded=True
+        self.num_threads=10
+        if (self.multi_threaded):
+            self.jobqueue = queue.Queue()
+            self.resultQueue = queue.Queue()
+            self.workers={}
+            for k in range(self.num_threads):
+                self.workers[k] = threading.Thread(target=self.queueWorker, daemon=True)
+                self.workers[k].start()
 
         self.logfile = logfile
         self.loglevel = loglevel
@@ -104,6 +123,11 @@ class ExactManager():
             raise ExactProcessError('Your computer''s clock is incorrect')
         else:
             self.log(1,f'Time offset to server is: {timeoffset} seconds.')
+    
+
+    def terminate(self):
+        for k in range(self.num_threads):
+            self.jobqueue.put((-1,0,0))
 
     def json_post_request(self,url) -> dict:
         req = requests.post(url, auth = (self.username, self.password))
@@ -468,11 +492,12 @@ class ExactManager():
         classes_rev = {x:y for x,y,col in database.getAllClasses()}
 
         uidToSend, nameToSend = database.getExactPerson()
-
+        pending_requests=0
         self.log(0,f'Checking all {len(database.annotations.keys())} entries of DB slide {slideuid}')
         
         for cntr,annokey in enumerate(database.annotations.keys()):
-            self.progress(0.5+(float(cntr)*0.5/(len(database.annotations.keys())+0.0001)))
+            if not (self.multi_threaded):
+                self.progress(0.5+(float(cntr)*0.5/(len(database.annotations.keys())+0.0001)))
             dbanno = database.annotations[annokey]
             # look through annotations
             labelToSend = [lab.classId for lab in dbanno.labels if lab.annnotatorId==uidToSend]
@@ -503,25 +528,56 @@ class ExactManager():
                             # can have the following causes:
                             # 1. label is new for annotation --> in this case, it has to be created
                             # 2. exact_id is missing in database --> avoided by first receiving from server
-                            det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(lts, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
-                            # add new exact_id to DB field
-                            label = dbanno.labels[i]
-                            database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
-                            label.exact_id = det['annotations']['id']
-                            self.log(1,'Updating local exact_id (previously unknown)')
+                            if (self.multi_threaded):
+                                context = {'labeluid': i, 'annouid': dbanno.uid}
+                                annotationtype = get_or_create_annotationtype(lts, dbanno.annotationType)
+                                self.jobqueue.put((0,partial(self.create_annotation, image_id=image_id, annotationtype_id=annotationtype, deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid),context))
+                                pending_requests+=1
+#                                label = dbanno.labels[i]
+#                                database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
+#                                label.exact_id = det['annotations']['id']
+                            else:
+                                det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(lts, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                                # add new exact_id to DB field
+                                label = dbanno.labels[i]
+                                database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
+                                label.exact_id = det['annotations']['id']
+                                self.log(1,'Updating local exact_id (previously unknown)')
                 else:
                     # Equal time stamps --> ignore
                     pass
             else:
                 for i, classToSend in zip(labelToSendIdx,labelToSend):
-                    det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(classToSend, dbanno.annotationType), deleted=dbanno.deleted, last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
-                    # add new exact_id to DB field
-                    label = dbanno.labels[i]
-                    # for local update, do not set Annotation.lastModified
-                    database.deleteTriggers()
-                    database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
-                    database.addTriggers()
-                    label.exact_id = det['annotations']['id']
+                    if (self.multi_threaded):
+                        context = {'labeluid': i, 'annouid': dbanno.uid}
+                        annotationtype = get_or_create_annotationtype(classToSend, dbanno.annotationType)
+                        self.jobqueue.put((0,partial(self.create_annotation, image_id=image_id, annotationtype_id=get_or_create_annotationtype(classToSend, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid),context))
+                        pending_requests+=1
+                    else:
+                        annotationtype=get_or_create_annotationtype(classToSend, dbanno.annotationType)
+                        det = self.create_annotation(image_id=image_id, annotationtype_id=annotationtype, deleted=dbanno.deleted, last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                        # add new exact_id to DB field
+                        label = dbanno.labels[i]
+                        # for local update, do not set Annotation.lastModified
+                        database.deleteTriggers()
+                        database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
+                        database.addTriggers()
+                        label.exact_id = det['annotations']['id']
+
+        # make updates to local database until final.
+        while (pending_requests>0):
+            self.progress(1.0-(float(pending_requests)*0.5/(len(database.annotations.keys())+0.0001)))
+            res, context = self.resultQueue.get()
+            print('Res:',res)
+            print('Context:',context)
+            dbanno = database.annotations[context['annouid']]
+            pending_requests-=1
+            i = context['labeluid']
+            label = dbanno.labels[i]
+            database.deleteTriggers()
+            database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=res['annotations']['id'])
+            database.addTriggers()
+            label.exact_id = res['annotations']['id']
 
         # finally, lets find out if we need to make modifications to the 
         # local database due to annotation type conversions

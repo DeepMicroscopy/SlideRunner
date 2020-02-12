@@ -1709,7 +1709,8 @@ class SlideRunnerUI(QMainWindow):
         npi[positionLegendY,positionLegendX:positionLegendX+actualLegendWidth,:] = np.clip(npi[positionLegendY,positionLegendX:positionLegendX+actualLegendWidth,:]*0.2,0,255)
         npi[positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:] = np.clip(npi[positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:]*0.2,0,255)
         
-        cv2.putText(npi, '%d microns' % legendMicrons, (positionLegendX, positionLegendY+15), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+        if (legendMicrons>0):
+            cv2.putText(npi, '%d microns' % legendMicrons, (positionLegendX, positionLegendY+15), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
         if (self.overlayExtremes is not None):
             # Add legend for colour code
@@ -2028,6 +2029,7 @@ class SlideRunnerUI(QMainWindow):
                 self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.POPUP_MESSAGEBOX,'Unable to proceed: '+str(e)))
     #            raise(e)
                 return
+        exm.terminate()
         
     def threadedSync(self, exm, allSlides,  **kwargs):
         try:
@@ -2045,6 +2047,8 @@ class SlideRunnerUI(QMainWindow):
             self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.POPUP_MESSAGEBOX,'Unable to proceed: '+str(e)))
 #            raise(e)
             return
+
+        exm.terminate()
         
 
     def syncWithExact(self, allSlides:bool=False):
