@@ -104,6 +104,7 @@ class ExactManager():
         self.statusqueue = statusqueue
         self.progress_denominator = 1
         self.progress_offset = 0
+        self.set_progress_properties(1,0)
         self.multi_threaded=True
         self.num_threads=10
         if (self.multi_threaded):

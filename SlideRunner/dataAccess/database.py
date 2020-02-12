@@ -665,6 +665,8 @@ class Database(object):
                     secondBest=uid
                 elif (slidedir.upper() == directory.upper()):
                     return uid
+                elif (os.path.realpath(slidedir).upper() == directory.upper()):
+                    return uid
                 else:
                     secondBest=uid
         return secondBest
