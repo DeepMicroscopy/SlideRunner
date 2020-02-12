@@ -569,8 +569,6 @@ class ExactManager():
         while (pending_requests>0):
             self.progress(1.0-(float(pending_requests)*0.5/(len(database.annotations.keys())+0.0001)))
             res, context = self.resultQueue.get()
-            print('Res:',res)
-            print('Context:',context)
             dbanno = database.annotations[context['annouid']]
             pending_requests-=1
             i = context['labeluid']

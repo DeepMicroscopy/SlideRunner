@@ -1960,7 +1960,7 @@ class SlideRunnerUI(QMainWindow):
             
                     if (exact_id is not None):
                         reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                                    f'{filename} is already linked with an image on exact. Exporting it will create another copy on the server. Really proceed to export?', QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.Cancel, QtWidgets.QMessageBox.No)
+                                                    f'{filename} is already linked with an image on exact. Exporting it will create another copy on the server. Really proceed to export?', [QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.Cancel], QtWidgets.QMessageBox.No)
 
                         if reply == QtWidgets.QMessageBox.No:
                             continue

@@ -6,48 +6,6 @@ import os
 
 EXACT_UNITTEST_URL = 'https://exact.cs.fau.de/srut/'
 
-# def test_retrieve():
-#     exm = ExactManager('sliderunner_unittest','unittestpw', EXACT_UNITTEST_URL)
-#     allImagesInSet = exm.retrieve_imagelist(59)
-#     print(allImagesInSet.dict())
-
-#     # select first image in imageset
-#     imageid = list(allImagesInSet.dict().keys())[0]
-
-#     # retrieve annotations from first image in imageset
-#     annos = exm.retrieve_annotations(imageid)
-
-#     assert(isinstance(annos,list))
-#     assert(len(annos)>0)
-# #    print(len(annos), annos[0])
-
-#     DB = Database().create(':memory:')
-#     # Add slide to database
-#     DB.insertNewSlide(allImagesInSet.dict()[imageid],'')
-    
-#     exm.retrieve_and_insert(973, filename=allImagesInSet.dict()[imageid], database=DB)
-#     oldCount = DB.execute('SELECT COUNT(*) FROM Annotations where slide==1').fetchone()[0]
-
-#     # try once again - number of objets in DB needs to be constant
-#     exm.retrieve_and_insert(973, filename=allImagesInSet.dict()[imageid], database=DB)
-#     newCount = DB.execute('SELECT COUNT(*) FROM Annotations where slide==1').fetchone()[0]
-#     print('Newcount:',newCount,oldCount)
-#     assert(oldCount==newCount)
-
-#     # fake new GUID for an entry
-#     DB.execute('UPDATE Annotations set guid="" where uid==1')
-
-#     exm.retrieve_and_insert(973, filename=allImagesInSet.dict()[imageid], database=DB)
-#     newCount = DB.execute('SELECT COUNT(*) FROM Annotations where slide==1').fetchone()[0]
-#     print('Newcount:',newCount,oldCount)
-#     assert(oldCount==newCount-1)
-
-#     # make DB entry deprecated
-#     DB.deleteTriggers()
-#     DB.dbcur.execute('UPDATE Annotations set lastModified=10.0 where uid==3')
-#     exm.retrieve_and_insert(973, filename=allImagesInSet.dict()[imageid], database=DB)
-#     newCount = DB.execute('SELECT COUNT(*) FROM Annotations where slide==1').fetchone()[0]
-#     assert(oldCount==newCount-1)
 
 
 
@@ -71,6 +29,8 @@ def test_setup():
     # And delete it, again
     http_status, res = exm.delete_annotationtype(int(ret['annotationType']['id']))
     assert(http_status==200)
+
+    exm.terminate()
 
 def test_images():
     exm = ExactManager('sliderunner_unittest','unittestpw', EXACT_UNITTEST_URL)
@@ -110,6 +70,8 @@ def test_images():
     allImagesInSet = exm.retrieve_imagelist(imageset)
     assert(len(list(allImagesInSet.dict().keys()))==0) # all images gone
 
+    exm.terminate()
+
     os.remove('dummy.tiff')
 
 def cleanup():
@@ -134,7 +96,7 @@ def cleanup():
         http_status, res = exm.delete_annotationtype(at['id'])
         assert(http_status==200)
 
-
+    exm.terminate()
 
 def test_pushannos():
     imageset=1
@@ -263,6 +225,7 @@ def test_pushannos():
     exm.delete_image(imageid)
 
     os.remove(imagename)
+    exm.terminate()
 
 if __name__ == "__main__":
     test_setup()
