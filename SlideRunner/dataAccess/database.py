@@ -189,6 +189,7 @@ class Database(object):
     def setExactPerson(self, uid):
         self.execute(f'UPDATE Persons set isExactUser=0 where uid != {uid}')
         self.execute(f'UPDATE Persons set isExactUser=1 where uid == {uid}')
+        self.commit()
         self.exactUser=uid
 
     def updateViewingProfile(self, vp:ViewingProfile):
