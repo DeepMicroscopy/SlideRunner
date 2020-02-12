@@ -107,10 +107,7 @@ def test_database():
     # Change class name
     DB.renameClass(1, 'Bla')
 
-    cleanup()
     
     pass
 
 
-def cleanup():
-    os.remove('sample_test_database.db')
