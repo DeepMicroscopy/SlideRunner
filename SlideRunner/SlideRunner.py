@@ -262,7 +262,7 @@ class SlideRunnerUI(QMainWindow):
         self.checkSettings()
         self.currentVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
         self.currentPluginVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
-        if (isinstance(self.settings.value('rotateImage',False),'string')):
+        if (isinstance(self.settings.value('rotateImage',False),str)):
             self.rotateImage = True if self.settings.value('rotateImage').upper()=='TRUE' else False
         else:
             self.rotateImage = bool(self.settings.value('rotateImage',False))
