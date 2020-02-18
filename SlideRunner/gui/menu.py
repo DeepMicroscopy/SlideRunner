@@ -139,7 +139,8 @@ def defineMenu(self, MainWindow, pluginList):
         self.menuItemView = self.menuAnnotation.addAction('Find by ID', MainWindow.findAnnoByID)
         self.rotate = self.menuFile.addAction('Rotate image', MainWindow.setRotate)
         self.rotate.setCheckable(True)
-        self.rotate.setChecked(bool(MainWindow.settings.value('rotateImage', False)))
+        rotval = MainWindow.settings.value('rotateImage', False)
+        self.rotate.setChecked(rotval if not isinstance(rotval,str) else rotval.upper()=='TRUE')
 
         self.menuItemView = zoomMenu.addAction('Go to coordinate', MainWindow.goToCoordinate)
         self.saveSnapshot = zoomMenu.addAction('Create snapshot of current view', MainWindow.savescreenshot)
