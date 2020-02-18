@@ -376,10 +376,13 @@ class Database(object):
                 # changed Slides.directory to absolute name
                 allslides = self.dbcur.execute('SELECT uid, filename, directory FROM Slides').fetchall()                
                 for (uid, filename, pathname) in allslides:
+                    pathname = '' if pathname is None else pathname # avoid None problems
+                    filename = '' if filename is None else filename
+                    dirname = '.' if os.path.dirname(dbfilename) is None else os.path.dirname(dbfilename)
                     candidates = [filename, 
-                                  os.path.dirname(dbfilename)+os.sep+filename,
+                                  dirname+os.sep+filename,
                                   pathname+os.sep+filename,
-                                  os.path.dirname(dbfilename)+os.sep+pathname+os.sep+filename]
+                                  dbfilename+os.sep+pathname+os.sep+filename]
                     found=False
                     for cand in candidates:
                         if os.path.exists(cand):
