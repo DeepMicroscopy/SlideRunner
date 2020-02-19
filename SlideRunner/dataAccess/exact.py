@@ -198,7 +198,7 @@ class ExactManager():
         m = encoder.MultipartEncoderMonitor(e, self.upload_monitor)
         headers = {'Content-Type': m.content_type, 'referer': self.serverurl}
         self.log(1, 'Uploading image',filename,'to',imageset_id)
-        status, obj = self.post('images/image/upload/%d/'%imageset_id, data=m, headers=headers, timeout=20)
+        status, obj = self.post('images/image/upload/%d/'%imageset_id, data=m, headers=headers, timeout=60)
         if (status==200):
             return obj
         else:

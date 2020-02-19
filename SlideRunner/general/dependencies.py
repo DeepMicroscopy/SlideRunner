@@ -76,6 +76,7 @@ def check_all_dependencies():
                 ('rollbar','rollbar', '0.14'),
                 ('time','time',None),
                 ('shapely','shapely','1.6.0'),
+                ('requests_toolbelt','requests_toolbelt','0.9.1'),
                 ('functools','functools',None),
                 ('openslide','openslide','1.1.1')] # (library_name, shorthand)
 
