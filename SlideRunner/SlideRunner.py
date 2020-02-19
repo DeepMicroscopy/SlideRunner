@@ -2037,7 +2037,7 @@ class SlideRunnerUI(QMainWindow):
     def threadedSync(self, exm, allSlides,  **kwargs):
         try:
             for cnt, (slideid, exact_id) in enumerate(allSlides):
-                image_id,imageset_id,product_id = [int(x) for x in exact_id.split('/')]
+                image_id,product_id,imageset_id = [int(x) for x in exact_id.split('/')]
                 newDB = Database().open(self.db.dbfilename)
                 newDB.loadIntoMemory(slideid)
                 exm.set_progress_properties(denominator=len(allSlides), offset=float(cnt)/len(allSlides))
