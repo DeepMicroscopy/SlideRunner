@@ -10,6 +10,7 @@ import sys
 from functools import partial
 import threading
 import queue
+from requests_toolbelt.multipart import encoder
 
 EPS_TIME_CONVERSION = 0.001 # epsilon for time conversion uncertainty
 
@@ -92,7 +93,7 @@ class ExactManager():
         while (True):
             status, newjob, context = self.jobqueue.get()
             if (status==-1):
-                print('Stopping worker')
+#                print('Stopping worker')
                 break
             ret = newjob()
             self.resultQueue.put((ret, context))
@@ -189,9 +190,15 @@ class ExactManager():
         return status, obj
 
 
+    def upload_monitor(self, monitor:encoder.MultipartEncoderMonitor):
+        self.progress(float(monitor.bytes_read)/monitor.len)
+
     def upload_image_to_imageset(self, imageset_id:int, filename:str) -> bool:
-        status, obj = self.post('images/image/upload/%d/'%imageset_id, data={}, headers={'referer': self.serverurl}, files={'files[]': open(filename, 'rb')}, timeout=20)
+        e = encoder.MultipartEncoder(fields={'files[]': (os.path.basename(filename), open(filename, 'rb'), 'application/octet-stream')})
+        m = encoder.MultipartEncoderMonitor(e, self.upload_monitor)
+        headers = {'Content-Type': m.content_type, 'referer': self.serverurl}
         self.log(1, 'Uploading image',filename,'to',imageset_id)
+        status, obj = self.post('images/image/upload/%d/'%imageset_id, data=m, headers=headers, timeout=20)
         if (status==200):
             return obj
         else:
