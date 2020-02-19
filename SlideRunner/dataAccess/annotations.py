@@ -73,7 +73,7 @@ class annotation():
           self.annotationType = AnnotationType.UNKNOWN
           self.labels = list()
           self.uid = uid
-          self.text = text
+          self.text = text if text is not None else ''
           self.agreedClass = None
           self.clickable = True
           self.guid = ''
