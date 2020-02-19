@@ -39,7 +39,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     outQueue = Queue()
     initialOpacity=1.0
     updateTimer=0.1
-    outputType = SlideRunnerPlugin.PluginOutputType.RGB_IMAGE
+    outputType = SlideRunnerPlugin.PluginOutputType.NO_OVERLAY
     description = 'Show unpickled object detection results'
     pluginType = SlideRunnerPlugin.PluginTypes.WHOLESLIDE_PLUGIN
     configurationList = list((
@@ -91,6 +91,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             
             if not (os.path.exists(job.configuration['file'])):
                 continue
+
+            print('Performing label update')
             self.sendAnnotationLabelUpdate()
 
             oldArchive = job.configuration['file']
@@ -109,8 +111,9 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                     # process slide
                     if (fname not in self.resultsArchive):
                         self.setMessage('Slide '+str(fname)+' not found in results file.')
+                        print('List is:',self.resultsArchive.keys())
                         continue
-                    
+                        
                     oldFilename=fname
 
 
