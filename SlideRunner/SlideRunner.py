@@ -254,6 +254,11 @@ class SlideRunnerUI(QMainWindow):
         self.ui.opacitySlider.setHidden(True)
         self.ui.opacityLabel.setHidden(True)
 
+        if (self.settings.value('exactSupportEnabled') is None):
+            welcomeExactDialog(app, self.settings)
+        
+        self.pluginList = pluginList
+
         menu.defineMenu(self.ui, self, pluginList)
         menu.defineAnnotationMenu(self)
 
@@ -304,7 +309,8 @@ class SlideRunnerUI(QMainWindow):
         if (len(sys.argv)>2):
             if os.path.isfile(sys.argv[2]):
                 self.openDatabase(True, filename=sys.argv[2])
-        
+
+
     def get_color(self, idx):
         colors = [[0,0,0,0],[0,0,255,255],[0,255,0,255],[255,255,0,255],[255,0,255,255],[0,127,0,255],[255,127,0,255],[127,127,0,255],[255,200,200,255],[10, 166, 168,255],[166, 10, 168,255],[166,168,10,255]]
 
@@ -2457,6 +2463,10 @@ class SlideRunnerUI(QMainWindow):
 
     def settingsDialog(self):
         settingsDialog(self.settings)
+        menu.defineMenu(self.ui, self, self.pluginList, initial=False)
+        menu.defineAnnotationMenu(self)
+
+        shortcuts.defineMenuShortcuts(self)
         self.currentVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
         self.showImage()
     

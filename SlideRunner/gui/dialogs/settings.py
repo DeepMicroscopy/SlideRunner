@@ -18,9 +18,12 @@ GuidedScreeningThresholdOptions = ['OTSU','high','med','low','off']
 def saveAndClose(ev, d: QDialog, elem:dict, settingsObject):
     cmap = cmaps[elem['combo_colorbar'].currentIndex()]
     settingsObject.setValue('OverlayColorMap', cmap)
+
     thres = GuidedScreeningThresholdOptions[elem['combo_guided'].currentIndex()]
     settingsObject.setValue('GuidedScreeningThreshold', thres)
     settingsObject.setValue('SpotCircleRadius', elem['radiusSlider'].value())
+    exactenabled = elem['exactsupport'].currentIndex()
+    settingsObject.setValue('exactSupportEnabled', exactenabled)
     settingsObject.setValue('exactHostname',elem['exactHostname'].text() )
     settingsObject.setValue('exactUsername',elem['exactUsername'].text() )
     settingsObject.setValue('exactPassword',elem['exactPassword'].text() )
@@ -96,17 +99,31 @@ def settingsDialog(settingsObject):
     c2.setCurrentIndex(ci)
     layout.addWidget(c2, 3,1)
 
+    labelExactSupport = QtWidgets.QLabel('EXACT support:')
+    c1 = QtWidgets.QComboBox()
+    ci = 0
+    for key,item in enumerate(['disabled','enabled']):
+        c1.addItem(item)
+        if (key == settingsObject.value('exactSupportEnabled')):
+            ci = key
+    elem['exactsupport'] = c1 
+    c1.setCurrentIndex(ci)
+
+    layout.addWidget(labelExactSupport, 4, 0)
+    layout.addWidget(c1, 4, 1)
+
+
     labelHostname = QtWidgets.QLabel('EXACT server:')
     editHostname = QtWidgets.QLineEdit(settingsObject.value('exactHostname', 'https://exact.cs.fau.de'))
     elem['exactHostname'] = editHostname
 
-    layout.addWidget(labelHostname, 4, 0)
-    layout.addWidget(editHostname, 4, 1)
+    layout.addWidget(labelHostname, 5, 0)
+    layout.addWidget(editHostname, 5, 1)
 
     labelUsername = QtWidgets.QLabel('EXACT username:')
     editUsername = QtWidgets.QLineEdit(settingsObject.value('exactUsername', 'Demo'))
-    layout.addWidget(labelUsername, 5, 0)
-    layout.addWidget(editUsername, 5, 1)
+    layout.addWidget(labelUsername, 6, 0)
+    layout.addWidget(editUsername, 6, 1)
     elem['exactUsername'] = editUsername
 
     labelPassword = QtWidgets.QLabel('EXACT password:')
@@ -114,11 +131,11 @@ def settingsDialog(settingsObject):
     editPassword.setEchoMode(QtWidgets.QLineEdit.PasswordEchoOnEdit)
     elem['exactPassword'] = editPassword
 
-    layout.addWidget(labelPassword, 6, 0)
-    layout.addWidget(editPassword, 6, 1)
+    layout.addWidget(labelPassword, 7, 0)
+    layout.addWidget(editPassword, 7, 1)
 
     b1 = QPushButton("ok",d)
-    layout.addWidget(b1, 7,1)
+    layout.addWidget(b1, 8, 1)
     b1.clicked.connect(partial(saveAndClose, d=d, elem=elem, settingsObject=settingsObject))
 
 
