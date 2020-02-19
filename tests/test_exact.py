@@ -191,7 +191,7 @@ def test_pushannos():
 
     # Now update remotely and see if changes are reflected
     newguid = str(uuid.uuid4())
-    created = exm.create_annotation(image_id=imageid, annotationtype_id=annotype_id, vector=[[90,80],[20,30]], last_modified=time.time(), guid=newguid )
+    created = exm.create_annotation(image_id=imageid, annotationtype_id=annotype_id, vector=[[90,80],[20,30]], last_modified=time.time(), guid=newguid, description='abcdef' )
 
     exm.sync(imageid, imageset_id=imageset, product_id=product_id, slideuid=slideuid, database=DB)
     found=False
@@ -200,6 +200,7 @@ def test_pushannos():
         if (anno.guid == newguid):
             found=True
             assert(anno.annotationType==AnnotationType.POLYGON)
+            assert(anno.text=='abcdef')
             assert(anno.labels[0].exact_id==created['annotations']['id'])
     
     assert(found)
