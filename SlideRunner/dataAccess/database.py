@@ -135,7 +135,7 @@ class Database(object):
         self.exactUser = 0
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
         self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('EXACTUSER','INTEGER',defaultValue=0)).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT')).add(DatabaseField('uuid','TEXT')).add(DatabaseField('exactImageID', 'TEXT'))
-        self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time())))
+        self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time()))).add(DatabaseField('description','TEXT'))
         self.databaseStructure['Persons'] = DatabaseTable('Persons').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('isExactUser','INTEGER', defaultValue=0))
         self.databaseStructure['Classes'] = DatabaseTable('Classes').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('color','TEXT'))
         self.databaseStructure['Annotations_label'] = DatabaseTable('Annotations_label').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('exact_id','INTEGER')).add(DatabaseField('person','INTEGER',defaultValue=0)).add(DatabaseField('class','INTEGER')).add(DatabaseField('annoId','INTEGER'))
@@ -250,7 +250,7 @@ class Database(object):
         if (slideId is None):
             return
 
-        self.dbcur.execute('SELECT uid, type,agreedClass,guid,lastModified,deleted FROM Annotations WHERE slide == %d'% slideId)
+        self.dbcur.execute('SELECT uid, type,agreedClass,guid,lastModified,deleted,description FROM Annotations WHERE slide == %d'% slideId)
         allAnnos = self.dbcur.fetchall()
 
 
@@ -260,18 +260,18 @@ class Database(object):
         if self.transformer is not None:
             allCoords = self.transformer(allCoords)
 
-        for uid, annotype,agreedClass,guid,lastModified,deleted in allAnnos:
+        for uid, annotype,agreedClass,guid,lastModified,deleted,description in allAnnos:
             coords = allCoords[allCoords[:,2]==uid,0:2]
             if (annotype == AnnotationType.SPOT):
-                self.annotations[uid] = spotAnnotation(uid, coords[0][0], coords[0][1])
+                self.annotations[uid] = spotAnnotation(uid, coords[0][0], coords[0][1], text=description)
             elif (annotype == AnnotationType.SPECIAL_SPOT):
-                self.annotations[uid] = spotAnnotation(uid, coords[0][0], coords[0][1], True)
+                self.annotations[uid] = spotAnnotation(uid, coords[0][0], coords[0][1], True, text=description)
             elif (annotype == AnnotationType.POLYGON):
-                self.annotations[uid] = polygonAnnotation(uid, coords)
+                self.annotations[uid] = polygonAnnotation(uid, coords, text=description)
             elif (annotype == AnnotationType.AREA):
-                self.annotations[uid] = rectangularAnnotation(uid, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
+                self.annotations[uid] = rectangularAnnotation(uid, coords[0][0], coords[0][1], coords[1][0], coords[1][1], text=description)
             elif (annotype == AnnotationType.CIRCLE):
-                self.annotations[uid] = circleAnnotation(uid, coords[0][0], coords[0][1], coords[1][0], coords[1][1])
+                self.annotations[uid] = circleAnnotation(uid, coords[0][0], coords[0][1], coords[1][0], coords[1][1], text=description)
             else:
                 print('Unknown annotation type %d found :( ' % annotype)
             self.annotations[uid].agreedClass = agreedClass
@@ -773,8 +773,8 @@ class Database(object):
         self.commit()
 
 
-    def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator, closed:bool=True, exact_id="Null"):
-        query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,3)' % (slideUID,classID)
+    def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator, closed:bool=True, exact_id="Null", description:str=''):
+        query = 'INSERT INTO Annotations (slide, agreedClass, type, description) VALUES (%d,%d,3,"%s")' % (slideUID,classID, description)
 #        query = 'INSERT INTO Annotations (coordinateX1, coordinateY1, coordinateX2, coordinateY2, slide, class1, person1) VALUES (%d,%d,%d,%d,%d,%d, %d)' % (x1,y1,x2,y2,slideUID,classID,annotator)
         if (isinstance(annoList, np.ndarray)):
             annoList=annoList.tolist()
@@ -794,17 +794,17 @@ class Database(object):
         self.commit()
         return annoId
 
-    def addAnnotationToDatabase(self, anno:annotation, slideUID:int, classID:int, annotatorID:int):
+    def addAnnotationToDatabase(self, anno:annotation, slideUID:int, classID:int, annotatorID:int, description:str=''):
         if (anno.annotationType == AnnotationType.AREA):
-            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID)
+            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID,description=description)
         elif (anno.annotationType == AnnotationType.POLYGON):
-            self.insertNewPolygonAnnotation(anno.coordinates, slideUID, classID, annotatorID)
+            self.insertNewPolygonAnnotation(anno.coordinates, slideUID, classID, annotatorID, description=description)
         elif (anno.annotationType == AnnotationType.CIRCLE):
-            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID, typeId=5)
+            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID, typeId=5,description=description)
         elif (anno.annotationType == AnnotationType.SPOT):
-            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID)
+            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, description=description)
         elif (anno.annotationType == AnnotationType.SPECIAL_SPOT):
-            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, type=4)
+            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, type=4, description=description)
         
 
     def getGUID(self, annoid) -> str:
@@ -813,8 +813,8 @@ class Database(object):
         except:
             return None
 
-    def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2, uuid=None, exact_id="Null"):
-        query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,%d)' % (slideUID,classID, typeId)
+    def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2, uuid=None, exact_id="Null", description=""):
+        query = 'INSERT INTO Annotations (slide, agreedClass, type, description) VALUES (%d,%d,%d,"%s")' % (slideUID,classID, typeId, description)
 #        query = 'INSERT INTO Annotations (coordinateX1, coordinateY1, coordinateX2, coordinateY2, slide, class1, person1) VALUES (%d,%d,%d,%d,%d,%d, %d)' % (x1,y1,x2,y2,slideUID,classID,annotator)
         self.execute(query)
         query = 'SELECT last_insert_rowid()'
@@ -849,10 +849,10 @@ class Database(object):
             return self.fetchone()[0]
 
 
-    def insertNewSpotAnnotation(self,xpos_orig,ypos_orig, slideUID, classID, annotator, type = 1, exact_id="Null"):
+    def insertNewSpotAnnotation(self,xpos_orig,ypos_orig, slideUID, classID, annotator, type = 1, exact_id="Null", description:str=''):
 
         if (type == 4):
-            query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,0,%d)' % (slideUID, type)
+            query = 'INSERT INTO Annotations (slide, agreedClass, type,description) VALUES (%d,0,%d, "%s")' % (slideUID, type,description)
             self.execute(query)
             query = 'SELECT last_insert_rowid()'
             self.execute(query)
@@ -862,7 +862,7 @@ class Database(object):
             self.annotations[annoId] = spotAnnotation(annoId, xpos_orig,ypos_orig, (type==4))
 
         else:
-            query = 'INSERT INTO Annotations (slide, agreedClass, type) VALUES (%d,%d,%d)' % (slideUID,classID, type)
+            query = 'INSERT INTO Annotations (slide, agreedClass, type, description) VALUES (%d,%d,%d,"%s")' % (slideUID,classID, type,description)
             self.execute(query)
             query = 'SELECT last_insert_rowid()'
             self.execute(query)
@@ -1098,7 +1098,8 @@ class Database(object):
             f'`lastModified`	REAL DEFAULT {time.time()},'
          	'`deleted`	INTEGER DEFAULT 0,'
             '`type`	INTEGER,'
-            '`agreedClass`	INTEGER'
+            '`agreedClass`	INTEGER,'
+            '`description` TEXT'
             ');')
 
         tempcur.execute('CREATE TABLE `Classes` ('

@@ -217,20 +217,20 @@ class ExactManager():
 
         def createDatabaseObject():
             if (vector_type == 3): # line
-                annoId = database.insertNewPolygonAnnotation(annoList=coords, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], exact_id=exact_id)
+                annoId = database.insertNewPolygonAnnotation(annoList=coords, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], exact_id=exact_id, description=anno['description'])
             elif (vector_type in [4,5]): # polygon or line
-                annoId = database.insertNewPolygonAnnotation(annoList=coords, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], closed=anno['annotation_type']['closed'], exact_id=exact_id)
+                annoId = database.insertNewPolygonAnnotation(annoList=coords, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], closed=anno['annotation_type']['closed'], exact_id=exact_id, description=anno['description'])
             elif (vector_type in [1,6]): # rectangle
-                annoId = database.insertNewAreaAnnotation(x1=anno['vector']['x1'],y1=anno['vector']['y1'],x2=anno['vector']['x2'],y2=anno['vector']['y2'], slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], exact_id=exact_id)                
+                annoId = database.insertNewAreaAnnotation(x1=anno['vector']['x1'],y1=anno['vector']['y1'],x2=anno['vector']['x2'],y2=anno['vector']['y2'], slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], exact_id=exact_id, description=anno['description'])                
             elif (vector_type==2): # ellipse
                 r1 = int(round((anno['vector']['x2']-anno['vector']['x1'])/2))
                 xpos = anno['vector']['x1']+r1
                 r2 = int(round((anno['vector']['y2']-anno['vector']['y1'])/2))
                 ypos = anno['vector']['y1']+r2
                 if ('SpotCircleRadius' in kwargs) and (r1==r2) and (r1==kwargs['SpotCircleRadius']):
-                    annoId = database.insertNewSpotAnnotation(xpos_orig=xpos,ypos_orig=ypos, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], typeId=5, exact_id=exact_id)                
+                    annoId = database.insertNewSpotAnnotation(xpos_orig=xpos,ypos_orig=ypos, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], typeId=5, exact_id=exact_id, description=anno['description'])                
                 else:
-                    annoId = database.insertNewAreaAnnotation(x1=anno['vector']['x1'],y1=anno['vector']['y1'],x2=anno['vector']['x2'],y2=anno['vector']['y2'], slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], typeId=5, exact_id=exact_id)                
+                    annoId = database.insertNewAreaAnnotation(x1=anno['vector']['x1'],y1=anno['vector']['y1'],x2=anno['vector']['x2'],y2=anno['vector']['y2'], slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], typeId=5, exact_id=exact_id, description=anno['description'])                
             else:
                 raise NotImplementedError('Vector Type %d is unknown.' % vector_type)
             
@@ -523,7 +523,7 @@ class ExactManager():
                         classToSend=lts # used in embedded function
                         if (idts is not None) and (idts>0):
                             print('Remote ID known:',idts,'=> Forcing update, remote is:', lastedit.timestamp(), 'local is:',dbanno.lastModified)
-                            self.update_annotation(image_id=image_id,annotation_id=idts, annotationtype_id=get_or_create_annotationtype(lts,dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), deleted=dbanno.deleted, guid=dbanno.guid)                 
+                            self.update_annotation(image_id=image_id,annotation_id=idts, annotationtype_id=get_or_create_annotationtype(lts,dbanno.annotationType), last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), deleted=dbanno.deleted, guid=dbanno.guid, description=dbanno.text)                 
                         else:
                             # case: exact_id is unknown
                             # can have the following causes:
@@ -532,13 +532,13 @@ class ExactManager():
                             if (self.multi_threaded):
                                 context = {'labeluid': i, 'annouid': dbanno.uid}
                                 annotationtype = get_or_create_annotationtype(lts, dbanno.annotationType)
-                                self.jobqueue.put((0,partial(self.create_annotation, image_id=image_id, annotationtype_id=annotationtype, deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid),context))
+                                self.jobqueue.put((0,partial(self.create_annotation, image_id=image_id, annotationtype_id=annotationtype, deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid, description=dbanno.text),context))
                                 pending_requests+=1
 #                                label = dbanno.labels[i]
 #                                database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
 #                                label.exact_id = det['annotations']['id']
                             else:
-                                det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(lts, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                                det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(lts, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid, description=dbanno.text)
                                 # add new exact_id to DB field
                                 label = dbanno.labels[i]
                                 database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
@@ -552,11 +552,11 @@ class ExactManager():
                     if (self.multi_threaded):
                         context = {'labeluid': i, 'annouid': dbanno.uid}
                         annotationtype = get_or_create_annotationtype(classToSend, dbanno.annotationType)
-                        self.jobqueue.put((0,partial(self.create_annotation, image_id=image_id, annotationtype_id=get_or_create_annotationtype(classToSend, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid),context))
+                        self.jobqueue.put((0,partial(self.create_annotation, image_id=image_id, annotationtype_id=get_or_create_annotationtype(classToSend, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid, description=dbanno.text),context))
                         pending_requests+=1
                     else:
                         annotationtype=get_or_create_annotationtype(classToSend, dbanno.annotationType)
-                        det = self.create_annotation(image_id=image_id, annotationtype_id=annotationtype, deleted=dbanno.deleted, last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid)
+                        det = self.create_annotation(image_id=image_id, annotationtype_id=annotationtype, deleted=dbanno.deleted, last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid, description=dbanno.text)
                         # add new exact_id to DB field
                         label = dbanno.labels[i]
                         # for local update, do not set Annotation.lastModified
