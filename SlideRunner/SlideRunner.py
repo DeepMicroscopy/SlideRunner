@@ -255,7 +255,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.opacityLabel.setHidden(True)
 
         if (self.settings.value('exactSupportEnabled') is None):
-            welcomeExactDialog(app, self.settings)
+            welcomeExactDialog(app, self.settings, self)
         
         self.pluginList = pluginList
 
@@ -309,6 +309,12 @@ class SlideRunnerUI(QMainWindow):
         if (len(sys.argv)>2):
             if os.path.isfile(sys.argv[2]):
                 self.openDatabase(True, filename=sys.argv[2])
+
+    def refreshMenu(self):
+        menu.defineMenu(self.ui, self, self.pluginList, initial=False)
+        menu.defineAnnotationMenu(self)
+
+        shortcuts.defineMenuShortcuts(self)
 
 
     def get_color(self, idx):
@@ -1977,7 +1983,8 @@ class SlideRunnerUI(QMainWindow):
                         if reply == QtWidgets.QMessageBox.Cancel:
                             break
                     
-                    if not (os.path.exists(pathname+os.sep+filename)):
+                    pathname = '.' if pathname is None else str(pathname)
+                    if not (os.path.exists(str(pathname)+os.sep+filename)):
                         reply = QtWidgets.QMessageBox.question(self, 'Image not found',
                                                 f'{filename} could not be found in {pathname}. Exclude from list and continue with export?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
 
@@ -2043,6 +2050,7 @@ class SlideRunnerUI(QMainWindow):
     def threadedSync(self, exm, allSlides,  **kwargs):
         try:
             for cnt, (slideid, exact_id) in enumerate(allSlides):
+                print('Syncing ',slideid,exact_id)
                 image_id,product_id,imageset_id = [int(x) for x in exact_id.split('/')]
                 newDB = Database().open(self.db.dbfilename)
                 newDB.loadIntoMemory(slideid)
@@ -2084,39 +2092,42 @@ class SlideRunnerUI(QMainWindow):
             imagesets_dict = {iset['id']:iset for iset in imagesets}
             listOfSlides=[]
 
-            if (allSlides):
-                for uid, filename,exact_id,pathname in self.db.listOfSlidesWithExact():
-                    if (uid!=self.slideUID) and not allSlides:
-                        continue
-                    
-                    if (exact_id is None) or (len(exact_id)==0): # not linked to exact
-                        continue
-                    # check if slide still exists on server
-                    (image_id, product_id, imageset_id) = [int(x) for x in exact_id.split('/')]
+            print('Current UID is: ',self.slideUID)
 
-                    found=False
-                    if imageset_id in imagesets_dict:
-                        productids = [p['id'] for p in imagesets_dict[imageset_id]['products']]
-                        if product_id in productids:
-                            found=True 
-                    
-                    invalids = self.db.execute('SELECT uid FROM Annotations where guid is Null').fetchall()
-                    for (invalidid,) in invalids:
-                        reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                                    f'Annotation with id {invalidid} in {filename} has invalid UUID. This can be a sign of a corrupt database. Randomly assign new UUID?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.Cancel)
+            for uid, filename,exact_id,pathname in self.db.listOfSlidesWithExact():
+                print('uid:',uid,'filename:',filename)
+                if (uid!=self.slideUID) and not allSlides:
+                    continue
+                
+                if (exact_id is None) or (len(exact_id)==0): # not linked to exact
+                    continue
+                # check if slide still exists on server
+                (image_id, product_id, imageset_id) = [int(x) for x in exact_id.split('/')]
 
-                        if reply == QtWidgets.QMessageBox.Cancel:
-                            return
+                found=False
+                if imageset_id in imagesets_dict:
+                    productids = [p['id'] for p in imagesets_dict[imageset_id]['products']]
+                    if product_id in productids:
+                        found=True 
+                
+                invalids = self.db.execute('SELECT uid FROM Annotations where guid is Null').fetchall()
+                for (invalidid,) in invalids:
+                    reply = QtWidgets.QMessageBox.question(self, 'Question',
+                                                f'Annotation with id {invalidid} in {filename} has invalid UUID. This can be a sign of a corrupt database. Randomly assign new UUID?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.Cancel)
 
-                        self.db.execute(f'UPDATE Annotations SET guid=generate_uuid() where uid=={invalidid}')
+                    if reply == QtWidgets.QMessageBox.Cancel:
+                        return
 
-                    if not found:
-                        print('Cleaning exact id field of ',uid,exact_id)
-                    else:
-                        listOfSlides.append([uid, exact_id])
+                    self.db.execute(f'UPDATE Annotations SET guid=generate_uuid() where uid=={invalidid}')
+
+                if not found:
+                    print('Cleaning exact id field of ',uid,exact_id)
+                else:
+                    listOfSlides.append([uid, exact_id])
 
             from _thread import start_new_thread
             self.db.commit()
+            print('ListOfSlides is:',listOfSlides)
             start_new_thread(self.threadedSync, (exm,listOfSlides))#))          
 #             exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=self.slideUID, database=self.db)
 
@@ -2463,10 +2474,7 @@ class SlideRunnerUI(QMainWindow):
 
     def settingsDialog(self):
         settingsDialog(self.settings)
-        menu.defineMenu(self.ui, self, self.pluginList, initial=False)
-        menu.defineAnnotationMenu(self)
-
-        shortcuts.defineMenuShortcuts(self)
+        self.refreshMenu()
         self.currentVP.spotCircleRadius = self.settings.value('SpotCircleRadius')
         self.showImage()
     
@@ -2557,11 +2565,12 @@ class SlideRunnerUI(QMainWindow):
 
 
 
-
 def main(slideReaderThread,app,splash,version,pluginList):
     style.setStyle(app)    
+
     
     myapp = SlideRunnerUI(slideReaderThread=slideReaderThread, app=app, version=version, pluginList=pluginList)
+
     myapp.show()
     myapp.raise_()
     splash.finish(myapp)

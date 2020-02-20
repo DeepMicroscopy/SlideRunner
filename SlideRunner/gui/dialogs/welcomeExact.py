@@ -32,15 +32,17 @@ def closeDlg(splash,e):
         print('Event is:',e)
 #        splash.close()
 
-def enableAndClose(splash, settingsObject):
+def enableAndClose(splash, settingsObject,mainWindow):
         settingsObject.setValue('exactSupportEnabled', 1)
+        mainWindow.refreshMenu()
         splash.close()
 
-def disableAndClose(splash, settingsObject):
+def disableAndClose(splash, settingsObject,mainWindow):
         settingsObject.setValue('exactSupportEnabled', 0)
+        mainWindow.refreshMenu()
         splash.close()
 
-def welcomeExactDialog(app, settingsObject):
+def welcomeExactDialog(app, settingsObject, mainwindow):
 
         # Create and display the about screen
         splash_pix = QPixmap(ARTWORK_DIR_NAME+'ExactWelcomeScreen.png')
@@ -52,11 +54,11 @@ def welcomeExactDialog(app, settingsObject):
         btn = QPushButton('Enable EXACT', splash)
         btn.move(140, 320)
 #        layout.addWidget(btn, 1,0)
-        btn.clicked.connect(partial(enableAndClose, splash, settingsObject))
+        btn.clicked.connect(partial(enableAndClose, splash, settingsObject,mainwindow))
 
         btn = QPushButton('Disable EXACT',splash)
         btn.move(350, 320)
-        btn.clicked.connect(partial(disableAndClose, splash, settingsObject))
+        btn.clicked.connect(partial(disableAndClose, splash, settingsObject,mainwindow))
       #  layout.addWidget(btn, 1,1)
 
 #        splash.showMessage('Version %s\n'%version, alignment = Qt.AlignHCenter + Qt.AlignBottom, color=Qt.black)

@@ -73,7 +73,7 @@ QTabWidget {
 font-size:8px;
 }
 QTabBar::tab:selected, QTabBar::tab:hover {
-background: #883333;
+background: QLinearGradient( x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #ffa02f, stop: 1 #ff862f);
 }
 /* Style the tab using the tab sub-control. Note that it reads QTabBar _not_ QTabWidget */
 QTabBar::tab {
@@ -85,6 +85,25 @@ font-size:8px;
 min-width: 8ex;
 padding: 2px;
 }
+QMenu::item:selected
+{
+    background: QLinearGradient( x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #ffa02f, stop: 1 #ff862f);
+}
+QMenu::item:!selected
+{
+    background: QLinearGradient( x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #343434, stop: 1 #343434);
+}
+QMenuBar::item:selected
+{
+    background: QLinearGradient( x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #ffa02f, stop: 1 #ff862f);
+}
+QProgressBar::chunk
+{
+    background-color: #d7801a;
+    width: 2.15px;
+    margin: 0.5px;
+}
+
 QTabBar::tab:!selected {
 margin-top: 2px; /* make non-selected tabs look smaller */
 }

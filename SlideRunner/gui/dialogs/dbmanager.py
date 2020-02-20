@@ -61,9 +61,10 @@ class DatabaseManager(QDialog):
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.viewport().installEventFilter(self)
         self.tableWidget.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+
     def loadFile(self, uid):
         
-        slidepath=(uid[-1]+os.sep+uid[1]) if os.path.exists((uid[-1]+os.sep+uid[1])) else uid[1]
+        slidepath=(uid[-1]+os.sep+uid[1]) if os.path.exists((str(uid[-1])+os.sep+str(uid[1]))) else uid[1]
 
         if (os.path.exists(slidepath)):
                 self.loadSlide = slidepath

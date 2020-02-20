@@ -221,6 +221,8 @@ class Database(object):
         self.execute(f'UPDATE Slides set directory="{directory}" where uid={slideUid}')
 
     def classPosition(self, classId):
+        if (classId==0):
+            return 0
         for pos, (name,uid,color) in enumerate(self._allclasses):
             if (uid==classId):
                 return pos+1

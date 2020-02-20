@@ -613,7 +613,10 @@ class ExactManager():
             return ret.status_code, ret.text
 
     def post(self, url, data, files=None, **kwargs):
-        ret= requests.post(self.serverurl+url, auth=(self.username, self.password), data=data, files=files, **kwargs)
+        try:
+            ret= requests.post(self.serverurl+url, auth=(self.username, self.password), data=data, files=files, **kwargs)
+        except requests.exceptions.ConnectionError as e:
+            return self.post(url, data, files, **kwargs)
         try:
             return ret.status_code, json.loads(ret.text)
         except:
