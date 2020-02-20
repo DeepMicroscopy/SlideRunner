@@ -253,11 +253,11 @@ class SlideRunnerUI(QMainWindow):
 
         self.ui.opacitySlider.setHidden(True)
         self.ui.opacityLabel.setHidden(True)
+        self.pluginList = pluginList
 
         if (self.settings.value('exactSupportEnabled') is None):
             welcomeExactDialog(app, self.settings, self)
         
-        self.pluginList = pluginList
 
         menu.defineMenu(self.ui, self, pluginList)
         menu.defineAnnotationMenu(self)
