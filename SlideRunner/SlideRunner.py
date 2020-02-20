@@ -919,6 +919,12 @@ class SlideRunnerUI(QMainWindow):
     
     def hitEscape(self):
         if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
+            reply = QtWidgets.QMessageBox.question(self, 'Question',
+                                          'Do you want to cancel your polygon annotation?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+
+            if reply == QtWidgets.QMessageBox.No:
+                return
+
             self.ui.annotationMode=0
             self.showImage()
 
