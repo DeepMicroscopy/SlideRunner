@@ -63,6 +63,7 @@ class SlideReader(multiprocessing.Process):
 
     def run(self):
         img=None
+        lastReq = [(-1,-1),-1,(512,512)]
         while (True):
             (slidename, location, level, size, id, rotated) = self.queue.get()
 
@@ -82,7 +83,9 @@ class SlideReader(multiprocessing.Process):
                 self.slidename = slidename
             self.slide.rotate = rotated
 
-            img = self.slide.read_region(location, level, size)
+            if not all([a==b for a,b in zip([location,level,size],lastReq)]):
+                img = self.slide.read_region(location, level, size)
+                lastReq = [location, level, size]
 
             self.outputQueue.put((np.array(img),id))
 
