@@ -311,8 +311,21 @@ class SlideRunnerUI(QMainWindow):
             if os.path.isfile(sys.argv[2]):
                 self.openDatabase(True, filename=sys.argv[2])
 
+    def show_exception(self, headline, exctype, value, tb):
+        excmsg = '\n'.join(traceback.format_exception(exctype, value, tb))
+        msgBox = QtWidgets.QMessageBox()
+        msgBox.setText("Uncaught exception")
+        msgBox.setInformativeText(headline)
+        msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        msgBox.setDetailedText(excmsg)
+        msgBox.setDefaultButton(QtWidgets.QMessageBox.Ok)
+        ret = msgBox.exec()        
+
+    def exceptionHook_threading(self, exctype, value, tb):
+        self.show_exception("Thread was terminated", exctype, value, tb)
+
     def exceptionHook(self, exctype, value, tb):
-        reply = QtWidgets.QMessageBox.about(self, "Exception", str(value))
+        self.show_exception("Exception", exctype, value, tb)
 
     def refreshMenu(self):
         menu.defineMenu(self.ui, self, self.pluginList, initial=False)
@@ -2583,6 +2596,7 @@ def main(slideReaderThread,app,splash,version,pluginList):
     myapp.show()
     myapp.raise_()
     sys.excepthook = myapp.exceptionHook
+    threading.excepthook = myapp.exceptionHook_threading
     splash.finish(myapp)
 
     if (myapp.activePlugin is not None):

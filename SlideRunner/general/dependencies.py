@@ -96,7 +96,7 @@ def check_all_dependencies():
 
 
 import sys
-
+import traceback
 check_qt_dependencies()
 
 check_all_dependencies()
