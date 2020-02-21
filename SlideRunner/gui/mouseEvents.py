@@ -95,6 +95,11 @@ def moveImage(self, event):
     # Move image if shift+left click
     modifiers = QtWidgets.QApplication.keyboardModifiers()
     posx,posy = getMouseEventPosition(self, event)
+    if (modifiers == Qt.ControlModifier) and (self.dragPoint):
+        cx,cy = self.screenToSlide((posx,posy))
+        self.db.annotations[self.drag_id[0]].coordinates[self.drag_id[1],:] = [cx,cy]
+        self.showImage()
+
     if (modifiers == Qt.ShiftModifier) or (self.ui.clickToMove):
         self.setCursor(Qt.ClosedHandCursor)
         cx,cy = self.screenToSlide((posx,posy))
@@ -147,6 +152,7 @@ def leftClickImage(self, event):
 
         posx, posy = getMouseEventPosition(self, event)
         self.ui.clickToMove = False
+        self.ui.dragPoint = False
         # Move image if shift+left click
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         if (modifiers == Qt.ShiftModifier) or ((self.db.isOpen() == False) and (self.activePlugin == False)):
@@ -174,6 +180,13 @@ def leftClickImage(self, event):
                 self.selectedAnno = clickedAnno.uid
             else:
                 self.selectedAnno = None
+
+        if (clickedAnno is not None) and (modifiers == Qt.ControlModifier) :
+                pp = clickedAnno.positionInAnnotationHandle(mouseClickGlobal)
+                if (pp):
+                    self.drag_id = [clickedAnno.uid, pp]
+                    self.dragPoint=True
+                    
 
 
         if clickedAnno is not None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT):
@@ -251,6 +264,15 @@ def releaseImage(self, event):
     """
     self.ui.clickToMove = False
     self.setCursor(Qt.ArrowCursor)
+    if (self.dragPoint):
+        posx,posy = getMouseEventPosition(self, event)
+        cx,cy = self.screenToSlide((posx,posy))
+        self.db.annotations[self.drag_id[0]].coordinates[self.drag_id[1],:] = [cx,cy]
+        self.db.updatePolygonPoint(annoId=self.drag_id[0], orderIdx=self.drag_id[1], coords=[cx,cy])
+        self.showImage()
+        self.dragPoint=False
+
+
     if (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA) & (self.ui.annotationMode>1) and (self.db.isOpen()):
         self.ui.annotationMode=0        
         if (self.lastAnnotationClass == 0):
@@ -415,6 +437,10 @@ def rightClickImage(self, event):
                 menuitems.append(act)
             menu.addAction('Remove annotation', partial(self.removeAnnotation, clickedAnno.uid))
             menu.addAction('Change ID',partial(self.changeAnnoID,clickedAnno.uid))
+            pp = clickedAnno.positionInAnnotationHandle(mouseClickGlobal)
+            if (pp):
+                addmenu = menu.addMenu('This polygon point')                
+                act = addmenu.addAction('remove', partial(self.removePolygonPoint, point_idx=pp, anno_uid=clickedAnno.uid))
 
             if len(previous)>0:
                 addmenu = menu.addMenu('Set agreed class')

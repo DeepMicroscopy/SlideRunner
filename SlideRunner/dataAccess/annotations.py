@@ -43,15 +43,23 @@ class AnnotationLabel(object):
 class annoCoordinate(object):
     x = None
     y = None
-    def __init__(self,x,y):
+    def __init__(self,x,y,x_abs=None,y_abs=None):
         self.x = x
         self.y = y
+        self.x_abs = x_abs
+        self.y_abs = y_abs
     
     def totuple(self):
         return (self.x, self.y)
     
     def tolist(self):
         return [self.x, self.y]
+    
+    def __str__(self):
+        return f'annoCoordinate at x={self.x}, y={self.y}'
+
+    def __repr__(self):
+        return f'annoCoordinate at x={self.x}, y={self.y}'
 
 class AnnotationHandle(object):
     pt1 = None
@@ -61,9 +69,13 @@ class AnnotationHandle(object):
         self.pt1 = pt1
         self.pt2 = pt2
 
-    def positionWithinRectangle(self,position:tuple):
-        return ((position[0]>self.pt1.x) and (position[1]>self.pt1.y) and
-                (position[0]<self.pt2.x) and (position[1]<self.pt2.y))
+    def positionWithinRectangle(self,position:tuple, absolute:bool=False, tolerance:int=2):
+        if (absolute):
+            return ((position[0]>=self.pt1.x_abs-tolerance) and (position[1]>=self.pt1.y_abs-tolerance) and
+                    (position[0]<=self.pt2.x_abs+tolerance) and (position[1]<=self.pt2.y_abs+tolerance))
+        else:
+            return ((position[0]>=self.pt1.x-tolerance) and (position[1]>=self.pt1.y-tolerance) and
+                    (position[0]<=self.pt2.x+tolerance) and (position[1]<=self.pt2.y+tolerance))
 
 
 
@@ -141,7 +153,7 @@ class annotation():
           if (updateAgreed):
               self.agreedClass = self.majorityLabel()
 
-      def _create_annohandle(self, image:np.ndarray, coord:tuple, markersize:int, color:tuple) -> AnnotationHandle:
+      def _create_annohandle(self, image:np.ndarray, coord:tuple, markersize:int, color:tuple, abscoord:tuple=(None,None)) -> AnnotationHandle:
             markersize=3
             pt1_rect = (max(0,coord[0]-markersize),
                         max(0,coord[1]-markersize))
@@ -149,7 +161,10 @@ class annotation():
                         min(image.shape[0],coord[1]+markersize))
             cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=[255,255,255,255], thickness=2)
             cv2.rectangle(img=image, pt1=(pt1_rect), pt2=(pt2_rect), color=color, thickness=1)
-            return AnnotationHandle(annoCoordinate(pt1_rect[0],pt1_rect[1]), annoCoordinate(pt2_rect[0],pt2_rect[1]))
+
+            pt1_abs = (abscoord[0]-markersize, abscoord[1]-markersize)
+            pt2_abs = (abscoord[0]+markersize, abscoord[1]+markersize)
+            return AnnotationHandle(annoCoordinate(*pt1_rect, *pt1_abs), annoCoordinate(*pt2_rect, *pt2_abs))
 
       def getDimensions(self) -> (int, int):
           minC = self.minCoordinates()
@@ -260,7 +275,7 @@ class rectangularAnnotation(annotation):
       def positionInAnnotation(self, position: list) -> bool:
             return ((position[0]>self.x1) and (position[0]<self.x2) and 
                    (position[1]>self.y1) and (position[1]<self.y2))
-    
+
       def width(self) -> float:
           return self.x2-self.x1
 
@@ -295,7 +310,7 @@ class polygonAnnotation(annotation):
     
     def positionInAnnotationHandle(self, position: tuple) -> int:
         for key,annoHandle in enumerate(self.annoHandles):
-             if (annoHandle.positionWithinRectangle(position)):
+             if (annoHandle.positionWithinRectangle(position,absolute=True)):
                  return key
         return None
 
@@ -340,7 +355,7 @@ class polygonAnnotation(annotation):
         return p
 
     def positionInAnnotation(self, position: list) -> bool:
-        return self.convertToPath().contains_point(position)
+        return self.convertToPath().contains_point(position) or self.positionInAnnotationHandle(position) is not None
 
     def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected=False):
         def slideToScreen(pos):
@@ -366,13 +381,13 @@ class polygonAnnotation(annotation):
             cv2.line(img=image, pt1=anno, pt2=slideToScreen(self.coordinates[listIdx+1]), thickness=2, color=self.getColor(vp), lineType=cv2.LINE_AA)       
 
             if (selected):
-                self.annoHandles.append(self._create_annohandle(image, anno, markersize, self.getColor(vp)))
+                self.annoHandles.append(self._create_annohandle(image, anno, markersize, self.getColor(vp), abscoord=self.coordinates[listIdx]))
 
 
         listIdx+=1
         anno = slideToScreen(self.coordinates[listIdx])
         if (selected):
-                self.annoHandles.append(self._create_annohandle(image, anno, markersize, self.getColor(vp)))
+                self.annoHandles.append(self._create_annohandle(image, anno, markersize, self.getColor(vp), abscoord=self.coordinates[listIdx]))
 
         cv2.line(img=image, pt1=anno, pt2=slideToScreen(self.coordinates[0]), thickness=2, color=self.getColor(vp), lineType=cv2.LINE_AA)       
 

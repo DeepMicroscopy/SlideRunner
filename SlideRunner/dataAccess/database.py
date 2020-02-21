@@ -14,6 +14,8 @@ import numpy as np
 import random
 import uuid
 
+
+
 def hex_to_rgb(value):
     value = value.lstrip('#')
     lv = len(value)
@@ -656,6 +658,11 @@ class Database(object):
         except:
             return ''
 
+    def setPathForSlide(self, slideuid, slidepath):
+        self.execute(f'UPDATE SLIDES set directory="{os.path.dirname(slidepath)}" where uid=={slideuid}')
+        self.commit()
+        return slideuid
+
     def findSlideWithFilename(self,slidename,slidepath, uuid:str=None):
         if (len(slidepath.split(os.sep))>1):
             directory = slidepath.split(os.sep)[-2]
@@ -670,7 +677,7 @@ class Database(object):
                 if slidedir is None:
                     secondBest=uid
                 elif (slidedir.upper() == directory.upper()):
-                    return uid
+                    return uid if update else uid
                 elif (os.path.realpath(slidedir).upper() == directory.upper()):
                     return uid
                 else:
@@ -893,6 +900,17 @@ class Database(object):
             self.annotations[annoIdx].removeLabel(labelIdx)
             self.commit()
             self.checkCommonAnnotation(annoIdx)
+
+    def updatePolygonPoint(self, annoId, orderIdx, coords):
+        self.execute(f'UPDATE Annotations_coordinates SET coordinateX={coords[0]}, coordinateY={coords[1]} where annoId=={annoId} and orderIdx=={orderIdx}+1')
+        self.commit()
+
+    def removePolygonPoint(self, annoId:int, coord_idx:int):
+        self.execute(f'DELETE FROM Annotations_coordinates where annoId=={annoId} and orderIdx=={coord_idx}+1')
+        self.execute(f'UPDATE Annotations_coordinates SET orderidx=orderidx-1 where annoId=={annoId} and orderIdx>{coord_idx}')
+        retain = [np.arange(0,coord_idx).tolist()+np.arange(coord_idx+1,self.annotations[annoId].coordinates.shape[0]).tolist()]
+        self.annotations[annoId].coordinates = self.annotations[annoId].coordinates[retain,:][0,:,:]
+        self.commit()
 
     def changeAnnotationID(self, annoId:int, newAnnoID:int):
             self.execute('SELECT COUNT(*) FROM Annotations where uid == (%d)' % newAnnoID)

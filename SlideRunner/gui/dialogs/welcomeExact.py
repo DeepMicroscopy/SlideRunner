@@ -29,8 +29,7 @@ from PyQt5.QtWidgets import QDialog, QWidget, QFileDialog, QMenu,QInputDialog, Q
 
 
 def closeDlg(splash,e):
-        print('Event is:',e)
-#        splash.close()
+        pass
 
 def enableAndClose(splash, settingsObject,mainWindow):
         settingsObject.setValue('exactSupportEnabled', 1)
@@ -47,13 +46,9 @@ def welcomeExactDialog(app, settingsObject, mainwindow):
         # Create and display the about screen
         splash_pix = QPixmap(ARTWORK_DIR_NAME+'ExactWelcomeScreen.png')
         splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
-        
-     #   layout = QtWidgets.QGridLayout()
-     #   splash.setLayout(layout)
 
         btn = QPushButton('Enable EXACT', splash)
         btn.move(140, 320)
-#        layout.addWidget(btn, 1,0)
         btn.clicked.connect(partial(enableAndClose, splash, settingsObject,mainwindow))
 
         btn = QPushButton('Disable EXACT',splash)
