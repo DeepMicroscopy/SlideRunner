@@ -182,6 +182,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui = addSidebar(self.ui, self)
         self.ui.moveDots=0
         self.currentZoom = 1
+        self.dragPoint=False
         self.annotationsSpots=list()
         self.annotationsArea = list()
         self.annotationsCircle = list()
@@ -309,6 +310,9 @@ class SlideRunnerUI(QMainWindow):
         if (len(sys.argv)>2):
             if os.path.isfile(sys.argv[2]):
                 self.openDatabase(True, filename=sys.argv[2])
+
+    def exceptionHook(self, exctype, value, tb):
+        reply = QtWidgets.QMessageBox.about(self, "Exception", str(value))
 
     def refreshMenu(self):
         menu.defineMenu(self.ui, self, self.pluginList, initial=False)
@@ -1174,6 +1178,10 @@ class SlideRunnerUI(QMainWindow):
                 self.popupmessage(f'Error: ID already used. ')
                 
 
+    def removePolygonPoint(self, point_idx:int, anno_uid:int):
+        self.db.removePolygonPoint(annoId=anno_uid, coord_idx=point_idx)
+        self.showImage()
+
     def removeAnnotation(self,annoId):
         """
             Callback if the user wants to remove an annotation
@@ -1370,18 +1378,6 @@ class SlideRunnerUI(QMainWindow):
         """
         return np.power(2,self.ui.zoomSlider.getValue()/100*(np.log2(0.5/ self.getMaxZoom())))*self.getMaxZoom()
 
-    def updateImageCache(self):
-        """
-          Update image cache during times of inactivity
-        """
-        if (self.lastReadRequest is not None):
-            self.read_region(self.lastReadRequest['location'], self.lastReadRequest['level'], self.lastReadRequest['size'], forceRead=True)
-            newcache = dict()
-            newcache['image'] = self.cachedImage
-            newcache['level'] = self.cachedLevel
-            newcache['location'] = self.cachedLocation
-
-            self.updatedCacheAvailable.emit(newcache)
 
 
     def getMaxZoom(self):
@@ -2497,6 +2493,8 @@ class SlideRunnerUI(QMainWindow):
         overview = cv2.cvtColor(np.asarray(overview), cv2.COLOR_BGRA2RGB)
         self.overview = overview
 
+
+
     def openSlide(self, filename):
         """
             Helper function to open a whole slide image
@@ -2506,7 +2504,10 @@ class SlideRunnerUI(QMainWindow):
                            'File not found: %s' % filename, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
             return
 
-        self.slide = RotatableOpenSlide(filename, rotate=self.rotateImage)
+        try:
+            self.slide = RotatableOpenSlide(filename, rotate=self.rotateImage)
+        except:
+            self.popupmessage('Unable to open '+filename)
 
         # Clear cache
         self.cachedLocation = None
@@ -2538,6 +2539,7 @@ class SlideRunnerUI(QMainWindow):
             self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
             print('Took: ',time.time()-t)
 
+            self.db.setPathForSlide(self.slideUID, self.slidepathname)
         self.relativeCoords = np.asarray([0,0], np.float32)
         self.lastScreeningLeftUpper = np.zeros(2)
         self.screeningHistory = list()
@@ -2570,6 +2572,7 @@ class SlideRunnerUI(QMainWindow):
         menu.updateOpenRecentSlide(self)
 
 
+import sys
 
 def main(slideReaderThread,app,splash,version,pluginList):
     style.setStyle(app)    
@@ -2579,10 +2582,10 @@ def main(slideReaderThread,app,splash,version,pluginList):
 
     myapp.show()
     myapp.raise_()
+    sys.excepthook = myapp.exceptionHook
     splash.finish(myapp)
 
     if (myapp.activePlugin is not None):
         myapp.activePlugin.inQueue.put(None)
         myapp.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(description=SlideRunnerPlugin.JobDescription.QUIT_PLUGIN_THREAD))
-    app.exec_()
-
+        app.exec_()
