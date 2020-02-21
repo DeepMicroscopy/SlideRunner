@@ -677,7 +677,7 @@ class Database(object):
                 if slidedir is None:
                     secondBest=uid
                 elif (slidedir.upper() == directory.upper()):
-                    return uid if update else uid
+                    return uid 
                 elif (os.path.realpath(slidedir).upper() == directory.upper()):
                     return uid
                 else:

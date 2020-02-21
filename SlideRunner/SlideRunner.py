@@ -2588,4 +2588,4 @@ def main(slideReaderThread,app,splash,version,pluginList):
     if (myapp.activePlugin is not None):
         myapp.activePlugin.inQueue.put(None)
         myapp.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(description=SlideRunnerPlugin.JobDescription.QUIT_PLUGIN_THREAD))
-        app.exec_()
+    app.exec_()
