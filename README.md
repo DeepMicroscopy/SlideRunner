@@ -20,6 +20,15 @@ Please find the authors webpage at: https://lme.tf.fau.de/person/aubreville/
 [![Watch the video](https://img.youtube.com/vi/S9GaXPAnyiE/hqdefault.jpg)](https://youtu.be/S9GaXPAnyiE)
 
 
+## Version 2 coming up ##
+
+With so many new features, it is time to declare Version 2 - which is scheduled to be on SlideRunner's second birthday, coinciding with BVM 2020. Now we are in beta phase, which means: Try out all new features and give feedback, if something doesn't work as expected.
+
+List of new features:
+- DICOM WSI support (through pydicom)
+- Synchronization support with [EXACT](https://github.com/ChristianMarzahl/Exact)
+- Much enhanced polygon annotation support, including modifying and simplification
+- and uncountable small fixes and improvements
 
 ## Download and Installation 
 
