@@ -437,8 +437,8 @@ def rightClickImage(self, event):
                 menuitems.append(act)
             menu.addAction('Remove annotation', partial(self.removeAnnotation, clickedAnno.uid))
             menu.addAction('Change ID',partial(self.changeAnnoID,clickedAnno.uid))
-#            if (clickedAnno.annoType == AnnotationType.POLYGON):
-#                menu.addAction('Simplify polygon', partial(self.simplifyPolygon, clickedAnno.uid))
+            if (clickedAnno.annotationType == AnnotationType.POLYGON):
+                menu.addAction('Simplify polygon', partial(self.simplifyPolygon, clickedAnno.uid))
             pp = clickedAnno.positionInAnnotationHandle(mouseClickGlobal, self.getZoomValue())
             if (pp):
                 addmenu = menu.addMenu('This polygon point')                

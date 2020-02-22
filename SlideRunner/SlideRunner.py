@@ -1208,7 +1208,24 @@ class SlideRunnerUI(QMainWindow):
             self.showImage()
 
     def simplifyPolygon(self, annoId):
-        pass        
+        val, okpressed = QtWidgets.QInputDialog.getDouble(self, "Threshold",  "Set the threshold (higher = more simplification)", 0.0001, 0, 0.02, 5)
+        if (okpressed):
+            oldC = self.db.annotations[annoId].coordinates
+            epsilon = val*cv2.arcLength(self.db.annotations[annoId].coordinates,True)
+
+            cont = cv2.approxPolyDP(self.db.annotations[annoId].coordinates,epsilon,True)
+            cont = cont.squeeze()
+            self.db.annotations[annoId].coordinates = cont
+            self.showImage()
+
+            reply = QtWidgets.QMessageBox.question(self, 'Question', 'Simplification done. Accept?',QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+            if reply == QtWidgets.QMessageBox.Yes:
+                ## simplify path in DB
+                self.db.setPolygonCoordinates(annoId, cont, self.slideUID)
+                pass
+            else:
+                self.db.annotations[annoId].coordinates = oldC
+                self.showImage()
 
 
     def removeAnnotationLabel(self, labelId, annoId):

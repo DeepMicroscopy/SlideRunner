@@ -781,6 +781,11 @@ class Database(object):
             self.execute(query)
         self.commit()
 
+    def setPolygonCoordinates(self, annoId, coords, slideUID):
+        self.execute(f'DELETE FROM Annotations_coordinates where annoId={annoId}')
+
+        self.insertCoordinates(np.array(coords), slideUID, annoId)
+        self.commit()
 
     def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator, closed:bool=True, exact_id="Null", description:str=''):
         query = 'INSERT INTO Annotations (slide, agreedClass, type, description) VALUES (%d,%d,3,"%s")' % (slideUID,classID, description)
