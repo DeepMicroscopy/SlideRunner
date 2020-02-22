@@ -69,7 +69,8 @@ class AnnotationHandle(object):
         self.pt1 = pt1
         self.pt2 = pt2
 
-    def positionWithinRectangle(self,position:tuple, absolute:bool=False, tolerance:int=2):
+    def positionWithinRectangle(self,position:tuple, absolute:bool=False, tolerance:int=2, zoom:float=1):
+        tolerance = tolerance * zoom
         if (absolute):
             return ((position[0]>=self.pt1.x_abs-tolerance) and (position[1]>=self.pt1.y_abs-tolerance) and
                     (position[0]<=self.pt2.x_abs+tolerance) and (position[1]<=self.pt2.y_abs+tolerance))
@@ -105,7 +106,7 @@ class annotation():
       def setAgreedClass(self, agreedClass):
           self.agreedClass = agreedClass
     
-      def positionInAnnotation(self, position: list) -> bool:
+      def positionInAnnotation(self, position: list, zoom:float) -> bool:
             return False
 
       def intersectingWithAnnotation(self, anno) -> bool:
@@ -136,7 +137,7 @@ class annotation():
         minC = self.minCoordinates()
         return [minC.x,minC.y] + list(self.getDimensions())
 
-      def positionInAnnotationHandle(self, position: tuple) -> int:
+      def positionInAnnotationHandle(self, position: tuple, zoom:float) -> int:
           return None
     
           
@@ -272,7 +273,7 @@ class rectangularAnnotation(annotation):
       def maxCoordinates(self) -> annoCoordinate:
             return annoCoordinate(self.x2, self.y2)
 
-      def positionInAnnotation(self, position: list) -> bool:
+      def positionInAnnotation(self, position: list, zoom:float) -> bool:
             return ((position[0]>self.x1) and (position[0]<self.x2) and 
                    (position[1]>self.y1) and (position[1]<self.y2))
 
@@ -308,9 +309,9 @@ class polygonAnnotation(annotation):
         if (coordinates is not None):
             self.coordinates = coordinates
     
-    def positionInAnnotationHandle(self, position: tuple) -> int:
+    def positionInAnnotationHandle(self, position: tuple, zoom:float) -> int:
         for key,annoHandle in enumerate(self.annoHandles):
-             if (annoHandle.positionWithinRectangle(position,absolute=True)):
+             if (annoHandle.positionWithinRectangle(position,absolute=True,zoom=zoom)):
                  return key
         return None
 
@@ -354,8 +355,8 @@ class polygonAnnotation(annotation):
         p = path.Path(self.coordinates)
         return p
 
-    def positionInAnnotation(self, position: list) -> bool:
-        return self.convertToPath().contains_point(position) or self.positionInAnnotationHandle(position) is not None
+    def positionInAnnotation(self, position: list, zoom:float) -> bool:
+        return self.convertToPath().contains_point(position) or self.positionInAnnotationHandle(position, zoom=zoom) is not None
 
     def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected=False):
         def slideToScreen(pos):
@@ -437,7 +438,7 @@ class circleAnnotation(annotation):
       def getDescription(self,db, micronsPerPixel=None) -> list:
           return [['Position', 'x1=%d, y1=%d' % (self.x1, self.y1)]] + self.getAnnotationsDescription(db)
 
-      def positionInAnnotation(self, position: list) -> bool:
+      def positionInAnnotation(self, position: list,zoom:float) -> bool:
           dist = np.sqrt(np.square(position[0]-self.x1)+np.square(position[1]-self.y1))
           return (dist<=self.r)
 
@@ -488,6 +489,6 @@ class spotAnnotation(annotation):
       def getDescription(self,db, micronsPerPixel=None) -> list:
           return [['Position', 'x1=%d, y1=%d' % (self.x1, self.y1)]] + self.getAnnotationsDescription(db)
 
-      def positionInAnnotation(self, position: list) -> bool:
+      def positionInAnnotation(self, position: list, zoom:float) -> bool:
           dist = np.sqrt(np.square(position[0]-self.x1)+np.square(position[1]-self.y1))
           return (dist<=25)

@@ -229,12 +229,12 @@ class Database(object):
             if (uid==classId):
                 return pos+1
 
-    def findClickAnnotation(self, clickPosition, vp : ViewingProfile, database=None, annoType = None):
+    def findClickAnnotation(self, clickPosition, vp : ViewingProfile, database=None, annoType = None, zoom:float=1.0):
         if (database is None):
             database = self.VA            
         for idx,anno in database.items():
             if (vp.activeClasses[self.classPosition(anno.agreedLabel())]):
-                if (anno.positionInAnnotation(clickPosition )) and (anno.clickable):
+                if (anno.positionInAnnotation(clickPosition, zoom=zoom )) and (anno.clickable):
                     if (annoType == anno.annotationType) or (annoType is None):
                         return anno
         return None

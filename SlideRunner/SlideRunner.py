@@ -1207,6 +1207,8 @@ class SlideRunnerUI(QMainWindow):
             self.db.removeAnnotation(annoId)
             self.showImage()
 
+    def simplifyPolygon(self, annoId):
+        pass        
 
 
     def removeAnnotationLabel(self, labelId, annoId):

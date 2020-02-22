@@ -256,12 +256,12 @@ class SlideRunnerPlugin:
             self.statusQueue.put((StatusInformation.UPDATE_INFORMATION, pluginInformation))
 
 
-      def findClickAnnotation(self, clickPosition, pluginVP):
+      def findClickAnnotation(self, clickPosition, pluginVP, zoom:float):
             labels = self.getAnnotationLabels()
             annoKeys=np.array([x.uid for x in labels])[np.where(pluginVP.activeClasses)[0]].tolist()
             for idx,anno in enumerate(self.getAnnotations()):
                   if (anno.pluginAnnotationLabel is None) or (anno.pluginAnnotationLabel.uid in annoKeys):
-                        if (anno.positionInAnnotation(clickPosition )) and (anno.clickable):
+                        if (anno.positionInAnnotation(clickPosition,zoom=zoom )) and (anno.clickable):
                               return anno
             return None
 

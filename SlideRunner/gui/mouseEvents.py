@@ -164,7 +164,7 @@ def leftClickImage(self, event):
         mouseClickGlobal = self.screenToSlide((posx,posy))
 
         if (self.activePlugin is not None):
-            clickedAnno = self.activePlugin.instance.findClickAnnotation( clickPosition=mouseClickGlobal, pluginVP=self.currentPluginVP)
+            clickedAnno = self.activePlugin.instance.findClickAnnotation( clickPosition=mouseClickGlobal, pluginVP=self.currentPluginVP, zoom=self.getZoomValue())
             if (clickedAnno is not None):
                 self.showDBEntry(clickedAnno)
                 self.selectedPluginAnno = clickedAnno.uid
@@ -174,7 +174,7 @@ def leftClickImage(self, event):
 
         clickedAnno = None
         if (self.db.isOpen()):
-            clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP)
+            clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP, zoom=self.getZoomValue())
             if (clickedAnno is not None):
                 self.showDBEntry(clickedAnno)
                 self.selectedAnno = clickedAnno.uid
@@ -182,7 +182,7 @@ def leftClickImage(self, event):
                 self.selectedAnno = None
 
         if (clickedAnno is not None) and (modifiers == Qt.ControlModifier) :
-                pp = clickedAnno.positionInAnnotationHandle(mouseClickGlobal)
+                pp = clickedAnno.positionInAnnotationHandle(mouseClickGlobal, self.getZoomValue())
                 if (pp):
                     self.drag_id = [clickedAnno.uid, pp]
                     self.dragPoint=True
@@ -396,9 +396,9 @@ def rightClickImage(self, event):
             action = menu.exec_(self.mapToGlobal(event.pos()))
             return
 
-        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP)
+        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP, zoom=self.getZoomValue())
         if (self.activePlugin is not None):
-            clickedPluginAnno = self.activePlugin.instance.findClickAnnotation( clickPosition=mouseClickGlobal, pluginVP=self.currentPluginVP)
+            clickedPluginAnno = self.activePlugin.instance.findClickAnnotation( clickPosition=mouseClickGlobal, pluginVP=self.currentPluginVP, zoom=self.getZoomValue())
         else:
             clickedPluginAnno = None
 
@@ -437,7 +437,9 @@ def rightClickImage(self, event):
                 menuitems.append(act)
             menu.addAction('Remove annotation', partial(self.removeAnnotation, clickedAnno.uid))
             menu.addAction('Change ID',partial(self.changeAnnoID,clickedAnno.uid))
-            pp = clickedAnno.positionInAnnotationHandle(mouseClickGlobal)
+#            if (clickedAnno.annoType == AnnotationType.POLYGON):
+#                menu.addAction('Simplify polygon', partial(self.simplifyPolygon, clickedAnno.uid))
+            pp = clickedAnno.positionInAnnotationHandle(mouseClickGlobal, self.getZoomValue())
             if (pp):
                 addmenu = menu.addMenu('This polygon point')                
                 act = addmenu.addAction('remove', partial(self.removePolygonPoint, point_idx=pp, anno_uid=clickedAnno.uid))
