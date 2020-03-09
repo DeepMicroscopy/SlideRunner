@@ -161,14 +161,10 @@ class ExactManager():
         obj = self.json_get_request(self.serverurl+'annotations/api/annotation/loadannotationtypes/?imageset_id=%d' % imageset_id)['annotation_types']        
         return obj
 
-    def download_image(self, image_id:int, target_folder:str):
-        status,filename,blob = self.getfile('images/api/image/download/%d/' % image_id)
+    def download_image(self, image_id:int, target_folder:str, callback:callable=None):
         self.log(1, 'Downloading image',image_id,'to',target_folder)
-        if (status==200):
-            open(target_folder+os.sep+filename, 'wb').write(blob)
-            return target_folder+os.sep+filename
-        else:
-            return ''
+        status,filename = self.getfile('images/api/image/download/%d/' % image_id, target_folder, callback=callback)
+        return filename
 
     def retrieve_imagesets(self):
         status, obj = self.get('images/api/list_imagesets/')
@@ -626,6 +622,19 @@ class ExactManager():
         ret= requests.get(self.serverurl+url, auth=(self.username, self.password))
         return ret.status_code, ret.text
 
-    def getfile(self, url) -> (int, str, bytes):
-        ret= requests.get(self.serverurl+url, auth=(self.username, self.password))
-        return ret.status_code, get_filename_from_cd(ret.headers.get('content-disposition')), ret.content
+    def getfile(self, url, target_folder, callback) -> (int, str, bytes):
+        with requests.get(self.serverurl+url, auth=(self.username, self.password), stream=True) as r:
+            r.raise_for_status()
+            target_file = target_folder+os.sep+get_filename_from_cd(r.headers['content-disposition'])
+            f = open(target_file,'wb')
+            siz=0
+            for chunk in r.iter_content(chunk_size=8192): 
+                if chunk: # filter out keep-alive new chunks
+                    f.write(chunk)
+                    siz += len(chunk)
+                    prog=float(siz)/int(r.headers['content-length'])
+                    if (callback) is not None:
+                        callback(prog*100)
+                    self.progress(prog)
+            f.close()
+        return r.status_code, target_file

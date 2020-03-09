@@ -7,7 +7,7 @@ import sys
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QAction, QTableWidget,QTableWidgetItem,QVBoxLayout
 from PyQt5.QtGui import QIcon
 from SlideRunner.dataAccess.exact import *
-
+from functools import partial
 
 class ExactDownloadDialog(QDialog):
 
@@ -16,7 +16,7 @@ class ExactDownloadDialog(QDialog):
         self.title = 'Download from EXACT (%s)' % settingsObject.value('exactHostname', 'https://exact.cs.fau.de').replace('//','//'+settingsObject.value('exactUsername', 'Demo')+'@')
         self.left = 50
         self.top = 50
-        self.width = 600
+        self.width = 900
         self.height = 500
         self.DB = DB
         self.setModal(True)
@@ -60,11 +60,14 @@ class ExactDownloadDialog(QDialog):
             self.tableWidget.setItem(row,1, QTableWidgetItem(str(imset)))
             self.tableWidget.setItem(row,2, QTableWidgetItem(str(im)))
             self.tableWidget.setItem(row,3, QTableWidgetItem(str(linked)))
+            btn = QPushButton('download')
+            self.tableWidget.setCellWidget(row,4, btn)
+            btn.clicked.connect(partial(self.download, self.los[row]))
 
     def createTable(self):
        # Create table
         self.tableWidget = QTableWidget()
-        self.tableWidget.setColumnCount(4)
+        self.tableWidget.setColumnCount(5)
         self.tableWidget.setHorizontalHeaderLabels(['ID','Imageset','Image','Assigned to'])
         self.updateTable()
         self.tableWidget.move(0,0)
@@ -91,14 +94,19 @@ class ExactDownloadDialog(QDialog):
         reply = QtWidgets.QMessageBox.question(self, 'Question',
                                         f'Add image and annotations to database?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
 
-        outfilename = self.exm.download_image(image_id=image_id, target_folder=savefolder)
+
+        progress = QtWidgets.QProgressDialog("Downloading image ..", "Cancel", 0, 100, self)
+        progress.setWindowModality(QtCore.Qt.WindowModal)
+        progress.show()
+
+        outfilename = self.exm.download_image(image_id=image_id, target_folder=savefolder, callback=progress.setValue)
 
         if reply == QtWidgets.QMessageBox.Yes:
             fpath,fname = os.path.split(outfilename)
             slideid = self.DB.insertNewSlide(fname,fpath)
 
             self.DB.execute(f'UPDATE Slides set exactImageID="{exactid}" where uid=={slideid}')
-
+            
             self.exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=slideid, filename=imname, database=self.DB)
 
             reply = QtWidgets.QMessageBox.information(self, 'Finished',
