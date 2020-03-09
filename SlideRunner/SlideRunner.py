@@ -2538,8 +2538,9 @@ class SlideRunnerUI(QMainWindow):
 
         try:
             self.slide = RotatableOpenSlide(filename, rotate=self.rotateImage)
-        except:
-            self.popupmessage('Unable to open '+filename)
+        except Exception as e:
+            self.popupmessage('Unable to open '+filename+':'+str(e))
+            return
 
         # Clear cache
         self.cachedLocation = None
