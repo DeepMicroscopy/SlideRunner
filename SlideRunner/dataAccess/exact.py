@@ -79,10 +79,12 @@ class ExactManager():
         if (self.statusqueue is not None) and (level>1):
             self.statusqueue.put((1, logmsg))
 
-    def progress(self, value:float):
+    def progress(self, value:float, callback:callable=None):
         value=value/self.progress_denominator+self.offset
         if (self.statusqueue is not None):
             self.statusqueue.put((0, value*100 if value<1 else -1))
+        if (callback is not None):
+            callback(value*100)
 
     def set_progress_properties(self, denominator:float, offset:float):
         self.progress_denominator=float(denominator)
@@ -216,7 +218,7 @@ class ExactManager():
         return ExactImageList([[int(x.split('?')[0].split('/')[-2]),x.split('?')[1]] for x in il if '?' in x])
 
 
-    def retrieve_and_insert(self, dataset_id:int, slideuid:int, database:Database, **kwargs ):
+    def retrieve_and_insert(self, dataset_id:int, slideuid:int, database:Database,  callback:callable=None, **kwargs ):
 
         def createDatabaseObject():
             if (vector_type == 3): # line
@@ -241,7 +243,7 @@ class ExactManager():
                 database.removeAnnotation(database.guids[uuid],onlyMarkDeleted=True)
             
             return annoId
-        self.progress(0)
+        self.progress(0, callback=callback)
         annos = np.array(self.retrieve_annotations(dataset_id))
         self.log(0, f'Found {len(annos)} annotations for dataset {dataset_id}')
 
@@ -268,7 +270,7 @@ class ExactManager():
         # TODO: resolve conflict if one guid has multiple shapes
 
         for cntr, uuid in enumerate(uuids):
-            self.progress(float(cntr)*0.5/(len(uuids)+0.001))
+            self.progress(float(cntr)*0.5/(len(uuids)+0.001), callback=callback)
             le_array = [datetime.datetime.strptime(sanno['last_edit_time'], "%Y-%m-%dT%H:%M:%S.%f") for sanno in annodict[uuid]]
             lastedit = np.max(le_array) # maximum last_edit time is most recent for uuid
 
@@ -424,11 +426,11 @@ class ExactManager():
             raise ExactProcessError('Unable to create annotation')
 
 
-    def sync(self, dataset_id:int,imageset_id:int, product_id:int, slideuid:int, database:Database, image_id:str=None, **kwargs ):
+    def sync(self, dataset_id:int,imageset_id:int, product_id:int, slideuid:int, database:Database, image_id:str=None, callback:callable=None, **kwargs ):
 
         annotypedict = dict()
         mergeLocalClasses=dict()
-        self.retrieve_and_insert(dataset_id=dataset_id, slideuid=slideuid, database=database)
+        self.retrieve_and_insert(dataset_id=dataset_id, slideuid=slideuid, database=database, callback=callback)
 
         def getAnnotationTypes():
             annotypes = self.retrieve_annotationtypes(imageset_id)
@@ -501,7 +503,7 @@ class ExactManager():
         
         for cntr,annokey in enumerate(database.annotations.keys()):
             if not (self.multi_threaded):
-                self.progress(0.5+(float(cntr)*0.5/(len(database.annotations.keys())+0.0001)))
+                self.progress(0.5+(float(cntr)*0.5/(len(database.annotations.keys())+0.0001)), callback=callback)
             dbanno = database.annotations[annokey]
             # look through annotations
             labelToSend = [lab.classId for lab in dbanno.labels if lab.annnotatorId==uidToSend]
@@ -570,7 +572,7 @@ class ExactManager():
 
         # make updates to local database until final.
         while (pending_requests>0):
-            self.progress(1.0-(float(pending_requests)*0.5/(len(database.annotations.keys())+0.0001)))
+            self.progress(1.0-(float(pending_requests)*0.5/(len(database.annotations.keys())+0.0001)), callback=callback)
             res, context = self.resultQueue.get()
             dbanno = database.annotations[context['annouid']]
             pending_requests-=1
@@ -597,7 +599,7 @@ class ExactManager():
                     database.loadIntoMemory(database.annotationsSlide)
 
 
-        self.progress(1)
+        self.progress(1, callback=callback)
 
 
 
@@ -633,8 +635,6 @@ class ExactManager():
                     f.write(chunk)
                     siz += len(chunk)
                     prog=float(siz)/int(r.headers['content-length'])
-                    if (callback) is not None:
-                        callback(prog*100)
-                    self.progress(prog)
+                    self.progress(prog, callback=callback)
             f.close()
         return r.status_code, target_file

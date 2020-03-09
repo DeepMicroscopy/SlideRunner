@@ -2188,6 +2188,8 @@ class SlideRunnerUI(QMainWindow):
             ELD = ExactDownloadDialog(self.db, self.settings)
 
             ELD.exec_()
+
+
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
                                           QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
@@ -2197,6 +2199,7 @@ class SlideRunnerUI(QMainWindow):
         # reload current slide annotations (in case they were deleted)
         if (self.slideUID is not None):
             self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
+        self.reopenDatabase()
 
     def linkSlideToExact(self):
         if (self.db.isOpen() == False):
@@ -2234,7 +2237,6 @@ class SlideRunnerUI(QMainWindow):
             # reload current slide annotations (in case they were deleted)
             if (self.slideUID is not None):
                 self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
-        
 
     def showDBstatistics(self):
         """

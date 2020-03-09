@@ -106,12 +106,14 @@ class ExactDownloadDialog(QDialog):
             slideid = self.DB.insertNewSlide(fname,fpath)
 
             self.DB.execute(f'UPDATE Slides set exactImageID="{exactid}" where uid=={slideid}')
+            progress.setWindowTitle('Synchronizing annotations')
             
-            self.exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=slideid, filename=imname, database=self.DB)
+            self.exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=slideid, filename=imname, database=self.DB, callback=progress.setValue)
 
             reply = QtWidgets.QMessageBox.information(self, 'Finished',
                            'Download finished', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
 
+        progress.close()
 #        self.DB.execute(f'UPDATE Slides set exactImageID={exactid} where uid=={self.DB.annotationsSlide}')
         self.updateTable()
         self.show()
