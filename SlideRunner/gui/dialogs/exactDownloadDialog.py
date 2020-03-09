@@ -99,7 +99,7 @@ class ExactDownloadDialog(QDialog):
 
         self.DB.execute(f'UPDATE Slides set exactImageID="{exactid}" where uid=={slideid}')
 
-        self.exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, filename=imname, database=self.DB)
+        self.exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=slideid, filename=imname, database=self.DB)
 
 #        self.DB.execute(f'UPDATE Slides set exactImageID={exactid} where uid=={self.DB.annotationsSlide}')
         self.updateTable()
