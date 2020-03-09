@@ -87,19 +87,22 @@ class ExactDownloadDialog(QDialog):
             return
 
         (image_id, product_id, imageset_id) = [int(x) for x in exactid.split('/')]
-        self.exm.download_image(image_id=image_id, target_folder=savefolder)
 
         reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                        f'Fetch annotations alongside?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                        f'Add image and annotations to database?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
 
-        if reply == QtWidgets.QMessageBox.No:
-            return
+        outfilename = self.exm.download_image(image_id=image_id, target_folder=savefolder)
 
-        slideid = self.DB.insertNewSlide(imname, savefolder)
+        if reply == QtWidgets.QMessageBox.Yes:
+            fpath,fname = os.path.split(outfilename)
+            slideid = self.DB.insertNewSlide(fname,fpath)
 
-        self.DB.execute(f'UPDATE Slides set exactImageID="{exactid}" where uid=={slideid}')
+            self.DB.execute(f'UPDATE Slides set exactImageID="{exactid}" where uid=={slideid}')
 
-        self.exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=slideid, filename=imname, database=self.DB)
+            self.exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=slideid, filename=imname, database=self.DB)
+
+            reply = QtWidgets.QMessageBox.information(self, 'Finished',
+                           'Download finished', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
 
 #        self.DB.execute(f'UPDATE Slides set exactImageID={exactid} where uid=={self.DB.annotationsSlide}')
         self.updateTable()
