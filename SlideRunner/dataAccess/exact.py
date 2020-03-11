@@ -165,7 +165,7 @@ class ExactManager():
 
     def download_image(self, image_id:int, target_folder:str, callback:callable=None):
         self.log(1, 'Downloading image',image_id,'to',target_folder)
-        status,filename = self.getfile('images/api/image/download/%d/' % image_id, target_folder, callback=callback)
+        status,filename = self.getfile('images/api/image/download/%d/?original_image=True' % image_id, target_folder, callback=callback)
         return filename
 
     def retrieve_imagesets(self):
