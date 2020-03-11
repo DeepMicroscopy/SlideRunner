@@ -6,4 +6,6 @@
 
 pyinstaller --windowed --onefile main_osx.spec
 
+plutil -replace  LSBackgroundOnly -bool false dist/SlideRunner.app/Contents/Info.plist
+
 hdiutil create -volname SlideRunner -srcfolder dist/SlideRunner.app -ov -format UDZO SlideRunner.dmg
