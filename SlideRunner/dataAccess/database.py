@@ -743,6 +743,8 @@ class Database(object):
 
 
     def addAnnotationLabel(self,classId,  person, annoId, exact_id:int=None):
+        if (exact_id is None):
+            exact_id = ''
         query = ('INSERT INTO Annotations_label (person, class, annoId, exact_id) '
                   f'VALUES ({person},{classId},{annoId},{exact_id})')
         self.execute(query)
@@ -1027,7 +1029,7 @@ class Database(object):
 
     def countEntryPerClass(self, slideID = 0):
         retval = {'unknown' :  {'uid': 0, 'count_total':0, 'count_slide':0}}
-        self.dbcur.execute('SELECT Classes.uid, COUNT(*), name FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass GROUP BY Classes.uid')
+        self.dbcur.execute('SELECT Classes.uid, COUNT(*), name FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass where Annotations.deleted == 0 GROUP BY Classes.uid')
         allClasses = self.dbcur.fetchall()
     
         classids = np.zeros(len(allClasses))        
@@ -1040,11 +1042,13 @@ class Database(object):
 
         if (slideID is not None):
 
-            self.dbcur.execute('SELECT Classes.uid, COUNT(*), name FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass where slide==%d GROUP BY Classes.uid' % slideID)
+            self.dbcur.execute('SELECT Classes.uid, COUNT(*), name FROM Annotations LEFT JOIN Classes on Classes.uid == Annotations.agreedClass where slide==%d and deleted==0 GROUP BY Classes.uid' % slideID)
             allClasses = self.dbcur.fetchall()
             
             for uid,cnt,name in allClasses:
                 name = 'unknown' if name is None else name
+                if name not in retval:
+                    retval[name] = {'uid': 0, 'count_total':0, 'count_slide':0}
                 retval[name]['count_slide'] = cnt
 
         return retval
