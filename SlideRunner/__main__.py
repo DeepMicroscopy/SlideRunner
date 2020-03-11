@@ -27,7 +27,7 @@ def main():
     	import traceback
     	print('Error: ',e)
     	traceback.print_exc()
-#    	rollbar.report_exc_info()
+    	rollbar.report_exc_info()
     	# equivalent to rollbar.report_exc_info(sys.exc_info())
     	print('An error has been reported to rollbar.')
 

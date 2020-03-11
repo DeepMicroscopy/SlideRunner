@@ -317,9 +317,12 @@ class SlideRunnerUI(QMainWindow):
         msgBox.setText("Uncaught exception")
         msgBox.setInformativeText(headline)
         msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        btn = msgBox.addButton(QtWidgets.QPushButton('Report to developers'), QtWidgets.QMessageBox.YesRole)
         msgBox.setDetailedText(excmsg)
-        msgBox.setDefaultButton(QtWidgets.QMessageBox.Ok)
-        ret = msgBox.exec()        
+        msgBox.setDefaultButton(btn)
+        ret = msgBox.exec()      
+        if (ret == 0): # Yes was pressed  
+            rollbar.report_exc_info((exctype, value, tb))
 
     def exceptionHook_threading(self, exctype, value, tb):
         self.show_exception("Thread was terminated", exctype, value, tb)
@@ -2229,6 +2232,7 @@ class SlideRunnerUI(QMainWindow):
             return
 
         DBM = DatabaseManager(self.db)
+
         DBM.exec_()
         if (len(DBM.loadSlide)>0):
             self.openSlide(DBM.loadSlide)
