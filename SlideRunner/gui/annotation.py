@@ -159,7 +159,7 @@ def removeFromPolygon(self, annotation, annoList):
         reply = QtWidgets.QMessageBox.about(self, "Error", 'Polygon difference did not work. Sorry!')
         return
 
-    if isinstance(diffPolygon, Polygon):
+    if isinstance(diffPolygon, Polygon) and not isinstance(diffPolygon.exterior.coords, list):
         diffPolyCoords = diffPolygon.exterior.coords.xy 
 
         unionCoords = np.float32(np.c_[diffPolyCoords[0],diffPolyCoords[1]])
