@@ -38,6 +38,7 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 |---|---|---|
 | Windows 10 (google drive)| V. 1.99beta1 | [link](https://drive.google.com/file/d/1fqcSPdKtgwPUKD8hllf0FSxqTITiK1Jx/view?usp=sharing) |
 | Windows 10 (google drive)| V. 1.29.0 | [link](https://drive.google.com/file/d/1MHEM9f6cpw4ErHCGNGzHCg4ARNFhsfU3/view?usp=sharing) |
+|Mac OS X (10.15) (google drive) | V. 1.99beta2 | [link](https://drive.google.com/file/d/1ePEXmZn34ynSjDWmhps4o8pnUvQTUS-u/view?usp=sharing) |
 |Mac OS X (10.15) (google drive) | V 1.29.0 | [link](https://drive.google.com/file/d/1IEkmvJIbf0s50cFDBhpe1eQdWtT2tW-q/view?usp=sharing) |
 ## Updates
 
