@@ -1056,7 +1056,7 @@ class Database(object):
 
 
     def countEntries(self):
-        self.dbcur.execute('SELECT COUNT(*) FROM Annotations')
+        self.dbcur.execute('SELECT COUNT(*) FROM Annotations where deleted==0')
         num1 = self.dbcur.fetchone()
 
         return num1[0]
