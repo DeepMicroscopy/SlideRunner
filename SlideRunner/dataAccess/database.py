@@ -744,7 +744,7 @@ class Database(object):
 
     def addAnnotationLabel(self,classId,  person, annoId, exact_id:int=None):
         if (exact_id is None):
-            exact_id = ''
+            exact_id = 'Null'
         query = ('INSERT INTO Annotations_label (person, class, annoId, exact_id) '
                   f'VALUES ({person},{classId},{annoId},{exact_id})')
         self.execute(query)
@@ -976,8 +976,9 @@ class Database(object):
             try:
                 return self.dbcur.execute(query)
             except Exception as e:
-                print('Failed query was: ',query)
-                raise(e)
+                import sys
+                raise type(e)(str(e) +
+                      ' Failed query was: %s' % query).with_traceback(sys.exc_info()[2])
         else:
             print('Warning: DB not opened.')
 
