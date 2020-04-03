@@ -16,6 +16,11 @@ If you use the software for research purposes, please cite our paper:
 
 Please find the authors webpage at: https://lme.tf.fau.de/person/aubreville/
 
+## New polygon annotation tools (1.99beta3)
+
+[![Watch the video](https://img.youtube.com/vi/Yfw3XmgvUuM/hqdefault.jpg)](https://youtu.be/Yfw3XmgvUuM)
+
+
 ## A short introduction of the basic tools (NEW!)
 [![Watch the video](https://img.youtube.com/vi/S9GaXPAnyiE/hqdefault.jpg)](https://youtu.be/S9GaXPAnyiE)
 
