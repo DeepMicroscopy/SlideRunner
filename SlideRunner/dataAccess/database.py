@@ -830,7 +830,10 @@ class Database(object):
             return None
 
     def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2, uuid=None, exact_id="Null", description=""):
-        query = 'INSERT INTO Annotations (slide, agreedClass, type, description) VALUES (%d,%d,%d,"%s")' % (slideUID,classID, typeId, description)
+        if (uuid is None):
+            query = 'INSERT INTO Annotations (slide, agreedClass, type, description) VALUES (%d,%d,%d,"%s")' % (slideUID,classID, typeId, description)
+        else:
+            query = 'INSERT INTO Annotations (slide, agreedClass, type, guid, description) VALUES (%d,%d,%d,"%s","%s")' % (slideUID,classID, typeId, uuid,description)
 #        query = 'INSERT INTO Annotations (coordinateX1, coordinateY1, coordinateX2, coordinateY2, slide, class1, person1) VALUES (%d,%d,%d,%d,%d,%d, %d)' % (x1,y1,x2,y2,slideUID,classID,annotator)
         self.execute(query)
         query = 'SELECT last_insert_rowid()'
