@@ -155,7 +155,6 @@ class annotation():
               self.agreedClass = self.majorityLabel()
 
       def _create_annohandle(self, image:np.ndarray, coord:tuple, markersize:int, color:tuple, abscoord:tuple=(None,None)) -> AnnotationHandle:
-            markersize=3
             pt1_rect = (max(0,coord[0]-markersize),
                         max(0,coord[1]-markersize))
             pt2_rect = (min(image.shape[1],coord[0]+markersize),
@@ -368,7 +367,7 @@ class polygonAnnotation(annotation):
             cx = int((xpos - p1[0]) / zoomLevel)
             cy = int((ypos - p1[1]) / zoomLevel)
             return (cx,cy)        
-        markersize = min(3,int(5/zoomLevel))
+        markersize = 4#min(4,int(5/zoomLevel))
         listIdx=-1
 
         self.annoHandles=list()

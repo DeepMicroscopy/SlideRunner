@@ -123,12 +123,17 @@ def addPolygonAnnotation(self,classID,event, annoList):
         Polygon annotation is ready. Add to database.
     """
     self.saveLastViewport()
+    if (self.ui.annotationMode==2): #replace polygon object
+         self.writeDebug('extended polygon annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))
+         self.db.exchangePolygonCoordinates(self.ui.annotationUID, self.slideUID, annoList)
+         self.db.annotations[self.ui.annotationUID].deleted=False # make visible again
+    else:
+        self.writeDebug('added polygon annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))
+        self.db.insertNewPolygonAnnotation(annoList,
+                                    self.slideUID,classID, self.retrieveAnnotator(event))
     self.ui.annotationMode=0
-    self.db.insertNewPolygonAnnotation(annoList,
-                                self.slideUID,classID, self.retrieveAnnotator(event))
     self.showImage()
     self.showAnnotationsInOverview()
-    self.writeDebug('added polygon annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))
     self.showDBentryCount()
 
 def addToPolygon(self, annotation, annoList):

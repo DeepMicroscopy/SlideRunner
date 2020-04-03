@@ -248,6 +248,8 @@ class SlideRunnerUI(QMainWindow):
         self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(127*np.ones((200,200,3),np.uint8)))
         self.overviewimage = 127*np.ones((200,200,3),np.uint8)
         self.opacity = 0.5
+        self.ui.annotationsList = []
+        self.ui.annotationUID=None
 
         self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
         self.ui.OverviewLabel.mousePressEvent = self.pressOverviewImage
@@ -945,6 +947,8 @@ class SlideRunnerUI(QMainWindow):
             if reply == QtWidgets.QMessageBox.No:
                 return
 
+            if (self.ui.annotationMode==2): #replace polygon object
+                self.db.annotations[self.ui.annotationUID].deleted=False # make visible again
             self.ui.annotationMode=0
             self.showImage()
 
@@ -956,6 +960,8 @@ class SlideRunnerUI(QMainWindow):
             if reply == QtWidgets.QMessageBox.No:
                 return
             
+            if (self.ui.annotationMode==2): #replace polygon object
+                self.db.annotations[self.ui.annotationUID].deleted=False # make visible again
             self.ui.mode = mode
             self.ui.annotationsList = list()
             self.showImage()
@@ -1079,7 +1085,7 @@ class SlideRunnerUI(QMainWindow):
 
     def showPolygon(self, tempimage, polygon, color):
         zoomLevel = self.getZoomValue()
-        markersize = 3
+        markersize = 4
         listIdx=-1
 
         # small assertion to fix bug #12
@@ -1097,6 +1103,7 @@ class SlideRunnerUI(QMainWindow):
             cv2.rectangle(img=tempimage, pt1=(pt1_rect), pt2=(pt2_rect), color=[255,255,255,255], thickness=2)
             cv2.rectangle(img=tempimage, pt1=(pt1_rect), pt2=(pt2_rect), color=color, thickness=1)
         listIdx+=1
+        markersize = 6
         anno = self.slideToScreen(polygon[listIdx])
         pt1_rect = (max(0,anno[0]-markersize),
                     max(0,anno[1]-markersize))
@@ -1193,6 +1200,22 @@ class SlideRunnerUI(QMainWindow):
             else:
                 self.popupmessage(f'Error: ID already used. ')
                 
+
+    def extendPolygonPoint(self, point_idx:int, anno_uid:int):
+        # retrieve complete annotation from DB
+        annocoords = self.db.annotations[anno_uid].coordinates
+        self.db.annotations[anno_uid].deleted=True
+        
+        annocoords = np.vstack((annocoords[point_idx+1:,:],annocoords[0:point_idx,:]))
+
+
+        # switch to polygon annoation mode
+        self.setUIMode(UIMainMode.MODE_ANNOTATE_POLYGON)
+        self.ui.annotationsList = annocoords.tolist()
+        self.ui.annotationUID = anno_uid
+        self.ui.annotationMode=2
+        self.showImage()
+
 
     def removePolygonPoint(self, point_idx:int, anno_uid:int):
         self.db.removePolygonPoint(annoId=anno_uid, coord_idx=point_idx)

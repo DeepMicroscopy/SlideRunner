@@ -36,14 +36,17 @@ def doubleClick(self, event):
         menu = QMenu(self)
         DBclasses=self.db.getAllClasses()
         DBclassToName = {classId:className for className,classId,color in DBclasses}
-        if (self.lastAnnotationClass>0):
-            act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
-            act.setShortcut(Qt.Key_Enter)
-        addmenu = menu.addMenu('Annotate as:')
-        menuitems = list()
-        for clsname in DBclasses:
-            act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event, self.ui.annotationsList))
-            menuitems.append(act)
+        if (self.ui.annotationMode==2): # replace annotation
+                act=menu.addAction('Save annotation',partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
+        else:
+            if (self.lastAnnotationClass>0):
+                act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
+                act.setShortcut(Qt.Key_Enter)
+            addmenu = menu.addMenu('Annotate as:')
+            menuitems = list()
+            for clsname in DBclasses:
+                act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event, self.ui.annotationsList))
+                menuitems.append(act)
         addmenu = menu.addAction('Cancel', self.hitEscape)
         addmenu = menu.addAction('Remove last point', partial(self.removeLastPolygonPoint,self))
 
@@ -139,6 +142,8 @@ def moveImage(self, event):
 
     if not (modifiers == Qt.ShiftModifier) and (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
         self.ui.moveDots+=1
+        if (len(self.ui.annotationsList)>0) and all([abs(a-p)<3 for a,p in zip(self.slideToScreen(self.ui.annotationsList[-1]),getMouseEventPosition(self,event))]):
+            return      
         self.ui.annotationsList.append(self.screenToSlide(getMouseEventPosition(self,event)))            
         self.showImage()
 
@@ -183,7 +188,7 @@ def leftClickImage(self, event):
 
         if (clickedAnno is not None) and (modifiers == Qt.ControlModifier) :
                 pp = clickedAnno.positionInAnnotationHandle(mouseClickGlobal, self.getZoomValue())
-                if (pp):
+                if (pp is not None):
                     self.drag_id = [clickedAnno.uid, pp]
                     self.dragPoint=True
                     
@@ -246,6 +251,10 @@ def leftClickImage(self, event):
                 self.ui.annotationsList = list()
                 self.ui.annotationMode=1
                 self.ui.moveDots=0
+            
+            # only append if position changed a little:
+            if (len(self.ui.annotationsList)>0) and all([abs(a-p)<3 for a,p in zip(self.slideToScreen(self.ui.annotationsList[-1]),getMouseEventPosition(self,event))]):
+                return      
             self.ui.annotationsList.append(self.screenToSlide(getMouseEventPosition(self,event)))            
         self.showImage()
 
@@ -379,16 +388,19 @@ def rightClickImage(self, event):
                 addmenu.addAction('Remove area from existing annotation', partial(GUIannotation.removeFromPolygon,self,clickedAnno, self.ui.annotationsList))
                 addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno, self.ui.annotationsList))
             DBclasses=self.db.getAllClasses()
-            DBclassToName = {classId:className for className,classId,color in DBclasses}
-            if (self.lastAnnotationClass>0):
-                act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
-                act.setShortcut(Qt.Key_Enter)
-            addmenu = menu.addMenu('Annotate as:')
+            if (self.ui.annotationMode==2): # replace annotation
+                act=menu.addAction('Save annotation',partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
+            else:
+                DBclassToName = {classId:className for className,classId,color in DBclasses}
+                if (self.lastAnnotationClass>0):
+                    act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
+                    act.setShortcut(Qt.Key_Enter)
+                addmenu = menu.addMenu('Annotate as:')
             
-            menuitems = list()
-            for clsname in self.db.getAllClasses():
-                act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event, self.ui.annotationsList))
-                menuitems.append(act)
+                menuitems = list()
+                for clsname in self.db.getAllClasses():
+                    act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event, self.ui.annotationsList))
+                    menuitems.append(act)
             addmenu = menu.addAction('Cancel', self.hitEscape)
             addmenu = menu.addAction('Remove last point', partial(self.removeLastPolygonPoint,self))
 
@@ -440,9 +452,10 @@ def rightClickImage(self, event):
             if (clickedAnno.annotationType == AnnotationType.POLYGON):
                 menu.addAction('Simplify polygon', partial(self.simplifyPolygon, clickedAnno.uid))
             pp = clickedAnno.positionInAnnotationHandle(mouseClickGlobal, self.getZoomValue())
-            if (pp):
+            if (pp is not None):
                 addmenu = menu.addMenu('This polygon point')                
                 act = addmenu.addAction('remove', partial(self.removePolygonPoint, point_idx=pp, anno_uid=clickedAnno.uid))
+                act = addmenu.addAction('extend shape from here', partial(self.extendPolygonPoint, point_idx=pp, anno_uid=clickedAnno.uid))
 
             if len(previous)>0:
                 addmenu = menu.addMenu('Set agreed class')
