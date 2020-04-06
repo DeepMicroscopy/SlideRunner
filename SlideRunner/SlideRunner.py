@@ -162,11 +162,12 @@ class SlideRunnerUI(QMainWindow):
     selectedAnno = None
     pluginParameterSliders = dict()
     refreshTimer = None
-    settings = QSettings('Pattern Recognition Lab, FAU Erlangen Nuernberg', 'SlideRunner')
 
 
     def __init__(self,slideReaderThread, app, version,pluginList):
         super(SlideRunnerUI, self).__init__()
+
+        self.settings = QSettings('Pattern Recognition Lab, FAU Erlangen Nuernberg', 'SlideRunner')
 
         # Default value initialization
         self.relativeCoords = np.asarray([0,0], np.float32)
