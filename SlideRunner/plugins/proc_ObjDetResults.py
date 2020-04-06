@@ -107,13 +107,16 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 self.resultsArchive = pickle.load(open(oldArchive,'rb'))
 
                 pname,fname = os.path.split(job.slideFilename)
+                fnamewithfolder = pname.split(os.sep)[-1] + os.sep + fname
                 if (oldFilename is not fname):
                     # process slide
-                    if (fname not in self.resultsArchive):
+                    if (fname not in self.resultsArchive) and (fnamewithfolder not in self.resultsArchive):
                         self.setMessage('Slide '+str(fname)+' not found in results file.')
                         print('List is:',self.resultsArchive.keys())
                         continue
-                        
+                    
+                    if (fnamewithfolder in self.resultsArchive):
+                        fname=fnamewithfolder
                     oldFilename=fname
 
 
@@ -145,7 +148,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 for idx in range(len(self.resultsArchive)):
                         row = self.resultsArchive[idx]
                         if (row[5]>job.configuration['threshold']):
-                            myanno = annotations.rectangularAnnotation(uid=idx, x1=row['x'], x2=row['y'], y1=row['x']+row['w'], y2=row['y']+row['h'], text='%.2f' % row['confidence'], pluginAnnotationLabel=self.annotationLabels[row['label']])                
+                            myanno = annotations.rectangularAnnotation(uid=idx, x1=row['x'], y1=row['y'], x2=row['x']+row['w'], y2=row['y']+row['h'], text='%.2f' % row['confidence'], pluginAnnotationLabel=self.annotationLabels[row['label']])                
                             self.annos.append(myanno)
 
 
