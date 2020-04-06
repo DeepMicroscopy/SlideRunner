@@ -664,11 +664,16 @@ class Database(object):
         return slideuid
 
     def findSlideWithFilename(self,slidename,slidepath, uuid:str=None):
+        if (slidepath=='') and (os.sep in slidename):
+            slidepath,slidename = os.path.split(slidename)
+
         if (len(slidepath.split(os.sep))>1):
             directory = slidepath.split(os.sep)[-2]
         else:
-            directory = ''
+            directory = slidepath
+
         ret = self.execute('SELECT uid,directory,uuid,filename from Slides ').fetchall()
+#        print('Looking up',slidename,'in',directory)
         secondBest=None
         for (uid,slidedir,suuid,fname) in ret:
             if (uuid is not None) and (suuid==uuid):
