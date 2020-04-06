@@ -12,8 +12,11 @@ class RotatableOpenSlide(object):
         if cls is RotatableOpenSlide:
             bname, ext = os.path.splitext(filename)
             if ext.upper() == '.DCM': return type("RotatableOpenSlide", (RotatableOpenSlide, dicom.ReadableDicomDataset,openslide.ImageSlide), {})(filename, rotate)
-            if ext.upper() in ['.PNG','.JPG','.GIF', '.BMP']: return type("ImageSlide", (RotatableOpenSlide,openslide.ImageSlide), {})(filename, rotate)
-            else: return type("OpenSlide", (RotatableOpenSlide,openslide.OpenSlide), {})(filename, rotate)
+            try:
+                slideobj = type("OpenSlide", (RotatableOpenSlide,openslide.OpenSlide), {})(filename, rotate)
+                return slideobj
+            except:
+                return type("ImageSlide", (RotatableOpenSlide,openslide.ImageSlide), {})(filename, rotate)
         else:
             return object.__new__(cls)
 
