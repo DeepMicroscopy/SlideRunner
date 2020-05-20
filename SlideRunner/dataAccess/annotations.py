@@ -259,7 +259,6 @@ class imageAnnotation(annotation):
             self.clickable=False
     
       def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected = False):
-            print('Drawing imageAnnotation',self.text,self.getColor(vp))
 
             image = cv2.rectangle(image, thickness=thickness, pt1=(0,0), pt2=(image.shape[1],image.shape[0]),color=self.getColor(vp), lineType=cv2.LINE_AA)
 
