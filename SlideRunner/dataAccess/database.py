@@ -138,6 +138,7 @@ class Database(object):
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
         self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('EXACTUSER','INTEGER',defaultValue=0)).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT')).add(DatabaseField('uuid','TEXT')).add(DatabaseField('exactImageID', 'TEXT'))
         self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time()))).add(DatabaseField('description','TEXT'))
+        self.databaseStructure['Annotations_coordinates'] = DatabaseTable('Annotations_coordinates').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('coordinateX','INTEGER')).add(DatabaseField('coordinateY','INTEGER')).add(DatabaseField('coordinateZ','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('annoId','INTEGER')).add(DatabaseField('orderIdx','INTEGER'))
         self.databaseStructure['Persons'] = DatabaseTable('Persons').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('isExactUser','INTEGER', defaultValue=0))
         self.databaseStructure['Classes'] = DatabaseTable('Classes').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('color','TEXT'))
         self.databaseStructure['Annotations_label'] = DatabaseTable('Annotations_label').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('exact_id','INTEGER')).add(DatabaseField('person','INTEGER',defaultValue=0)).add(DatabaseField('class','INTEGER')).add(DatabaseField('annoId','INTEGER'))
@@ -245,11 +246,15 @@ class Database(object):
         except:
             return ''
 
-    def loadIntoMemory(self, slideId, transformer=None):
+    def loadIntoMemory(self, slideId, transformer=None, zLevel=0):
+        if not (self.isOpen()):
+            return
+
         self.annotations = dict()
         self.annotationsSlide = slideId
         self.guids = dict()
         self.transformer = transformer
+        self.zLevel = zLevel
 
         if (slideId is None):
             return
@@ -258,14 +263,18 @@ class Database(object):
         allAnnos = self.dbcur.fetchall()
 
 
-        self.dbcur.execute('SELECT coordinateX, coordinateY,annoid FROM Annotations_coordinates where annoId IN (SELECT uid FROM Annotations WHERE slide == %d) ORDER BY orderIdx' % (slideId))
+        self.dbcur.execute('SELECT coordinateX, coordinateY, coordinateZ, annoid FROM Annotations_coordinates where annoId IN (SELECT uid FROM Annotations WHERE slide == %d) ORDER BY orderIdx' % (slideId))
         allCoords = np.asarray(self.dbcur.fetchall())
 
         if self.transformer is not None:
             allCoords = self.transformer(allCoords)
 
         for uid, annotype,agreedClass,guid,lastModified,deleted,description in allAnnos:
-            coords = allCoords[allCoords[:,2]==uid,0:2]
+            coords = allCoords[allCoords[:,3]==uid,0:2]
+            zCoord = allCoords[allCoords[:,3]==uid,2][0] if allCoords.shape[0]>0 else 0
+
+            if (zCoord != zLevel):
+                continue
             if (annotype == AnnotationType.SPOT):
                 self.annotations[uid] = spotAnnotation(uid, coords[0][0], coords[0][1], text=description)
             elif (annotype == AnnotationType.SPECIAL_SPOT):
@@ -276,6 +285,8 @@ class Database(object):
                 self.annotations[uid] = rectangularAnnotation(uid, coords[0][0], coords[0][1], coords[1][0], coords[1][1], text=description)
             elif (annotype == AnnotationType.CIRCLE):
                 self.annotations[uid] = circleAnnotation(uid, coords[0][0], coords[0][1], coords[1][0], coords[1][1], text=description)
+            elif (annotype == AnnotationType.IMAGEANNOTATION):
+                self.annotations[uid] = imageAnnotation(uid, text=description)
             else:
                 print('Unknown annotation type %d found :( ' % annotype)
             self.annotations[uid].agreedClass = agreedClass
@@ -290,7 +301,8 @@ class Database(object):
         allLabels = self.dbcur.fetchall()
 
         for (annoId, person, classId,uid, exact_id) in allLabels:
-            self.annotations[annoId].addLabel(AnnotationLabel(person, classId, uid, exact_id), updateAgreed=False)
+            if (annoId) in self.annotations:
+                self.annotations[annoId].addLabel(AnnotationLabel(person, classId, uid, exact_id), updateAgreed=False)
 
 
         self.generateMinMaxCoordsList()
@@ -332,12 +344,17 @@ class Database(object):
             if not self.checkTableStructure('Classes'):
                 sql_statements = self.checkTableStructure('Classes','ammend')
                 for sql in sql_statements:
-                    print(sql)
                     self.dbcur.execute(sql)
                 self.db.commit()
 
             if not self.checkTableStructure('Annotations'):
                 sql_statements = self.checkTableStructure('Annotations','ammend')
+                for sql in sql_statements:
+                    self.dbcur.execute(sql)
+                self.db.commit()
+
+            if not self.checkTableStructure('Annotations_coordinates'):
+                sql_statements = self.checkTableStructure('Annotations_coordinates','ammend')
                 for sql in sql_statements:
                     self.dbcur.execute(sql)
                 self.db.commit()
@@ -398,9 +415,15 @@ class Database(object):
 
                 self.addTriggers()
 
-                DBversion = self.dbcur.execute('PRAGMA user_version = 2')
+                self.dbcur.execute('PRAGMA user_version = 2')
                 print('Successfully migrated DB to version 2')
                 self.commit()
+
+            if (DBversion[0]==2):
+                self.dbcur.execute('PRAGMA user_version = 3')
+                print('Successfully migrated DB to version 3')
+                self.commit()
+
 
             self.dbOpened = True
             self.dbfilename = dbfilename
@@ -472,47 +495,7 @@ class Database(object):
 
         return True
 
-    def findSpotAnnotations(self,leftUpper, rightLower, slideUID, blinded = False, currentAnnotator=None):
-        q = ('SELECT coordinateX, coordinateY, agreedClass,Annotations_coordinates.uid,annoId,type FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
-                ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND (type==1 OR type==4)'%(slideUID) )
-        if not blinded:
-            self.execute(q)
-            return self.fetchall()
-    
-        q=(' SELECT coordinateX, coordinateY,0,uid,annoId,1 from Annotations_coordinates WHERE coordinateX >= '+str(leftUpper[0])+
-                 ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+' AND slide == %d;' % slideUID)
-                
-        self.execute(q)
-        resp = np.asarray(self.fetchall())
 
-        if (resp.shape[0]==0):
-            return list()
-
-
-        self.execute('SELECT annoId, class from Annotations_label LEFT JOIN Annotations on Annotations_label.annoId == Annotations.uid WHERE person==%d and TYPE IN (1,4) GROUP BY annoId' % currentAnnotator)
-        myAnnos = np.asarray(self.fetchall())
-
-        if (myAnnos.shape[0]==0):
-            myOnes = np.zeros(resp.shape).astype(np.bool)
-            mineInAll = np.empty(0)
-        else:
-            myOnes = np.in1d(resp[:,4],myAnnos[:,0])
-            mineInAll = np.in1d(myAnnos[:,0],resp[:,4])
-
-        if mineInAll.shape[0]>0:
-            resp[myOnes,2] = myAnnos[mineInAll,1]
-
-        self.execute('SELECT uid,type from Annotations WHERE type IN (1,4) AND slide == %d'% slideUID)
-        correctTypeUIDs = np.asarray(self.fetchall())
-        if (correctTypeUIDs.shape[0]==0):
-            return list() # No annotation with correct type available
-
-        typeFilter = np.in1d(resp[:,4], correctTypeUIDs[:,0])
-        assignType = np.in1d(correctTypeUIDs[:,0], resp[:,4])
-        resp[:,5] = correctTypeUIDs[assignType,1]
-        return resp[typeFilter,:].tolist()
- 
 
     def getUnknownInCurrentScreen(self,leftUpper, rightLower, currentAnnotator) -> annotation:
         visAnnos = self.getVisibleAnnotations(leftUpper, rightLower)
@@ -536,11 +519,11 @@ class Database(object):
         self.execute(q)
         return self.fetchall()
 
-    def findAllAnnotations(self, annoId, slideUID = None):
+    def findAllAnnotations(self, annoId, slideUID = None, zLevel=0):
         if (slideUID is None):
             q = 'SELECT coordinateX, coordinateY FROM Annotations_coordinates WHERE annoId==%d' % annoId
         else:
-            q = 'SELECT coordinateX, coordinateY FROM Annotations_coordinates WHERE annoId==%d AND slide == %d' % (annoId, slideUID)
+            q = 'SELECT coordinateX, coordinateY FROM Annotations_coordinates WHERE annoId==%d AND slide == %d and coordinateZ == %d' % (annoId, slideUID, zLevel)
         self.execute(q)
         return self.fetchall()    
 
@@ -558,85 +541,6 @@ class Database(object):
                 return self.annotations[annoId]
         return None
 
-    def findPolygonAnnotatinos(self,leftUpper,rightLower, slideUID,blinded = False, currentAnnotator=None):
-        if not blinded:
-            q = ('SELECT agreedClass,annoId FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
-                ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type==3 '%(slideUID) +' GROUP BY Annotations_coordinates.annoId')
-            self.execute(q)
-            farr = self.fetchall()
-        else:
-            q = ('SELECT 0,annoId FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
-                ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type==3 '%(slideUID) +' AND Annotations.uid NOT IN (SELECT annoId FROM Annotations_label WHERE person==%d GROUP BY annoID) GROUP BY Annotations_coordinates.annoId' % currentAnnotator)
-            self.execute(q)
-            farr1 = self.fetchall()
-
-            q = ('SELECT class,Annotations_label.annoId FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId LEFT JOIN Annotations_label ON Annotations_label.annoId == Annotations.uid WHERE coordinateX >= '+str(leftUpper[0])+
-                ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type==3 '%(slideUID) +' AND Annotations_label.person == %d GROUP BY Annotations_coordinates.annoId' % currentAnnotator)
-            self.execute(q)
-            farr2 = self.fetchall()
-
-            farr = farr1+farr2
-
-
-        polysets = []
-        
-        toggler=True
-        for entryOuter in range(len(farr)):
-            # find all annotations for area:
-            allAnnos = self.findAllAnnotations(farr[entryOuter][1])
-            polygon = list()
-            for entry in np.arange(0,len(allAnnos),1):
-                polygon.append([allAnnos[entry][0],allAnnos[entry][1]])
-            polygon.append([allAnnos[0][0],allAnnos[0][1]]) # close polygon
-            polysets.append((polygon,farr[entryOuter][0],farr[entryOuter][1] ))
-
-        return polysets
-
-    def findAreaAnnotations(self,leftUpper, rightLower, slideUID, blinded = False, currentAnnotator = 0):
-        if not blinded:
-            q = ('SELECT coordinateX, coordinateY,agreedClass, annoId, type, orderIdx FROM Annotations_coordinates  LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE annoID in (SELECT annoId FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
-                ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type IN (2,5) '%(slideUID) +' group by Annotations_coordinates.annoId) ORDER BY Annotations_coordinates.annoId, orderIdx')
-            self.execute(q)
-            farr = self.fetchall()
-
-            reply = []
-            for entry in range(len(farr)-1):
-                # find all annotations for area:
-                if (farr[entry][5]==1):
-                    reply.append([farr[entry][0],farr[entry][1],farr[entry+1][0],farr[entry+1][1],farr[entry][2],farr[entry][3],farr[entry][4]])
-                    # tuple: x1,y1,x2,y2,class,annoId ID, type
-            return reply
-
-        else:
-            q = ('SELECT 0,annoId,type FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId WHERE coordinateX >= '+str(leftUpper[0])+
-                ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type IN (2,5) '%(slideUID) +' AND Annotations.uid NOT IN (SELECT annoId FROM Annotations_label WHERE person==%d GROUP BY annoID) GROUP BY Annotations_coordinates.annoId' % currentAnnotator)
-
-            self.execute(q)
-            farr1 = self.fetchall()
-
-            q = ('SELECT class,Annotations_label.annoId,type FROM Annotations_coordinates LEFT JOIN Annotations on Annotations.uid == Annotations_coordinates.annoId LEFT JOIN Annotations_label ON Annotations_label.annoId == Annotations.uid WHERE coordinateX >= '+str(leftUpper[0])+
-                ' AND coordinateX <= '+str(rightLower[0])+' AND coordinateY >= '+str(leftUpper[1])+' AND coordinateY <= '+str(rightLower[1])+
-                ' AND Annotations.slide == %d AND type IN (2,5) '%(slideUID) +' AND Annotations_label.person == %d GROUP BY Annotations_coordinates.annoId' % currentAnnotator)
-
-            self.execute(q)
-            farr2 = self.fetchall()
-
-            farr = farr1+farr2
-            
-        reply = []
-        toggler=True
-        for entryOuter in range(len(farr)):
-            # find all annotations for area:
-            allAnnos = self.findAllAnnotations(farr[entryOuter][1])
-            for entry in np.arange(0,len(allAnnos),2):
-                reply.append([allAnnos[entry][0],allAnnos[entry][1],allAnnos[entry+1][0],allAnnos[entry+1][1],farr[entryOuter][0],farr[entryOuter][1],farr[entryOuter][2]])
-            # tuple: x1,y1,x2,y2,class,annoId ID, type
-        return reply
 
 
     def setSlideDimensions(self,slideuid,dimensions):
@@ -756,7 +660,7 @@ class Database(object):
         self.checkCommonAnnotation( annoId)
         self.commit()
 
-    def exchangePolygonCoordinates(self, annoId, slideUID, annoList):
+    def exchangePolygonCoordinates(self, annoId, slideUID, annoList, zLevel):
         self.annotations[annoId].annotationType = AnnotationType.POLYGON
         self.annotations[annoId].coordinates = np.asarray(annoList)
         self.generateMinMaxCoordsList()
@@ -765,10 +669,10 @@ class Database(object):
         self.execute(query)
         self.commit()
 
-        self.insertCoordinates(np.array(annoList), slideUID, annoId)
+        self.insertCoordinates(np.array(annoList), slideUID, annoId, zLevel)
         
 
-    def insertCoordinates(self, annoList:np.ndarray, slideUID, annoId):
+    def insertCoordinates(self, annoList:np.ndarray, slideUID, annoId, zLevel):
         """
                 Insert an annotation into the database.
                 annoList must be a numpy array, but can be either 2 columns or 3 columns (3rd is order)
@@ -778,18 +682,17 @@ class Database(object):
             annoList = self.transformer(annoList, inverse=True)
 
         for num, annotation in enumerate(annoList.tolist()):
-            query = ('INSERT INTO Annotations_coordinates (coordinateX, coordinateY, slide, annoId, orderIdx) VALUES (%d,%d,%d,%d,%d)'
-                    % (annotation[0],annotation[1],slideUID, annoId, annotation[2] if len(annotation)>2 else num+1))
+            query = (f'INSERT INTO Annotations_coordinates (coordinateX, coordinateY, coordinateZ, slide, annoId, orderIdx) VALUES ({annotation[0]},{annotation[1]},{zLevel}, {slideUID},{annoId},{annotation[2] if len(annotation)>2 else num+1})')
             self.execute(query)
         self.commit()
 
-    def setPolygonCoordinates(self, annoId, coords, slideUID):
+    def setPolygonCoordinates(self, annoId, coords, slideUID, zLevel):
         self.execute(f'DELETE FROM Annotations_coordinates where annoId={annoId}')
 
-        self.insertCoordinates(np.array(coords), slideUID, annoId)
+        self.insertCoordinates(np.array(coords), slideUID, annoId, zLevel)
         self.commit()
 
-    def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator, closed:bool=True, exact_id="Null", description:str=''):
+    def insertNewPolygonAnnotation(self, annoList, slideUID, classID, annotator, closed:bool=True, exact_id="Null", description:str='', zLevel:int=0):
         query = 'INSERT INTO Annotations (slide, agreedClass, type, description) VALUES (%d,%d,3,"%s")' % (slideUID,classID, description)
 #        query = 'INSERT INTO Annotations (coordinateX1, coordinateY1, coordinateX2, coordinateY2, slide, class1, person1) VALUES (%d,%d,%d,%d,%d,%d, %d)' % (x1,y1,x2,y2,slideUID,classID,annotator)
         if (isinstance(annoList, np.ndarray)):
@@ -803,24 +706,26 @@ class Database(object):
         assert(len(annoList)>0)
         self.annotations[annoId] = polygonAnnotation(annoId, np.asarray(annoList))
         self.appendToMinMaxCoordsList(self.annotations[annoId])
-        self.insertCoordinates(np.array(annoList), slideUID, annoId)
+        self.insertCoordinates(np.array(annoList), slideUID, annoId, zLevel)
 
         self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId, exact_id=exact_id)
 
         self.commit()
         return annoId
 
-    def addAnnotationToDatabase(self, anno:annotation, slideUID:int, classID:int, annotatorID:int, description:str=''):
+        
+
+    def addAnnotationToDatabase(self, anno:annotation, slideUID:int, classID:int, annotatorID:int, zLevel:int, description:str=''):
         if (anno.annotationType == AnnotationType.AREA):
-            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID,description=description)
+            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID,description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.POLYGON):
-            self.insertNewPolygonAnnotation(anno.coordinates, slideUID, classID, annotatorID, description=description)
+            self.insertNewPolygonAnnotation(anno.coordinates, slideUID, classID, annotatorID, description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.CIRCLE):
-            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID, typeId=5,description=description)
+            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID, typeId=5,description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.SPOT):
-            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, description=description)
+            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.SPECIAL_SPOT):
-            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, type=4, description=description)
+            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, type=4, description=description, zLevel=zLevel)
         
 
     def getGUID(self, annoid) -> str:
@@ -829,7 +734,7 @@ class Database(object):
         except:
             return None
 
-    def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2, uuid=None, exact_id="Null", description=""):
+    def insertNewAreaAnnotation(self, x1,y1,x2,y2, slideUID, classID, annotator, typeId=2, uuid=None, exact_id="Null", description="", zLevel=0):
         if (uuid is None):
             query = 'INSERT INTO Annotations (slide, agreedClass, type, description) VALUES (%d,%d,%d,"%s")' % (slideUID,classID, typeId, description)
         else:
@@ -847,7 +752,7 @@ class Database(object):
         self.appendToMinMaxCoordsList(self.annotations[annoId])
 
         annoList = np.array([[x1,y1,1],[x2,y2,2]])
-        self.insertCoordinates(np.array(annoList), slideUID, annoId)
+        self.insertCoordinates(np.array(annoList), slideUID, annoId, zLevel)
         
         self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId, exact_id=exact_id)
 
@@ -867,8 +772,32 @@ class Database(object):
             self.execute(query)
             return self.fetchone()[0]
 
+    def removeImageAnnotation(self, slideUID:int, zLevel:int, annotator:int, exact_id="Null"):
+        query = f'SELECT annoId FROM Annotations_coordinates where coordinateX IS NULL and coordinateY IS NULL and coordinateZ=={zLevel} and slide=={slideUID} and annoID in (SELECT annoID FROM Annotations_label where person=={annotator})'
+        # delete all previous labels by current annotator
+        self.execute(query)
+        for [aid,] in self.fetchall():
+            if (aid.deleted==0):
+                self.removeAnnotation(aid)
 
-    def insertNewSpotAnnotation(self,xpos_orig,ypos_orig, slideUID, classID, annotator, type = 1, exact_id="Null", description:str=''):
+
+    def insertNewImageAnnotation(self, slideUID:int, zLevel:int, classID:int, annotator:int, exact_id="Null", description:str=''):
+
+        self.removeImageAnnotation(slideUID=slideUID, zLevel=zLevel, annotator=annotator)
+
+        query = 'INSERT INTO Annotations (slide,agreedClass,type,description) VALUES (%d,0,%d, "%s")' % (slideUID, AnnotationType.IMAGEANNOTATION,description)
+        self.execute(query)
+        query = 'SELECT last_insert_rowid()'
+        self.execute(query)
+        annoId = self.fetchone()[0]
+        self.annotations[annoId] = imageAnnotation(annoId)
+        self.insertCoordinates(np.array([['Null', 'Null',1]]), slideUID, annoId, zLevel)
+        self.addAnnotationLabel(classId=classID, person=annotator, annoId=annoId, exact_id=exact_id)
+        self.appendToMinMaxCoordsList(self.annotations[annoId])
+
+
+
+    def insertNewSpotAnnotation(self,xpos_orig,ypos_orig, slideUID, classID, annotator, type = 1, exact_id="Null", description:str='', zLevel=0):
 
         if (type == 4):
             query = 'INSERT INTO Annotations (slide, agreedClass, type,description) VALUES (%d,0,%d, "%s")' % (slideUID, type,description)
@@ -877,7 +806,7 @@ class Database(object):
             self.execute(query)
             annoId = self.fetchone()[0]
 
-            self.insertCoordinates(np.array([[xpos_orig, ypos_orig,1]]), slideUID, annoId)
+            self.insertCoordinates(np.array([[xpos_orig, ypos_orig,1]]), slideUID, annoId, zLevel)
             self.annotations[annoId] = spotAnnotation(annoId, xpos_orig,ypos_orig, (type==4))
 
         else:
@@ -887,7 +816,7 @@ class Database(object):
             self.execute(query)
             annoId = self.fetchone()[0]
 
-            self.insertCoordinates(np.array([[xpos_orig, ypos_orig,1]]), slideUID, annoId)
+            self.insertCoordinates(np.array([[xpos_orig, ypos_orig,1]]), slideUID, annoId, zLevel)
             self.execute(query)
 
             self.annotations[annoId] = spotAnnotation(annoId, xpos_orig,ypos_orig, (type==4))
@@ -1119,6 +1048,7 @@ class Database(object):
             '`uid`	INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,'
             '`coordinateX`	INTEGER,'
             '`coordinateY`	INTEGER,'
+            '`coordinateZ`	INTEGER DEFAULT 0,'
             '`slide`	INTEGER,'
             '`annoId`	INTEGER,'
             '`orderIdx`	INTEGER'

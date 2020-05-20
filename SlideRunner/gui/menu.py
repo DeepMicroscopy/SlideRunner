@@ -61,16 +61,14 @@ def defineMenu(self, MainWindow, pluginList, initial=True):
                 for action in self.menuHelp.actions():
                         self.menuHelp.removeAction(action)
         self.zoomInAction = self.zoomMenu.addAction('Zoom in')
-        self.zoomInAction.setShortcut("+")
         self.zoomInAction.triggered.connect(MainWindow.zoomIn)
 
-        self.zoomInAction = self.zoomMenu.addAction('Zoom out')
-        self.zoomInAction.setShortcut("-")
-        self.zoomInAction.triggered.connect(MainWindow.zoomOut)
+        self.zoomOutAction = self.zoomMenu.addAction('Zoom out')
+        self.zoomOutAction.triggered.connect(MainWindow.zoomOut)
 
-        self.zoomInAction = self.zoomMenu.addAction('Max optical zoom')
-        self.zoomInAction.setShortcut("Ctrl+M")
-        self.zoomInAction.triggered.connect(MainWindow.zoomMaxoptical)
+        self.zoomMaxAction = self.zoomMenu.addAction('Max optical zoom')
+        self.zoomMaxAction.setShortcut("Ctrl+M")
+        self.zoomMaxAction.triggered.connect(MainWindow.zoomMaxoptical)
         MainWindow.setMenuBar(self.menubar)
         self.action_Open = QtWidgets.QAction(MainWindow)
         self.action_Open.setObjectName("action_Open")

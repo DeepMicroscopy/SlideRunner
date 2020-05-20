@@ -8,6 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from SlideRunner.gui.zoomSlider import *
+from SlideRunner.gui.frameSlider import *
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -41,6 +42,13 @@ class Ui_MainWindow(object):
         self.MainImage.setLineWidth(0)
         self.MainImage.setAlignment(QtCore.Qt.AlignCenter)
         self.MainImage.setObjectName("MainImage")
+        self.frameSlider = frameSlider()
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Maximum)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.frameSlider.sizePolicy().hasHeightForWidth())
+        self.frameSlider.setSizePolicy(sizePolicy)
+        self.verticalLayout.addWidget(self.frameSlider)
         self.verticalLayout.addWidget(self.MainImage)
         self.horizontalScrollBar = QtWidgets.QScrollBar(self.centralwidget)
         self.horizontalScrollBar.setMaximum(999)
@@ -55,6 +63,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.zoomSlider.sizePolicy().hasHeightForWidth())
         self.zoomSlider.setSizePolicy(sizePolicy)
+#        self.zoomSlider.setHidden(True)
         self.verticalLayout.addWidget(self.zoomSlider)
         self.verticalLayout.addLayout(self.horizontalLayout_2)
         self.horizontalLayout.addLayout(self.verticalLayout)
@@ -145,12 +154,12 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "SlideRunner"))
-        self.MainImage.setText(_translate("MainWindow", "No Slide Open"))
+        self.MainImage.setText(_translate("MainWindow", "No Image Open"))
         self.OverviewLabel.setText(_translate("MainWindow", "TextLabel"))
         self.filenameLabel.setText(_translate("MainWindow", "TextLabel"))
         self.databaseLabel.setText(_translate("MainWindow", "No database opened."))
         self.menuDatabase.setTitle(_translate("MainWindow", "Database"))
-        self.menuFile.setTitle(_translate("MainWindow", "Slide"))
+        self.menuFile.setTitle(_translate("MainWindow", "Image"))
         self.menuAnnotation.setTitle(_translate("MainWindow", "Annotation"))
         self.menuHelp.setTitle(_translate("MainWindow", "Help"))
         self.action_Open.setText(_translate("MainWindow", "&Open default"))

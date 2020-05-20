@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import QTableWidget
 from SlideRunner.gui.types import *
 from SlideRunner.gui import annotation as GUIannotation
 from functools import partial
+from PyQt5.QtCore import Qt
 
 class ClassSelectTableWidget(QTableWidget):
     def __init__(self, parent = None, parentObject = None):
@@ -11,8 +12,13 @@ class ClassSelectTableWidget(QTableWidget):
         self.parentObject = parentObject
     
     def contextMenuEvent(self, event):
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
         columnId = self.columnAt(event.pos().x())
         rowId = self.rowAt(event.pos().y())
+        if (modifiers == Qt.ShiftModifier):
+                partial(GUIannotation.addImageLabel, self.parentObject, self.parentObject.classList[rowId].uid)()
+                return
+
         menu = QMenu(self)
         if (columnId == 0):
                 addAction = menu.addAction('Toggle all', self.parentObject.toggleAllClasses)
@@ -20,13 +26,17 @@ class ClassSelectTableWidget(QTableWidget):
         elif (self.parentObject.db.isOpen()):
                 addAction = menu.addAction('Add new class')
                 addAction.triggered.connect(self.parentObject.addCellClass)
-                if (rowId > 0):
+                if (rowId == 0):
+                        setSlideLabel = menu.addAction('Delete image label', partial(GUIannotation.deleteImageLabel, self.parentObject))                
+                elif (rowId>0):
                         if (self.parentObject.classList[rowId].itemID == ClassRowItemId.ITEM_DATABASE):
                                 changeColorAction = menu.addAction('Change color', partial(GUIannotation.changeClassColor, self.parentObject, self.parentObject.classList[rowId].color, self.parentObject.classList[rowId].uid))                
                                 renameAction = menu.addAction('Rename class',partial(GUIannotation.renameClass,self.parentObject, self.parentObject.classList[rowId].uid))                
                                 removeAction = menu.addAction('Remove class', partial(GUIannotation.deleteClass, self.parentObject, self.parentObject.classList[rowId].uid))                
 
                                 removeAllOfClassAction = menu.addAction('Remove all of this class from slide', partial(GUIannotation.deleteAllFromClassOnSlide,self.parentObject, self.parentObject.classList[rowId].uid))
+                                setSlideLabel = menu.addAction('Assign to complete image', partial(GUIannotation.addImageLabel, self.parentObject, self.parentObject.classList[rowId].uid))                
+                                print('Self: ',self, self.parentObject)
 
 
                 if (self.parentObject.activePlugin is not None) and (rowId > 0):

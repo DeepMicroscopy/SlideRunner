@@ -221,21 +221,22 @@ class ExactManager():
     def retrieve_and_insert(self, dataset_id:int, slideuid:int, database:Database,  callback:callable=None, **kwargs ):
 
         def createDatabaseObject():
+            zLevel = anno['vector']['z1'] if 'z1' in anno['vector'] else 0
             if (vector_type == 3): # line
-                annoId = database.insertNewPolygonAnnotation(annoList=coords, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], exact_id=exact_id, description=anno['description'])
+                annoId = database.insertNewPolygonAnnotation(annoList=coords, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], exact_id=exact_id, description=anno['description'], zLevel=zLevel)
             elif (vector_type in [4,5]): # polygon or line
-                annoId = database.insertNewPolygonAnnotation(annoList=coords, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], closed=anno['annotation_type']['closed'], exact_id=exact_id, description=anno['description'])
+                annoId = database.insertNewPolygonAnnotation(annoList=coords, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], closed=anno['annotation_type']['closed'], exact_id=exact_id, description=anno['description'], zLevel=zLevel)
             elif (vector_type in [1,6]): # rectangle
-                annoId = database.insertNewAreaAnnotation(x1=anno['vector']['x1'],y1=anno['vector']['y1'],x2=anno['vector']['x2'],y2=anno['vector']['y2'], slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], exact_id=exact_id, description=anno['description'])                
+                annoId = database.insertNewAreaAnnotation(x1=anno['vector']['x1'],y1=anno['vector']['y1'],x2=anno['vector']['x2'],y2=anno['vector']['y2'], slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], exact_id=exact_id, description=anno['description'], zLevel=zLevel)                
             elif (vector_type==2): # ellipse
                 r1 = int(round((anno['vector']['x2']-anno['vector']['x1'])/2))
                 xpos = anno['vector']['x1']+r1
                 r2 = int(round((anno['vector']['y2']-anno['vector']['y1'])/2))
                 ypos = anno['vector']['y1']+r2
                 if ('SpotCircleRadius' in kwargs) and (r1==r2) and (r1==kwargs['SpotCircleRadius']):
-                    annoId = database.insertNewSpotAnnotation(xpos_orig=xpos,ypos_orig=ypos, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], typeId=5, exact_id=exact_id, description=anno['description'])                
+                    annoId = database.insertNewSpotAnnotation(xpos_orig=xpos,ypos_orig=ypos, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], typeId=5, exact_id=exact_id, description=anno['description'], zLevel=zLevel)                
                 else:
-                    annoId = database.insertNewAreaAnnotation(x1=anno['vector']['x1'],y1=anno['vector']['y1'],x2=anno['vector']['x2'],y2=anno['vector']['y2'], slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], typeId=5, exact_id=exact_id, description=anno['description'])                
+                    annoId = database.insertNewAreaAnnotation(x1=anno['vector']['x1'],y1=anno['vector']['y1'],x2=anno['vector']['x2'],y2=anno['vector']['y2'], slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], typeId=5, exact_id=exact_id, description=anno['description'], zLevel=zLevel)                
             else:
                 raise NotImplementedError('Vector Type %d is unknown.' % vector_type)
             

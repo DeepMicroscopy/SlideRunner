@@ -8,6 +8,7 @@ class AnnotationType(enumerate):
     POLYGON = 3
     SPECIAL_SPOT = 4
     CIRCLE = 5
+    IMAGEANNOTATION = 6
     UNKNOWN = 255
 
 class ViewingProfile(object):
@@ -249,6 +250,29 @@ class annotation():
             return annoCoordinate(None, None)
 
 
+class imageAnnotation(annotation):
+      def __init__(self, uid, text='', pluginAnnotationLabel=None, minimumAnnotationLabelZoom=1):
+            super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
+            self.text = text
+            self.minimumAnnotationLabelZoom = minimumAnnotationLabelZoom
+            self.annotationType = AnnotationType.AREA
+            self.clickable=False
+    
+      def draw(self, image: np.ndarray, leftUpper: tuple, zoomLevel: float, thickness: int, vp : ViewingProfile, selected = False):
+            print('Drawing imageAnnotation',self.text,self.getColor(vp))
+
+            image = cv2.rectangle(image, thickness=thickness, pt1=(0,0), pt2=(image.shape[1],image.shape[0]),color=self.getColor(vp), lineType=cv2.LINE_AA)
+
+            if (len(self.text)>0) and (zoomLevel < self.minimumAnnotationLabelZoom):
+                  cv2.putText(image, self.text, (10, 10), cv2.FONT_HERSHEY_PLAIN , 0.7,self.getColor(vp),1,cv2.LINE_AA)
+    
+      def minCoordinates(self) -> annoCoordinate:
+         return annoCoordinate(0,0)
+    
+      def maxCoordinates(self) -> annoCoordinate:
+         return annoCoordinate(np.inf,np.inf)
+
+
 class rectangularAnnotation(annotation):
       def __init__(self, uid, x1, y1, x2, y2, text='', pluginAnnotationLabel=None, minimumAnnotationLabelZoom=1):
             super().__init__(uid=uid, text=text, pluginAnnotationLabel=pluginAnnotationLabel)
@@ -258,6 +282,7 @@ class rectangularAnnotation(annotation):
             self.y2 = y2
             self.minimumAnnotationLabelZoom = minimumAnnotationLabelZoom
             self.annotationType = AnnotationType.AREA
+            self.text = text
       
       @property
       def coordinates(self):
@@ -321,11 +346,12 @@ class polygonAnnotation(annotation):
         return annoCoordinate(self.coordinates[:,0].max(), self.coordinates[:,1].max())
     
     def area_px(self) -> float:
-        return cv2.contourArea(self.coordinates)
+        print(np.array(self.coordinates).shape,np.array(self.coordinates).dtype)
+        return cv2.contourArea(np.int32(np.array(self.coordinates)))
 
     # Largest diameter --> 2* radius of minimum enclosing circle
     def diameter_px(self) -> float:
-        (x,y),radius = cv2.minEnclosingCircle(self.coordinates)
+        (x,y),radius = cv2.minEnclosingCircle(np.int32(np.array(self.coordinates)))
         return radius*2
 
     def getDescription(self,db, micronsPerPixel=None) -> list:
@@ -335,7 +361,7 @@ class polygonAnnotation(annotation):
         micronsPerPixel = float(micronsPerPixel)
         if micronsPerPixel < 2E-6:
             area = '%d px^2' % area_px
-            diameter = '%d px^2' % diameter_px
+            diameter = '%d px' % diameter_px
         else:
             area_mum2 = (area_px*micronsPerPixel*micronsPerPixel)
             diameter_mum = diameter_px*micronsPerPixel
@@ -344,9 +370,9 @@ class polygonAnnotation(annotation):
             else:
                 area = '%.2f mm^2' % (1E-6 * area_mum2)
             if (diameter_mum < 1e3):
-                diameter = '%.2f µm^2' % diameter_mum
+                diameter = '%.2f µm' % diameter_mum
             else:
-                diameter = '%.2f mm^2' % (diameter_mum * 1e-3)
+                diameter = '%.2f mm' % (diameter_mum * 1e-3)
 
         return [['Position', 'x1=%d, y1=%d' % (mc.x,mc.y)], ['Area', area], ['Largest diameter', diameter]] + self.getAnnotationsDescription(db)
 
@@ -449,6 +475,7 @@ class circleAnnotation(annotation):
                   image = cv2.circle(image, thickness=thickness, center=(xpos1,ypos1), radius=radius,color=self.getColor(vp), lineType=cv2.LINE_AA)
             if (len(self.text)>0) and (zoomLevel < self.minimumAnnotationLabelZoom):
                     cv2.putText(image, self.text, (xpos1,ypos1), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+
 
 class spotAnnotation(annotation):
 

@@ -227,6 +227,7 @@ class SlideRunnerUI(QMainWindow):
         self.setCenterReceived.connect(self.setCenter)
         self.readRegionCompleted.connect(self.showImage_part2)
         self.pluginPopupMessageReceived.connect(self.popupmessage)
+        self.ui.frameSlider.valueChanged.connect(self.frameChanged)
 
         self.pluginStatusReceiver = PluginStatusReceiver(self.progressBarQueue, self)
         self.pluginStatusReceiver.setDaemon(True)
@@ -1248,7 +1249,7 @@ class SlideRunnerUI(QMainWindow):
             reply = QtWidgets.QMessageBox.question(self, 'Question', 'Simplification done. Accept?',QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
             if reply == QtWidgets.QMessageBox.Yes:
                 ## simplify path in DB
-                self.db.setPolygonCoordinates(annoId, cont, self.slideUID)
+                self.db.setPolygonCoordinates(annoId, cont, self.slideUID, zLevel=self.zPosition)
                 pass
             else:
                 self.db.annotations[annoId].coordinates = oldC
@@ -1489,12 +1490,6 @@ class SlideRunnerUI(QMainWindow):
         sp = cv2.warpAffine(self.slideOverview[:,:,0:3], M, dsize=size)
         subpix_a = np.expand_dims(cv2.warpAffine(self.slideOverview[:,:,3], M, dsize=size),axis=2)
         return np.concatenate((sp, subpix_a), axis=2)
-    """
-        read_region: cached version of openslide's read_region.
-
-        Reads from the original slide with 50% overlap to each side.
-
-    """
 
     def image_in_cache(self, location, level, size):
         readNew = False
@@ -1517,32 +1512,7 @@ class SlideRunnerUI(QMainWindow):
             coords = (x0,x1,y0,y1)
         return readNew,coords
 
-    def read_region(self, location, level, size, forceRead = False):
-        self.lastReadRequest = dict()
-        self.lastReadRequest['location'] = location
-        self.lastReadRequest['level'] = level
-        self.lastReadRequest['size'] = size
-        reader_location = (int(location[0]-1.*size[0]*self.slide.level_downsamples[level]),
-                          int(location[1]-1.*size[1]*self.slide.level_downsamples[level]))
-        reader_size = (int(size[0]*3), int(size[1]*3))
-        readNew,coords = self.image_in_cache(location, level, size)
-        
-        if not readNew:
-            (x0,x1,y0,y1) = coords
-            ret = self.cachedImage[y0:y1,x0:x1,:]
-            return ret
-        else:
-            # refill cache
-            region = self.slide.read_region(location=reader_location,level=level,size=reader_size)
-            # Convert to numpy array
-            self.cachedImage = np.array(region, dtype=np.uint8)
-            self.cachedLevel = level
-            self.cachedLocation = reader_location
-            x0 = int((location[0]-self.cachedLocation[0])/self.slide.level_downsamples[level])
-            y0 = int((location[1]-self.cachedLocation[1])/self.slide.level_downsamples[level])
-            x1 = x0 + size[0]
-            y1 = y0 + size[1]
-            return self.cachedImage[y0:y1,x0:x1,:]
+
 
 
     def updateCache(self, newcache):
@@ -1613,10 +1583,10 @@ class SlideRunnerUI(QMainWindow):
         else:
             level_overview = self.slide.level_count-1
 
-        self.slideReaderThread.queue.put((self.slidepathname, location_im, act_level, size_im, self.processingStep, self.rotateImage))
+        self.slideReaderThread.queue.put((self.slidepathname, location_im, act_level, size_im, self.processingStep, self.rotateImage, self.zPosition))
 
     def closeEvent(self, event):
-        self.slideReaderThread.queue.put((-1,0,0,0,0,0))
+        self.slideReaderThread.queue.put((-1,0,0,0,0,0,0))
         self.slideReaderThread.join(0)
         event.accept()
 
@@ -1816,6 +1786,8 @@ class SlideRunnerUI(QMainWindow):
         self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.displayedImage)))
 
     def toggleOneClass(self, row):
+        if (self.db.isOpen()==False):
+            return
         if (row>=len(self.modelItems)):
             return
         self.modelItems[row].stateChanged.disconnect(self.selectClasses)
@@ -2382,6 +2354,7 @@ class SlideRunnerUI(QMainWindow):
             for clsid in range(len(classes)):
                 clsname = classes[clsid]
                 item = QTableWidgetItem(clsname[0])
+                item.setFlags(Qt.ItemIsSelectable)
                 pixmap = QPixmap(10,10)
                 pixmap.fill(QColor.fromRgb(*hex_to_rgb(clsname[2])))
                 btn = QPushButton('')
@@ -2389,6 +2362,7 @@ class SlideRunnerUI(QMainWindow):
                 btn.clicked.connect(partial(self.clickAnnoclass, clsid+1))
                 self.classButtons.append(btn)
                 itemcol = QTableWidgetItem('')
+                itemcol.setFlags(Qt.NoItemFlags)
                 checkbx = QCheckBox()
                 checkbx.setChecked(True)
                 itemcol.setBackground(QColor.fromRgb(*hex_to_rgb(clsname[2])))
@@ -2474,6 +2448,27 @@ class SlideRunnerUI(QMainWindow):
         self.showImage()
         self.updateScrollbars()
 
+    def nextFrame(self):
+        self.ui.frameSlider.setValue(self.ui.frameSlider.getValue()+1)
+        self.zPosition = self.ui.frameSlider.getValue()
+        self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates, zLevel=self.zPosition)
+        self.showImage()
+
+    def previousFrame(self):
+        self.ui.frameSlider.setValue(self.ui.frameSlider.getValue()-1)
+        self.zPosition = self.ui.frameSlider.getValue()
+        self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates, zLevel=self.zPosition)
+        self.showImage()
+
+
+    def frameChanged(self):
+        self.zPosition = self.ui.frameSlider.getValue()
+        if (self.db.isOpen()):
+            self.findSlideUID(self.slide.dimensions)
+            t = time.time()
+            self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates, zLevel=self.zPosition)
+        self.showImage()
+
     def createNewDatabase(self):
         """
             Callback function to create a new database structure.
@@ -2550,7 +2545,7 @@ class SlideRunnerUI(QMainWindow):
             level_overview = np.where(np.array(self.slide.level_downsamples)==32)[0][0] # pick overview at 32x
         else:
             level_overview = self.slide.level_count-1
-        overview = self.slide.read_region(location=(0,0), level=level_overview, size=self.slide.level_dimensions[level_overview])
+        overview = self.slide.read_region(location=(0,0), level=level_overview, size=self.slide.level_dimensions[level_overview], zLevel=self.zPosition)
         self.slideOverview = np.asarray(overview)
         overview = cv2.cvtColor(np.asarray(overview), cv2.COLOR_BGRA2RGB)
         self.overview = overview
@@ -2569,12 +2564,17 @@ class SlideRunnerUI(QMainWindow):
         try:
             self.slide = RotatableOpenSlide(filename, rotate=self.rotateImage)
         except Exception as e:
-            self.popupmessage('Unable to open '+filename+':'+str(e))
+            self.show_exception("Unable to open"+filename, *sys.exc_info())
             return
 
         # Clear cache
         self.cachedLocation = None
         self.cachedLevel = None
+
+        self.ui.frameSlider.valueChanged.disconnect()
+        self.ui.frameSlider.setNumberOfFrames(self.slide.numberOfFrames)
+        self.ui.frameSlider.setFPS(self.slide.fps)
+        self.ui.frameSlider.valueChanged.connect(self.frameChanged)
 
         if (openslide.PROPERTY_NAME_OBJECTIVE_POWER in self.slide.properties):
             self.slideMagnification = self.slide.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
@@ -2588,6 +2588,7 @@ class SlideRunnerUI(QMainWindow):
         else:
             self.slideMicronsPerPixel = 1E-6
         self.slidename = os.path.basename(filename)
+        self.zPosition=0
 
         # unhide label and show filename
         self.ui.filenameLabel.setText(self.slidename)

@@ -36,7 +36,7 @@ def addSpotAnnotation(self, classID, event, typeAnno=1):
         self.writeDebug('added object center annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))
     xpos = int((annotation[0] - p1[0]) / self.getZoomValue())
     
-    self.db.insertNewSpotAnnotation(xpos_orig,ypos_orig, self.slideUID, classID,self.retrieveAnnotator(event), type=typeAnno )
+    self.db.insertNewSpotAnnotation(xpos_orig,ypos_orig, self.slideUID, classID,self.retrieveAnnotator(event), type=typeAnno, zLevel=self.zPosition)
     self.showDBentryCount()
     self.showImage()
 
@@ -71,6 +71,18 @@ def deleteClass(self, classID, event = None):
     self.db.deleteClass(classID)
     self.showDatabaseUIelements()
 
+
+def addImageLabel(self, classID, event = None):
+    if not (self.db.isOpen()):
+        return
+    self.db.insertNewImageAnnotation(slideUID=self.slideUID, zLevel=self.zPosition, classID=classID, annotator=self.retrieveAnnotator(event), exact_id="Null", description='')
+    self.showImage()
+
+def deleteImageLabel(self, event = None):
+    if not (self.db.isOpen()):
+        return
+    self.db.removeImageAnnotation(slideUID=self.slideUID, zLevel=self.zPosition, annotator=self.retrieveAnnotator(event), exact_id="Null")
+    self.showImage()
 
 def deleteAllFromClassOnSlide(self, classID, event = None):
     if not (self.db.isOpen()):
@@ -130,7 +142,7 @@ def addPolygonAnnotation(self,classID,event, annoList):
     else:
         self.writeDebug('added polygon annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))
         self.db.insertNewPolygonAnnotation(annoList,
-                                    self.slideUID,classID, self.retrieveAnnotator(event))
+                                    self.slideUID,classID, self.retrieveAnnotator(event), zLevel=self.zPosition)
     self.ui.annotationMode=0
     self.showImage()
     self.showAnnotationsInOverview()
@@ -205,7 +217,7 @@ def addCircleAnnotation(self, classID, event):
     self.showAnnoclass()
 
     self.db.insertNewAreaAnnotation(xpos_orig_1,ypos_orig_1,xpos_orig_2,ypos_orig_2,
-                                self.slideUID,classID, self.retrieveAnnotator(event), 5)
+                                self.slideUID,classID, self.retrieveAnnotator(event), 5, zLevel=self.zPosition)
 
     self.showDBentryCount()
     self.showImage()
@@ -232,7 +244,7 @@ def addAreaAnnotation(self, classID, event):
     self.showAnnoclass()
 
     self.db.insertNewAreaAnnotation(xpos_orig_1,ypos_orig_1,xpos_orig_2,ypos_orig_2,
-                                self.slideUID,classID, self.retrieveAnnotator(event))
+                                self.slideUID,classID, self.retrieveAnnotator(event),zLevel=self.zPosition)
 
     self.showDBentryCount()
     self.showImage()

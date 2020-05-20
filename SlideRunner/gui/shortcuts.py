@@ -22,6 +22,8 @@
 from PyQt5.QtWidgets import QShortcut
 from PyQt5.QtGui import QKeySequence
 from functools import partial
+from SlideRunner.gui import annotation as GUIannotation
+
 
 def defineShortcuts(self):
 
@@ -37,10 +39,25 @@ def defineShortcuts(self):
         shortcut.activated.connect(partial(self.clickAnnoclass, k+1))
         shortcuts.append(shortcut)
 
+    for k in range(8):
+        shortcut = QShortcut(QKeySequence("Shift+%d" % (k+1)),self)
+        shortcut.activated.connect(partial(GUIannotation.addImageLabel, self, k+1))
+        shortcuts.append(shortcut)
+
+    shortcut = QShortcut(QKeySequence('Shift+0'), self)
+    shortcut.activated.connect(partial(GUIannotation.deleteImageLabel, self))
 
     # Set keyboard shortcuts
     shortcutEsc = QShortcut(QKeySequence("Esc"), self)
     shortcutEsc.activated.connect(self.hitEscape)
+
+    shortcutnextframe = QShortcut(QKeySequence("Shift++"), self)
+    shortcutnextframe.activated.connect(self.nextFrame)
+
+    shortcutprevframe = QShortcut(QKeySequence("Shift+-"), self)
+    shortcutprevframe.activated.connect(self.previousFrame)
+
+
     shortcuts.append(shortcutEsc)
     shortcutN = QShortcut(QKeySequence("N"), self)
     shortcutN.activated.connect(self.nextScreeningStep)
@@ -62,6 +79,8 @@ def defineMenuShortcuts(self):
     self.ui.actionOpen.setShortcut("Ctrl+O")
     self.ui.actionOpen.triggered.connect(self.openSlideDialog)
     self.ui.actionOpen_custom.setShortcut("Ctrl+C")
+    self.ui.zoomInAction.setShortcut("+")
+    self.ui.zoomOutAction.setShortcut("-")
     self.ui.actionCreate_new.triggered.connect(self.createNewDatabase)
     self.ui.actionOpen_custom.triggered.connect(self.openCustomDB)
     self.ui.actionAdd_annotator.triggered.connect(self.addAnnotator)
