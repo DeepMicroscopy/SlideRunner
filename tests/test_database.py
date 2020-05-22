@@ -99,7 +99,7 @@ def test_database():
     assert(stats['Crap']['count_total']==4)
 
     DB.loadIntoMemory(1)
-    assert(DB.annotations[list(DB.annotations.keys()[-3])].guid=='ABC')
+    assert(DB.annotations[list(DB.annotations.keys())[-2]].guid=='ABC')
 
     # Manipulate agreed class
     assert(DB.annotations[1].agreedClass==2)
