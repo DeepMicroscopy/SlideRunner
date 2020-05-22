@@ -89,9 +89,13 @@ class SlideReader(multiprocessing.Process):
             if (slidename!=self.slidename):
                 self.slide = RotatableOpenSlide(slidename, rotate=rotated)
                 self.slidename = slidename
+                newSlide=True
+            else:
+                newSlide=False
+
             self.slide.rotate = rotated
 
-            if not all([a==b for a,b in zip([location,level,size,zlevel],lastReq)]):
+            if not all([a==b for a,b in zip([location,level,size,zlevel],lastReq)]) or newSlide:
                 img = self.slide.read_region(location, level, size, zLevel=zlevel)
                 lastReq = [location, level, size,zlevel]
 

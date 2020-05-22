@@ -1444,7 +1444,7 @@ class SlideRunnerUI(QMainWindow):
         """
             Returns the maximum zoom available for this image.
         """
-        return self.slide.level_dimensions[0][0] / self.mainImageSize[0]
+        return max(self.slide.level_dimensions[0][0] / self.mainImageSize[0],self.slide.level_dimensions[0][1] / self.mainImageSize[1]) * 1.2
 
     def setZoomValue(self, zoomValue):
         """
@@ -2508,7 +2508,7 @@ class SlideRunnerUI(QMainWindow):
         """
             Callback function to select a slide
         """
-        filename = QFileDialog.getOpenFileName(filter='WSI files (*.svs *.tif *.png *.bif *.svslide *.mrxs *.scn *.vms *.vmu *.ndpi *.tiff *.bmp *.dcm);;Aperio SVS format (*.svs);;DICOM format (*.dcm);;All files (*.*)')[0]
+        filename = QFileDialog.getOpenFileName(filter='WSI files (*.svs *.tif *.png *.bif *.svslide *.mrxs *.scn *.vms *.vmu *.ndpi *.tiff *.bmp *.dcm);;Aperio SVS format (*.svs);;DICOM format (*.dcm);;CellVizio MKT format (*.dcm);;All files (*.*)')[0]
         if (len(filename)==0):
             return ''
         self.openSlide(filename)
@@ -2574,6 +2574,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.frameSlider.valueChanged.disconnect()
         self.ui.frameSlider.setNumberOfFrames(self.slide.numberOfFrames)
         self.ui.frameSlider.setFPS(self.slide.fps)
+        self.ui.frameSlider.setValue(0)
         self.ui.frameSlider.valueChanged.connect(self.frameChanged)
 
         if (openslide.PROPERTY_NAME_OBJECTIVE_POWER in self.slide.properties):
@@ -2601,7 +2602,6 @@ class SlideRunnerUI(QMainWindow):
             self.findSlideUID(self.slide.dimensions)
             t = time.time()
             self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
-            print('Took: ',time.time()-t)
 
             self.db.setPathForSlide(self.slideUID, self.slidepathname)
         self.relativeCoords = np.asarray([0,0], np.float32)
