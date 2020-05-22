@@ -73,16 +73,6 @@ def test_database():
     DB.insertNewAreaAnnotation(x1=10,y1=10,x2=20,y2=20, slideUID=1, classID=1, annotator=1, uuid='ABC', typeId=5, zLevel=0) # circle
     DB.insertNewAreaAnnotation(x1=15,y1=10,x2=20,y2=20, slideUID=1, classID=1, annotator=1, typeId=2, zLevel=0) # rectangle
 
-    #TODO: FIX TEST
-#    areaannos = DB.findAreaAnnotations(leftUpper=(0,0), rightLower=(40,40), slideUID=1, blinded = False, currentAnnotator = 0)
-    # return list is: x1,y1,x2,y2,class,annoId ID, type
-#    print(areaannos)
-#    assert(areaannos[0][0] == 10)
-#    assert(areaannos[0][6] == 5)
-#    assert(len(areaannos)==2)
-
-#    assert(areaannos[1][0] == 15)
-#    assert(areaannos[1][6] == 2)
 
 
     # test statistics
@@ -100,6 +90,9 @@ def test_database():
 
     DB.loadIntoMemory(1)
     assert(DB.annotations[list(DB.annotations.keys())[-2]].guid=='ABC')
+
+    assert(DB.annotations[list(DB.annotations.keys())[-2]].x1 == 15) # it's a circle object - thus it will have different coords
+    assert(DB.annotations[list(DB.annotations.keys())[-1]].x2 == 20)
 
     # Manipulate agreed class
     assert(DB.annotations[1].agreedClass==2)
