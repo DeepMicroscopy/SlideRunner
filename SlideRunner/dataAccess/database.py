@@ -782,8 +782,7 @@ class Database(object):
         # delete all previous labels by current annotator
         self.execute(query)
         for [aid,] in self.fetchall():
-            if (aid.deleted==0):
-                self.removeAnnotation(aid)
+            self.removeAnnotation(aid)
 
 
     def insertNewImageAnnotation(self, slideUID:int, zLevel:int, classID:int, annotator:int, exact_id="Null", description:str=''):
