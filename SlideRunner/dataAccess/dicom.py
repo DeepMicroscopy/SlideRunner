@@ -82,10 +82,10 @@ class ReadableDicomDataset():
                 all([dims_instances[x][1]==dims_instances[0][1] for x in range(len(dims_instances))]) and len(dims_instances)>1    
         self.multiInstanceStack = stack
 
-        self.levels = sorted(list(self._dsstore.keys())) if not stack else [0]
         self._dsequence = sequencedTiles(self._dsstore)
         
         try:
+            self.levels = sorted(list(self._dsstore.keys()))
             self.geometry_imsize = [(self._dsstore[k][0x48,0x6].value,self._dsstore[k][0x48,0x7].value) for k in self.levels]
             self.geometry_tilesize = [(self._dsstore[k].Columns, self._dsstore[k].Rows) for k in self.levels]
             self.geometry_columns = [round(0.5+(self.geometry_imsize[k][0]/self.geometry_tilesize[k][0])) for k in self.levels]
@@ -94,8 +94,9 @@ class ReadableDicomDataset():
             self.mpp_x = float(self._dsstore[0].SharedFunctionalGroupsSequence[0][0x028,0x9110][0][0x028,0x030][0])*1000
             self.mpp_y = float(self._dsstore[0].SharedFunctionalGroupsSequence[0][0x028,0x9110][0][0x028,0x030][1])*1000
             self.numberOfFrames = 1
-        except:
+        except Exception as e:
             # Fall back to simple reader
+            self.levels = sorted(list(self._dsstore.keys())) if not stack else [0]
             self.read_region = self.read_region_simple
             self.extremes = np.min(self._dsstore[0].pixel_array), np.max(self._dsstore[0].pixel_array)
             self.geometry_imsize = [self._dsstore[0].Columns, self._dsstore[0].Rows]
@@ -199,7 +200,8 @@ class ReadableDicomDataset():
         lu, lu_xo, lu_yo = self.get_id(*list(location),level=level)
         rl, rl_xo, rl_yo = self.get_id(*[sum(x) for x in zip(location,size)], level=level)
         # generate big image
-        bigimg = 255*np.ones(((rl[1]-lu[1]+1)*self.geometry_tilesize[level][0], (rl[0]-lu[0]+1)*self.geometry_tilesize[level][1],4), np.uint8)
+        bigimg = 0*np.ones(((rl[1]-lu[1]+1)*self.geometry_tilesize[level][0], (rl[0]-lu[0]+1)*self.geometry_tilesize[level][1],4), np.uint8)
+        bigimg[:,:,3] = 255
         for xi, xgridc in enumerate(range(lu[0],rl[0]+1)):
             for yi, ygridc in enumerate(range(lu[1],rl[1]+1)):
                 if (xgridc<0) or (ygridc<0):
