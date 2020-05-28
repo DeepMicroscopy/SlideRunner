@@ -2507,7 +2507,7 @@ class SlideRunnerUI(QMainWindow):
         """
             Callback function to select a slide
         """
-        filename = QFileDialog.getOpenFileName(filter='WSI files (*.svs *.tif *.png *.bif *.svslide *.mrxs *.scn *.vms *.vmu *.ndpi *.tiff *.bmp *.dcm);;Aperio SVS format (*.svs);;DICOM format (*.dcm);;CellVizio MKT format (*.dcm);;All files (*.*)')[0]
+        filename = QFileDialog.getOpenFileName(filter='WSI files (*.svs *.tif *.png *.bif *.svslide *.mrxs *.scn *.vms *.vmu *.ndpi *.tiff *.bmp *.dcm);;Aperio SVS format (*.svs);;DICOM format (*.dcm);;CellVizio MKT format (*.mkt);;All files (*.*)')[0]
         if (len(filename)==0):
             return ''
         self.openSlide(filename)
