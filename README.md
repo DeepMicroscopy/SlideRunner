@@ -27,12 +27,16 @@ Please find the authors webpage at: https://lme.tf.fau.de/person/aubreville/
 
 ## Version 2 coming up ##
 
-With so many new features, it is time to declare Version 2 - which is scheduled to be on SlideRunner's second birthday, coinciding with BVM 2020. Now we are in beta phase, which means: Try out all new features and give feedback, if something doesn't work as expected.
+With so many new features, it is time to declare Version 2. While we initially wanted to declare the version on this years BVM, it has all been delayed a bit. But for a good reason: Following requests by our pathologists, SlideRunner now has support for a much broader range of image formats.
 
 List of new features:
-- DICOM WSI support (through pydicom)
+- New formats:
+    - DICOM supprt (including DICOM WSI, through pydicom, new in 1.99beta4)
+    - CellVizio MKT (Confocal Laser Endomicroscopy, new in 1.99beta4)
+    - TIFF stacks (previously was only for 2D images, new in 1.99beta6) 
 - Synchronization support with [EXACT](https://github.com/ChristianMarzahl/Exact)
 - Much enhanced polygon annotation support, including modifying and simplification
+- Support for z Stacks as well as time series
 - and uncountable small fixes and improvements
 
 ## Download and Installation 
@@ -41,11 +45,8 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 
 | Operating System | Version | Download link|
 |---|---|---|
-| Windows 10 (google drive)| V. 1.99beta5 | [link](https://drive.google.com/file/d/1ki-_E7imQGBEUSKsevmqDdHr4YTu3-98/view?usp=sharing) |
-| Windows 10 (google drive)| V. 1.99beta3 | [link](https://drive.google.com/file/d/1b9LWPoS_PvKce0rGHYoXfTx3SMdds8-8/view?usp=sharing) |
-| Windows 10 (google drive)| V. 1.29.0 | [link](https://drive.google.com/file/d/1MHEM9f6cpw4ErHCGNGzHCg4ARNFhsfU3/view?usp=sharing) |
-|Mac OS X (10.15) (google drive) | V. 1.99beta2 | [link](https://drive.google.com/file/d/1ePEXmZn34ynSjDWmhps4o8pnUvQTUS-u/view?usp=sharing) |
-|Mac OS X (10.15) (google drive) | V 1.29.0 | [link](https://drive.google.com/file/d/1IEkmvJIbf0s50cFDBhpe1eQdWtT2tW-q/view?usp=sharing) |
+| Windows 10 (google drive) | V. 1.99beta6 | [link](https://drive.google.com/file/d/16kuSAkYWeb4boG9bW8AYtL0S7uo8lXz_/view?usp=sharing) |
+| Mac OS X (10.15) (google drive) | V. 1.99beta6 | [link](https://drive.google.com/file/d/16kuSAkYWeb4boG9bW8AYtL0S7uo8lXz_/view?usp=sharing) |
 ## Updates
 
 Starting V. 1.31.0, SlideRunner has support for the DICOM WSI image format (thanks, pydicom team, for your support!). Use wsi2dcm to convert images into dicom format.
