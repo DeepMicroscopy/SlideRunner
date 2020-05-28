@@ -6,6 +6,56 @@ import numpy as np
 import os
 from . import dicom
 from . import cellvizio
+from openslide.lowlevel import OpenSlideError, OpenSlideUnsupportedFormatError
+from PIL import Image
+
+# This is a 3D version of openslide.ImageSlide, supporting z stacks
+
+class ImageSlide3D(openslide.ImageSlide):
+
+    def __init__(self, file):
+        """Open an image file.
+
+        file can be a filename or a PIL.Image."""
+        openslide.ImageSlide.__init__(self, file)
+
+        self.numberOfFrames = self._image.n_frames
+    
+        
+
+
+    def read_region(self, location, level, size, zStack):
+        """Return a PIL.Image containing the contents of the region.
+
+        location: (x, y) tuple giving the top left pixel in the level 0
+                  reference frame.
+        level:    the level number.
+        size:     (width, height) tuple giving the region size."""
+
+        if level != 0:
+            raise OpenSlideError("Invalid level")
+        if ['fail' for s in size if s < 0]:
+            raise OpenSlideError("Size %s must be non-negative" % (size,))
+        # Any corner of the requested region may be outside the bounds of
+        # the image.  Create a transparent tile of the correct size and
+        # paste the valid part of the region into the correct location.
+        image_topleft = [max(0, min(l, limit - 1))
+                    for l, limit in zip(location, self._image.size)]
+        image_bottomright = [max(0, min(l + s - 1, limit - 1))
+                    for l, s, limit in zip(location, size, self._image.size)]
+        tile = Image.new("RGBA", size, (0,) * 4)
+        #print(self._image)
+        if not ['fail' for tl, br in zip(image_topleft, image_bottomright)
+                if br - tl < 0]:  # "< 0" not a typo
+            # Crop size is greater than zero in both dimensions.
+            # PIL thinks the bottom right is the first *excluded* pixel
+            self._image.seek(zStack)
+            crop = self._image.crop(image_topleft +
+                    [d + 1 for d in image_bottomright])
+            tile_offset = tuple(il - l for il, l in
+                    zip(image_topleft, location))
+            tile.paste(crop, tile_offset)
+        return tile    
 
 class RotatableOpenSlide(object):
 
@@ -14,15 +64,18 @@ class RotatableOpenSlide(object):
             bname, ext = os.path.splitext(filename)
             if ext.upper() == '.DCM': return type("RotatableOpenSlide", (RotatableOpenSlide, dicom.ReadableDicomDataset,openslide.ImageSlide), {})(filename, rotate)
             if ext.upper() == '.MKT': return type("ReadableCellVizioMKTDataset", (RotatableOpenSlide, cellvizio.ReadableCellVizioMKTDataset, openslide.ImageSlide), {})(filename,rotate)
+#            if ext.upper() == '.TIF': return type("RotatableOpenSlide", (RotatableOpenSlide, ImageSlide3D,openslide.ImageSlide), {})(filename, rotate)
             try:
                 slideobj = type("OpenSlide", (RotatableOpenSlide,openslide.OpenSlide), {})(filename, rotate)
                 return slideobj
             except:
-                return type("ImageSlide", (RotatableOpenSlide,openslide.ImageSlide), {})(filename, rotate)
+                return type("ImageSlide", (RotatableOpenSlide,ImageSlide3D), {})(filename, rotate)
         else:
             return object.__new__(cls)
 
     def __init__(self, filename, rotate=False):
+        if ('rotate' in self.__dict__): # speed up - somehow init is called twice. Let's skip that.
+            return
         self.rotate=rotate
         self.type=0
         self.numberOfFrames = 1
@@ -87,6 +140,7 @@ class SlideReader(multiprocessing.Process):
                 return
 
             if (slidename!=self.slidename):
+                print('Opening new slide, name differs')
                 self.slide = RotatableOpenSlide(slidename, rotate=rotated)
                 self.slidename = slidename
                 newSlide=True

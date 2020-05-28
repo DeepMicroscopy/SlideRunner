@@ -69,12 +69,10 @@ class imageReceiverThread(threading.Thread):
         threading.Thread.__init__(self)
         self.queue = queue
         self.selfObj = selfObj
-        print('Created 1 image receiver thread')
 
     def run(self):
         while True:
             (img, procId) = self.queue.get()
-            print('Received an image from the plugin queue')
             self.selfObj.overlayMap = img
             self.selfObj.showImage3Request.emit(np.empty(0), procId)
                         
@@ -191,6 +189,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.wandAnnotation = WandAnnotation()
         self.slidename=''
         self.slideUID = 0
+        self.region = [0,0]
         self.slideReaderThread = slideReaderThread
         self.ui.annotationMode = 0
         self.annotatorsModel = QStringListModel()
@@ -2562,6 +2561,7 @@ class SlideRunnerUI(QMainWindow):
             return
 
         try:
+            print('Opening ',filename)
             self.slide = RotatableOpenSlide(filename, rotate=self.rotateImage)
         except Exception as e:
             self.show_exception("Unable to open"+filename, *sys.exc_info())

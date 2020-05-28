@@ -66,13 +66,23 @@ class ReadableDicomDataset():
                 try:
                     tmpdcm = pydicom.dcmread(self._path+os.sep+dcmfile)
                     if (tmpdcm.InstanceNumber) is None:
-                        self._dsstore[0] = tmpdcm            
+                        self._dsstore[0] = tmpdcm      
                     elif (tmpdcm.SeriesInstanceUID==self._sequenceInstanceUID):
                         self._dsstore[tmpdcm.InstanceNumber-1] = tmpdcm            
                 except Exception as e:
                     print(f'Warning: Unable to open {dcmfile}:',e)
+        
+        # some DICOM files have no instance 0 (as DICOM WSIs)
+        if 0 not in self._dsstore:
+            self._dsstore = {0: list(self._dsstore.values())[0]}
 
-        self.levels = sorted(list(self._dsstore.keys()))
+        # check if all instances have same resolution --> this is a stack
+        dims_instances = [[self._dsstore[x].Columns,self._dsstore[x].Rows ] for x in self._dsstore]
+        stack = all([dims_instances[x][0]==dims_instances[0][0] for x in range(len(dims_instances))]) and \
+                all([dims_instances[x][1]==dims_instances[0][1] for x in range(len(dims_instances))])       
+        self.multiInstanceStack = stack
+
+        self.levels = sorted(list(self._dsstore.keys())) if not stack else [0]
         self._dsequence = sequencedTiles(self._dsstore)
         
         try:
@@ -95,8 +105,11 @@ class ReadableDicomDataset():
             self.channels = 1
             self.mpp_x = 1e-6
             self.mpp_y  = 1e-6
-        
-            self.numberOfFrames = self._dsstore[0].NumberOfFrames if ('NumberOfFrames' in self._dsstore[0]) else 1
+
+            if not stack:
+                self.numberOfFrames = self._dsstore[0].NumberOfFrames if ('NumberOfFrames' in self._dsstore[0]) else 1
+            else:
+                self.numberOfFrames = len(dims_instances)
             self.fps = 1000/self._dsstore[0].FrameTime if ('FrameTime' in self._dsstore[0]) else 1.0
 
     
@@ -129,8 +142,10 @@ class ReadableDicomDataset():
         if (location[0]<0):
             offset[1] = -location[0]
             location = (0,location[1])
-        if (self.numberOfFrames>1):
+        if (self.numberOfFrames>1) and not (self.multiInstanceStack):
             imgcut = self._dsstore[0].pixel_array[zLevel, location[1]:location[1]+size[1]-offset[0],location[0]:location[0]+size[0]-offset[1]]
+        elif (self.multiInstanceStack):
+            imgcut = np.copy(self._dsstore[zLevel].pixel_array[location[1]:location[1]+size[1]-offset[0],location[0]:location[0]+size[0]-offset[1]])
         else:
             imgcut = np.copy(self._dsstore[0].pixel_array[location[1]:location[1]+size[1]-offset[0],location[0]:location[0]+size[0]-offset[1]])
         imgcut = np.uint8(np.clip(np.float32(imgcut)/(self.extremes[1])*255.0,0,255))
