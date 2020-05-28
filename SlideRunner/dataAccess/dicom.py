@@ -79,7 +79,7 @@ class ReadableDicomDataset():
         # check if all instances have same resolution --> this is a stack
         dims_instances = [[self._dsstore[x].Columns,self._dsstore[x].Rows ] for x in self._dsstore]
         stack = all([dims_instances[x][0]==dims_instances[0][0] for x in range(len(dims_instances))]) and \
-                all([dims_instances[x][1]==dims_instances[0][1] for x in range(len(dims_instances))])       
+                all([dims_instances[x][1]==dims_instances[0][1] for x in range(len(dims_instances))]) and len(dims_instances)>1    
         self.multiInstanceStack = stack
 
         self.levels = sorted(list(self._dsstore.keys())) if not stack else [0]
