@@ -16,6 +16,9 @@ If you use the software for research purposes, please cite our paper:
 
 Please find the authors webpage at: https://lme.tf.fau.de/person/aubreville/
 
+## New file formats (1.99beta6)
+[![Watch the video](https://img.youtube.com/vi/JMQdywxgVlE/hqdefault.jpg)](https://youtu.be/JMQdywxgVlE)
+
 ## New polygon annotation tools (1.99beta3)
 
 [![Watch the video](https://img.youtube.com/vi/Yfw3XmgvUuM/hqdefault.jpg)](https://youtu.be/Yfw3XmgvUuM)
