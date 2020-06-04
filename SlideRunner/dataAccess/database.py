@@ -726,7 +726,8 @@ class Database(object):
         elif (anno.annotationType == AnnotationType.POLYGON):
             self.insertNewPolygonAnnotation(anno.coordinates, slideUID, classID, annotatorID, description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.CIRCLE):
-            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID, typeId=5,description=description, zLevel=zLevel)
+            coords = anno.coordinates
+            self.insertNewAreaAnnotation(coords[0],coords[1],coords[2],coords[3],slideUID,classID, annotatorID, typeId=5,description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.SPOT):
             self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.SPECIAL_SPOT):
