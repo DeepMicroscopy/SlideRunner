@@ -8,6 +8,8 @@ from . import dicom
 from . import cellvizio
 from openslide.lowlevel import OpenSlideError, OpenSlideUnsupportedFormatError
 from PIL import Image
+import PIL
+PIL.Image.MAX_IMAGE_PIXELS = 933120000
 
 # This is a 3D version of openslide.ImageSlide, supporting z stacks
 
@@ -67,9 +69,13 @@ class RotatableOpenSlide(object):
 #            if ext.upper() == '.TIF': return type("RotatableOpenSlide", (RotatableOpenSlide, ImageSlide3D,openslide.ImageSlide), {})(filename, rotate)
             try:
                 slideobj = type("OpenSlide", (RotatableOpenSlide,openslide.OpenSlide), {})(filename, rotate)
+                slideobj.isOpenSlide = True
                 return slideobj
             except:
-                return type("ImageSlide", (RotatableOpenSlide,ImageSlide3D), {})(filename, rotate)
+                print('Opened IMAGESLIDE object')
+                slideobj = type("ImageSlide", (RotatableOpenSlide,ImageSlide3D), {})(filename, rotate)
+                slideobj.isOpenSlide = False
+                return slideobj
         else:
             return object.__new__(cls)
 
@@ -92,7 +98,10 @@ class RotatableOpenSlide(object):
             location = [int(x-y-(w*self.level_downsamples[level])) for x,y,w in zip(self.dimensions, location, size)]
             return super().read_region(location, level, size, zLevel).rotate(180)
         else:
-            return super().read_region(location, level, size, zLevel)
+            if (self.isOpenSlide):
+                return super().read_region(location, level, size)
+            else:
+                return super().read_region(location, level, size, zLevel)
 
     def transformCoordinates(self, location, level=0, size=None, inverse=False):
         if (self.rotate):
