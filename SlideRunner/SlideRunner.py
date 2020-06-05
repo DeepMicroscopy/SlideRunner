@@ -2629,6 +2629,11 @@ class SlideRunnerUI(QMainWindow):
         self.showImage()
 
         self.updateScrollbars()
+        self.screeningMode=False
+        self.ui.iconScreening.setChecked(False)
+        self.ui.iconNextScreen.setEnabled(self.screeningMode)
+        self.ui.iconPreviousScreen.setEnabled(False)
+        self.ui.iconNextScreen.setEnabled(False)
 
         self.showDBstatistics()
 
