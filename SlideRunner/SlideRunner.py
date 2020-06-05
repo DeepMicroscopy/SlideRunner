@@ -742,11 +742,12 @@ class SlideRunnerUI(QMainWindow):
         if not (self.screeningMode):
             return
 
+
+        if (self.screeningIndex-1<=-len(self.screeningHistory)):
+            return
+
         self.screeningIndex -= 1
 
-        if (self.screeningIndex-1<len(self.screeningHistory)):
-            return
-            
         self.setCenterTo(self.screeningHistory[self.screeningIndex-1][0],self.screeningHistory[self.screeningIndex-1][1])
 
         if (self.screeningIndex+len(self.screeningHistory)<=0):
@@ -781,6 +782,10 @@ class SlideRunnerUI(QMainWindow):
         while (not newImageFound):
             # advance one step to the right
 
+            if (self.screeningMap.checkIsNew(self.lastScreeningLeftUpper)):
+                newImageFound=True
+                continue
+
             # Find next open spot in current row, if not, advance rows until one is found
             self.lastScreeningLeftUpper[0] += relOffset_x*0.9
 
@@ -794,8 +799,6 @@ class SlideRunnerUI(QMainWindow):
                            'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                 return
 
-            if (self.screeningMap.checkIsNew(self.lastScreeningLeftUpper)):
-                newImageFound=True
 
         # there is at least one pixel that was not covered
         leftupper_x = self.lastScreeningLeftUpper[0]
