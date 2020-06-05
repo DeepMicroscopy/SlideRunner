@@ -52,6 +52,7 @@ class ReadableCellVizioMKTDataset():
     def __init__(self, filename):
 
        self.fileName = filename
+       self.isOpenSlide = False
        self.fileHandle = open(filename, 'rb')
        self.fileHandle.seek(5) # we find the FPS at position 05
        fFPSByte = self.fileHandle.read(4)
