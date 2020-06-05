@@ -43,6 +43,7 @@
 
 SLIDERUNNER_DEBUG = False
 
+
 from SlideRunner.general import dependencies
 import sys
 import multiprocessing
@@ -743,6 +744,9 @@ class SlideRunnerUI(QMainWindow):
 
         self.screeningIndex -= 1
 
+        if (self.screeningIndex-1<len(self.screeningHistory)):
+            return
+            
         self.setCenterTo(self.screeningHistory[self.screeningIndex-1][0],self.screeningHistory[self.screeningIndex-1][1])
 
         if (self.screeningIndex+len(self.screeningHistory)<=0):
