@@ -661,7 +661,10 @@ class Database(object):
         self.execute(query)
         newid = self.fetchone()[0]
         self.logLabel(newid)
-        self.annotations[annoId].addLabel(AnnotationLabel(person, classId, newid, exact_id))
+
+        if annoId in self.annotations: # slide needs to be loaded in order to work
+            self.annotations[annoId].addLabel(AnnotationLabel(person, classId, newid, exact_id))
+
         self.checkCommonAnnotation( annoId)
         self.commit()
 
