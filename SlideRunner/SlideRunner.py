@@ -190,7 +190,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.wandAnnotation = WandAnnotation()
         self.slidename=''
         self.slideUID = 0
-        self.region = [0,0]
+        self.region = [[0,0],[0,0]]
         self.slideReaderThread = slideReaderThread
         self.ui.annotationMode = 0
         self.annotatorsModel = QStringListModel()
