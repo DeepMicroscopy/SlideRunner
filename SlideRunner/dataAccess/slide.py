@@ -21,8 +21,10 @@ class ImageSlide3D(openslide.ImageSlide):
         file can be a filename or a PIL.Image."""
         openslide.ImageSlide.__init__(self, file)
 
-        self.numberOfFrames = self._image.n_frames
-    
+        try:
+            self.numberOfFrames = self._image.n_frames 
+        except:
+            self.numberOfFrames = 1
         
 
 
