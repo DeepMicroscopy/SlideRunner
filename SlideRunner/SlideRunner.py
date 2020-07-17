@@ -1907,6 +1907,8 @@ class SlideRunnerUI(QMainWindow):
             classes =   self.db.getAllClasses()
             for cls in classes:
                 self.writeDebug('Found class %s (%d)' % ( cls[0],cls[1]))
+            
+            self.showImage()
 
 
     """
