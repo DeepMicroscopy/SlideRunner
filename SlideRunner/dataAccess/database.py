@@ -122,8 +122,8 @@ from typing import Dict
 class Database(object):
     annotations = Dict[int,annotation]
 
-    minCoords = np.empty(0)
-    maxCoords = np.empty(0)
+    minCoords = np.empty((0,3))
+    maxCoords = np.empty((0,3))
 
     def __init__(self):
         self.dbOpened = False
