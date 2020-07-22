@@ -446,7 +446,7 @@ class SlideRunnerUI(QMainWindow):
             ret,err = QFileDialog.getSaveFileName(self,config.title, "",config.mask)
         
         elif (config.dialogType == SlideRunnerPlugin.FilePickerDialogType.OPEN_DIRECTORY):
-            ret,err = QFileDialog.getExistingDirectory(self,config.title, "",config.mask)
+            ret,err = QFileDialog.getExistingDirectory(self,config.title, "")
         
         labelObj.setText('...'+ret[-20:] if len(ret)>20 else ret)
         self.pluginFilepickers[config.uid]['value'] = ret
@@ -1388,8 +1388,9 @@ class SlideRunnerUI(QMainWindow):
             slideUID = self.db.findSlideWithFilename(self.slidename,self.slidepathname, uuid=uid)
 
             if (slideUID is None):
+                print('SLIDEUID IS NONE',slideUID)
                 msg = "Slide is not in database. Do you wish to add it?"
-                reply = YesNoAbortDialog('Question',msg,'Yes, add it.','No, open other slide', 'No, open other DB')
+                reply = YesNoAbortDialog('Question',msg,'Yes, add it.','No, open other slide', 'No, close database.')
                 if reply == QtWidgets.QMessageBox.Yes:
                     self.db.insertNewSlide(self.slidename,self.slidepathname, uid)
                     self.findSlideUID(dimensions)
@@ -1398,12 +1399,8 @@ class SlideRunnerUI(QMainWindow):
                 elif reply== QtWidgets.QMessageBox.No:
                     slname = self.openSlideDialog()
                     self.findSlideUID()
-#                    if (len(slname) == 0):
-#                        self.imageOpened=False
-#                        self.showImage()
                 elif reply == QtWidgets.QMessageBox.Abort:
-                    self.openCustomDB()
-                    self.findSlideUID(dimensions)
+                    self.closeDatabase()
                 else:
                     print('Reply was: ',reply)
 
@@ -1885,7 +1882,8 @@ class SlideRunnerUI(QMainWindow):
             if (self.imageOpened):
                 self.findSlideUID(self.slide.dimensions)
                 self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
-
+                if not (self.db.isOpen()):
+                    return
 
             lastdatabaseslist.append(filename)
             lastdatabaseslist = lastdatabaseslist[-11:]
@@ -1970,7 +1968,10 @@ class SlideRunnerUI(QMainWindow):
     def closeDatabase(self):
         self.ui.action_CloseDB.setEnabled(False)
         self.db = Database()
-        self.ui.annotatorComboBox.currentIndexChanged.disconnect()
+        try:
+            self.ui.annotatorComboBox.currentIndexChanged.disconnect()
+        except:
+            pass
         self.ui.actionAdd_annotator.setEnabled(False)
         self.ui.actionAdd_cell_class.setEnabled(False)
         self.ui.annotatorComboBox.setVisible(False)
@@ -1982,6 +1983,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.annotatorComboBox.setEnabled(False)
         self.ui.inspectorTableView.setVisible(False)
         self.ui.categoryView.setVisible(False)
+        self.showImage()
 
     def setExactUser(self):
         if (self.db.isOpen() == False):
@@ -2604,15 +2606,18 @@ class SlideRunnerUI(QMainWindow):
         self.ui.filenameLabel.setText(self.slidename)
         self.ui.filenameLabel.setHidden(False)
         self.slidepathname = filename
-        self.imageOpened=True
         self.ui.statusbar.showMessage(filename+': '+str(self.slide.dimensions))
 
         if (self.db.isOpen()):
             self.findSlideUID(self.slide.dimensions)
-            t = time.time()
-            self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
+            if (self.slideUID is not None) and (self.db.isOpen()):
+                t = time.time()
+                self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
 
-            self.db.setPathForSlide(self.slideUID, self.slidepathname)
+                self.db.setPathForSlide(self.slideUID, self.slidepathname)
+
+        self.imageOpened=True
+
         self.relativeCoords = np.asarray([0,0], np.float32)
         self.lastScreeningLeftUpper = np.zeros(2)
         self.screeningHistory = list()
