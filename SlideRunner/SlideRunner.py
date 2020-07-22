@@ -446,7 +446,7 @@ class SlideRunnerUI(QMainWindow):
             ret,err = QFileDialog.getSaveFileName(self,config.title, "",config.mask)
         
         elif (config.dialogType == SlideRunnerPlugin.FilePickerDialogType.OPEN_DIRECTORY):
-            ret,err = QFileDialog.getExistingDirectory(self,config.title, "")
+            ret = QFileDialog.getExistingDirectory(self,config.title, "")
         
         labelObj.setText('...'+ret[-20:] if len(ret)>20 else ret)
         self.pluginFilepickers[config.uid]['value'] = ret
