@@ -27,7 +27,6 @@ from exact_sync.v1.configuration import Configuration
 from exact_sync.v1.api_client import ApiClient
 
 from pathlib import Path
-from sklearn import datasets
 
 configuration = Configuration()
 configuration.username = 'sliderunner_unittest'
