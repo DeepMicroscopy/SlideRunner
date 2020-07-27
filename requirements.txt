@@ -6,3 +6,4 @@ numpy==1.17.3
 opencv-python==4.1.1.26
 pydicom==1.4.0
 requests_toolbelt==0.9.1
+EXCAT-Sync==0.0.15

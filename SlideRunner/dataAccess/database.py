@@ -246,6 +246,21 @@ class Database(object):
         except:
             return ''
 
+
+
+    def getAnnotationZLevels(self, slideId):
+        """
+            Gets all available zLevels (e.g., frame number) containing annotations 
+        """
+        if (slideId is None):
+            return
+        
+        #self.dbcur.execute('SELECT uid, type,agreedClass,guid,lastModified,deleted,description FROM Annotations WHERE slide == %d'% slideId)
+        self.dbcur.execute(f'SELECT coordinateZ FROM Annotations_coordinates where slide == {slideId} group by coordinateZ')
+        return np.array(self.dbcur.fetchall()).reshape(-1).tolist()
+
+
+
     def loadIntoMemory(self, slideId, transformer=None, zLevel=0):
         if not (self.isOpen()):
             return
