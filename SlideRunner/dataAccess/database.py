@@ -583,11 +583,11 @@ class Database(object):
         return slideuid
 
     def findSlideWithFilename(self,slidename,slidepath, uuid:str=None):
-        if (slidepath=='') and (os.sep in slidename):
+        if (slidepath=='') and len(os.path.split(slidename)[0])>0:
             slidepath,slidename = os.path.split(slidename)
 
-        if (len(slidepath.split(os.sep))>1):
-            directory = slidepath.split(os.sep)[-2]
+        if (len(os.path.split(directory)[0])>1):
+            directory,fname = os.path.split(directory)
         else:
             directory = slidepath
 
@@ -904,7 +904,7 @@ class Database(object):
             
 
     def insertNewSlide(self,slidename:str,slidepath:str,uuid:str=""):
-            if (len(slidepath.split(os.sep))>1):
+            if (len(os.path.split(slidepath)[0])>0):
                 directory = os.path.dirname(os.path.realpath(slidepath))
             else:
                 directory = ''
