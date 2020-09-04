@@ -586,8 +586,8 @@ class Database(object):
         if (slidepath=='') and len(os.path.split(slidename)[0])>0:
             slidepath,slidename = os.path.split(slidename)
 
-        if (len(os.path.split(directory)[0])>1):
-            directory,fname = os.path.split(directory)
+        if (len(os.path.split(slidepath)[0])>1):
+            directory,fname = os.path.split(slidepath)
         else:
             directory = slidepath
 
