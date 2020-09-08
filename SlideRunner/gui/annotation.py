@@ -125,7 +125,7 @@ def copyAllAnnotations(self, pluginAnnoClass, classID, event = None):
     self.showDBentryCount()
 
 def copyAnnotation(self,pluginAnno, classID,event):
-    self.db.addAnnotationToDatabase(pluginAnno, slideUID=self.slideUID, classID=classID, annotatorID=self.retrieveAnnotator(event), description=pluginAnno.text)
+    self.db.addAnnotationToDatabase(pluginAnno, slideUID=self.slideUID, classID=classID, annotatorID=self.retrieveAnnotator(event), description=pluginAnno.text, zLevel=self.zPosition)
     self.db.loadIntoMemory(slideId=self.slideUID)
     self.showImage()
     self.showDBentryCount()
