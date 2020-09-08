@@ -22,8 +22,8 @@ class zoomSlider(QtWidgets.QWidget):
     
     def zoomValueToSlider(self, value : float) -> float:
         maxZoom = self.getMaxZoom()
-        retval = 100*np.log2(value/(maxZoom))/(np.log2(0.5/maxZoom))
-        return 100*np.log2(value/(maxZoom))/(np.log2(0.5/maxZoom))
+        retval = 100*np.log2(value/(maxZoom))/(np.log2(0.25/maxZoom))
+        return 100*np.log2(value/(maxZoom))/(np.log2(0.25/maxZoom))
 
     def setMaxZoom(self, maxZoom : float):
         self.maxZoom = maxZoom

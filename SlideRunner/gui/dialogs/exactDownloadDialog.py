@@ -46,13 +46,16 @@ class ExactDownloadDialog(QDialog):
 
         DB = self.DB
         fileToAnnos = {exactimageid:slide for slide,exactimageid in DB.execute('SELECT filename, exactImageID from Slides').fetchall()}
-        self.loi = self.exm.retrieve_imagesets()
+        self.loi = self.exm.APIs.image_sets_api.list_image_sets(pagination=False, expand='product_set,images', omit='images.annotations').results
+
+
+
         rowcount=0
         self.los = []
         for imageset in self.loi:
-            for row,image in enumerate(imageset['images']):
-                for product in imageset['products']:
-                    self.los.append([image_and_product_to_id(image['id'], product['id'],imageset['id']),imageset['name']+'('+product['name']+')', str(image['name']),fileToAnnos[image_and_product_to_id(image['id'], product['id'],imageset['id'])] if image_and_product_to_id(image['id'], product['id'],imageset['id']) in fileToAnnos else '' ])
+            for row,image in enumerate(imageset.images):
+                for product in imageset.product_set:
+                    self.los.append([image_and_product_to_id(image['id'], product['id'],imageset.id),imageset.name+'('+product['name']+')', str(image['name']),fileToAnnos[image_and_product_to_id(image['id'], product['id'],imageset.id)] if image_and_product_to_id(image['id'], product['id'],imageset.id) in fileToAnnos else '' ])
                     rowcount+=1
         self.tableWidget.setRowCount(rowcount)
         for row,(id,imset,im,linked) in enumerate(self.los):
@@ -89,6 +92,8 @@ class ExactDownloadDialog(QDialog):
         if (savefolder==''):
             return
 
+        filename = imname
+
         (image_id, product_id, imageset_id) = [int(x) for x in exactid.split('/')]
 
         reply = QtWidgets.QMessageBox.question(self, 'Question',
@@ -99,7 +104,8 @@ class ExactDownloadDialog(QDialog):
         progress.setWindowModality(QtCore.Qt.WindowModal)
         progress.show()
 
-        outfilename = self.exm.download_image(image_id=image_id, target_folder=savefolder, callback=progress.setValue)
+        status, outfilename = self.exm.APIs.images_api.download_image(image_id, target_path=savefolder+os.sep+filename,original_image=True)
+#        image_download_image(image_id=image_id, target_folder=savefolder, callback=progress.setValue)
 
         if reply == QtWidgets.QMessageBox.Yes:
             fpath,fname = os.path.split(outfilename)

@@ -1439,7 +1439,7 @@ class SlideRunnerUI(QMainWindow):
         """
             Convert slider position to zoom value
         """
-        return np.power(2,self.ui.zoomSlider.getValue()/100*(np.log2(0.5/ self.getMaxZoom())))*self.getMaxZoom()
+        return np.power(2,self.ui.zoomSlider.getValue()/100*(np.log2(0.25/ self.getMaxZoom())))*self.getMaxZoom()
 
 
 
@@ -1457,13 +1457,13 @@ class SlideRunnerUI(QMainWindow):
         if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
             self.pluginAnnos = list()
         self.currentZoom = zoomValue
-        if (self.currentZoom < 0.5):
-            self.currentZoom = 0.5
+        if (self.currentZoom < 0.25):
+            self.currentZoom = 0.25
         maxzoom = self.getMaxZoom()
         if (self.currentZoom > maxzoom):
             self.currentZoom = maxzoom
 
-        sliderVal = 100*np.log2(self.currentZoom/(maxzoom))/(np.log2(0.5/maxzoom))
+        sliderVal = 100*np.log2(self.currentZoom/(maxzoom))/(np.log2(0.25/maxzoom))
 
         self.ui.zoomSlider.valueChanged.disconnect()
         self.ui.zoomSlider.setValue(sliderVal)
@@ -2041,15 +2041,16 @@ class SlideRunnerUI(QMainWindow):
                                 self.settings.value('exactPassword', 'demodemo'),
                                 self.settings.value('exactHostname', 'https://exact.cs.fau.de'),
                                 statusqueue=self.progressBarQueue, loglevel=0)
-            imagesets = exm.retrieve_imagesets()
-            items = ['%d: ' % iset['id']+iset['name'] for iset in imagesets]
+            
+            imagesets = exm.APIs.image_sets_api.list_image_sets(pagination=False, expand='product_set').results
+            items = ['%d: ' % iset.id+iset.name for iset in imagesets]
             item, ok = QInputDialog.getItem(self, "Select image set", "Image sets", items, 0, False)
 
             if not (ok):
                 return
 
             iselect = [k for k,name in enumerate(items) if name==item][0]
-            products = ['%d: ' % p['id']+p['name'] for p in imagesets[iselect]['products']]
+            products = ['%d: ' % p.id+p.name for p in imagesets[iselect].products_set]
 
             pitem, ok = QInputDialog.getItem(self, "Select a product", "Products in image set", products, 0, False)
             if not (ok):
@@ -2131,8 +2132,19 @@ class SlideRunnerUI(QMainWindow):
                                 self.settings.value('exactHostname', 'https://exact.cs.fau.de'),
                                 statusqueue=self.progressBarQueue, loglevel=0)
 
-            imagesets = exm.retrieve_imagesets()
-            imagesets_dict = {iset['id']:iset for iset in imagesets}
+
+            imagesets = exm.APIs.image_sets_api.list_image_sets(pagination=False, expand='product_set').results
+#            items = ['%d: ' % iset.id+iset.name for iset in imagesets]
+            imagesets_dict = {iset.id:iset for iset in imagesets}
+ #           item, ok = QInputDialog.getItem(self, "Select image set", "Image sets", items, 0, False)
+
+  #          if not (ok):
+   #             return
+
+    #        iselect = [k for k,name in enumerate(items) if name==item][0]
+    #        products = ['%d: ' % p.id+p.name for p in imagesets[iselect].products_set]
+
+
             listOfSlides=[]
 
             print('Current UID is: ',self.slideUID)
@@ -2149,7 +2161,7 @@ class SlideRunnerUI(QMainWindow):
 
                 found=False
                 if imageset_id in imagesets_dict:
-                    productids = [p['id'] for p in imagesets_dict[imageset_id]['products']]
+                    productids = [p['id'] for p in imagesets_dict[imageset_id].product_set]
                     if product_id in productids:
                         found=True 
                 
