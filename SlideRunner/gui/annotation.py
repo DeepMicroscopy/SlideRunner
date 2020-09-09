@@ -119,7 +119,7 @@ def copyAllAnnotations(self, pluginAnnoClass, classID, event = None):
         return
     
     for pluginAnno in annos:
-        self.db.addAnnotationToDatabase(pluginAnno, slideUID=self.slideUID, classID=classID, annotatorID=self.retrieveAnnotator(event), description=pluginAnno.text)
+        self.db.addAnnotationToDatabase(pluginAnno, slideUID=self.slideUID, classID=classID, annotatorID=self.retrieveAnnotator(event), description=pluginAnno.text, zLevel=self.zPosition)
     
     self.showImage()
     self.showDBentryCount()
