@@ -738,18 +738,18 @@ class Database(object):
 
         
 
-    def addAnnotationToDatabase(self, anno:annotation, slideUID:int, classID:int, annotatorID:int, zLevel:int, description:str=''):
+    def addAnnotationToDatabase(self, anno:annotation, slideUID:int, classID:int, annotatorID:int, zLevel:int, description:str='') -> int:
         if (anno.annotationType == AnnotationType.AREA):
-            self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID,description=description, zLevel=zLevel)
+            return self.insertNewAreaAnnotation(anno.x1,anno.y1,anno.x2,anno.y2,slideUID,classID, annotatorID,description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.POLYGON):
-            self.insertNewPolygonAnnotation(anno.coordinates, slideUID, classID, annotatorID, description=description, zLevel=zLevel)
+            return self.insertNewPolygonAnnotation(anno.coordinates, slideUID, classID, annotatorID, description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.CIRCLE):
             coords = anno.coordinates
-            self.insertNewAreaAnnotation(coords[0],coords[1],coords[2],coords[3],slideUID,classID, annotatorID, typeId=5,description=description, zLevel=zLevel)
+            return self.insertNewAreaAnnotation(coords[0],coords[1],coords[2],coords[3],slideUID,classID, annotatorID, typeId=5,description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.SPOT):
-            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, description=description, zLevel=zLevel)
+            return self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, description=description, zLevel=zLevel)
         elif (anno.annotationType == AnnotationType.SPECIAL_SPOT):
-            self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, type=4, description=description, zLevel=zLevel)
+            return self.insertNewSpotAnnotation(anno.x1, anno.y1, slideUID, classID, annotatorID, type=4, description=description, zLevel=zLevel)
         
 
     def getGUID(self, annoid) -> str:
