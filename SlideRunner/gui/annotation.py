@@ -137,7 +137,7 @@ def addPolygonAnnotation(self,classID,event, annoList):
     self.saveLastViewport()
     if (self.ui.annotationMode==2): #replace polygon object
          self.writeDebug('extended polygon annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))
-         self.db.exchangePolygonCoordinates(self.ui.annotationUID, self.slideUID, annoList)
+         self.db.exchangePolygonCoordinates(self.ui.annotationUID, self.slideUID, annoList, zLevel=self.zPosition)
          self.db.annotations[self.ui.annotationUID].deleted=False # make visible again
     else:
         self.writeDebug('added polygon annotation of class %d, slide %d, person %d' % ( classID, self.slideUID,self.retrieveAnnotator(event)))
