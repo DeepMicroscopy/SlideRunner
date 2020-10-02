@@ -22,7 +22,28 @@ from SlideRunner.dataAccess.database import hex_to_rgb, rgb_to_hex
 from shapely.geometry import * 
 
 
+def checkAnnotationParameters(self, classID:int, event) -> bool:
+    """
+         A simple check for the annotation parameters to not throw an exception but give a meaningful information
+    """
+    if classID is None:
+        self.messagebox('Unable to retrieve class for annotation')
+        return False
+    elif self.slideUID is None:
+        self.messagebox('Unable to assign annotation to slide')
+        return False
+    elif self.retrieveAnnotator(event) is None:
+        self.messagebox('Unable to perform annotation: Unknown annotator.')
+        return False
+    return True
+    
+    
+
 def addSpotAnnotation(self, classID, event, typeAnno=1):
+
+    if (typeAnno==1) and not checkAnnotationParameters(self, classID, event):
+         return
+
     self.saveLastViewport()
     pos_image = mouseEvents.getMouseEventPosition(self,event)
 
@@ -43,6 +64,7 @@ def addSpotAnnotation(self, classID, event, typeAnno=1):
     self.showAnnotationsInOverview()
 
 def renameClass(self, classID, event = None):
+
     text = self.db.getClassByID(classID)
     name, ok = QtWidgets.QInputDialog.getText(self, "Please give a new name for the new category",
                                         "Name:", text=text)
@@ -51,6 +73,8 @@ def renameClass(self, classID, event = None):
         self.showDatabaseUIelements()
 
 def changeClassColor(self,oldcolor, classID, event = None):
+
+
     text = self.db.getClassByID(classID)
     replyCol = QtWidgets.QColorDialog.getColor(QColor.fromRgb(*hex_to_rgb(oldcolor)))
 
@@ -73,18 +97,24 @@ def deleteClass(self, classID, event = None):
 
 
 def addImageLabel(self, classID, event = None):
+    if not checkAnnotationParameters(self, classID, event):
+         return
     if not (self.db.isOpen()):
         return
     self.db.insertNewImageAnnotation(slideUID=self.slideUID, zLevel=self.zPosition, classID=classID, annotator=self.retrieveAnnotator(event), exact_id="Null", description='')
     self.showImage()
 
 def deleteImageLabel(self, event = None):
+    if not checkAnnotationParameters(self, classID, event):
+         return
     if not (self.db.isOpen()):
         return
     self.db.removeImageAnnotation(slideUID=self.slideUID, zLevel=self.zPosition, annotator=self.retrieveAnnotator(event), exact_id="Null")
     self.showImage()
 
 def deleteAllFromClassOnSlide(self, classID, event = None):
+    if not checkAnnotationParameters(self, classID, event):
+         return
     if not (self.db.isOpen()):
         return
 
@@ -107,6 +137,8 @@ def deleteAllFromClassOnSlide(self, classID, event = None):
     self.showImage()
 
 def copyAllAnnotations(self, pluginAnnoClass, classID, event = None):
+    if not checkAnnotationParameters(self, classID, event):
+         return
     if not (self.db.isOpen()) or (self.activePlugin == None):
         return
     
@@ -125,6 +157,8 @@ def copyAllAnnotations(self, pluginAnnoClass, classID, event = None):
     self.showDBentryCount()
 
 def copyAnnotation(self,pluginAnno, classID,event):
+    if not checkAnnotationParameters(self, classID, event):
+         return
     self.db.addAnnotationToDatabase(pluginAnno, slideUID=self.slideUID, classID=classID, annotatorID=self.retrieveAnnotator(event), description=pluginAnno.text, zLevel=self.zPosition)
     self.db.loadIntoMemory(slideId=self.slideUID)
     self.showImage()
@@ -189,6 +223,10 @@ def removeFromPolygon(self, annotation, annoList):
         
 
 def addCircleAnnotation(self, classID, event):
+
+    if not checkAnnotationParameters(self, classID, event):
+         return
+
     self.saveLastViewport()
     pt2 = mouseEvents.getMouseEventPosition(self,event)
     x1 = min(pt2[0],self.ui.anno_pt1[0])
@@ -226,6 +264,10 @@ def addCircleAnnotation(self, classID, event):
 
 
 def addAreaAnnotation(self, classID, event):
+
+    if not checkAnnotationParameters(self, classID, event):
+         return
+
     self.saveLastViewport()
     pt2 = mouseEvents.getMouseEventPosition(self,event)
     x1 = min(pt2[0],self.ui.anno_pt1[0])

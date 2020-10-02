@@ -373,6 +373,10 @@ class SlideRunnerUI(QMainWindow):
     Signal that we accept drag&drop for files, and show the link icon.
     """
 
+    def messagebox(self, msg):
+        reply = QtWidgets.QMessageBox.about(self,  "Message", msg)
+
+
     def popupmessage(self, msg):
         reply = QtWidgets.QMessageBox.about(self, "Plugin says", msg)
     

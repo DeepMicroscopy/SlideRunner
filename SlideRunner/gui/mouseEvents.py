@@ -222,7 +222,7 @@ def leftClickImage(self, event):
             self.ui.wandAnnotation = WandAnnotation(self.screenToSlide(getMouseEventPosition(self,event)))
             self.showImage()
 
-        if clickedAnno is None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT):
+        if clickedAnno is None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_SPOT) and self.db.isOpen():
             if (self.lastAnnotationClass==0):
                 menu = QMenu(self)
                 addmenu = menu.addMenu('Add annotation')
@@ -233,20 +233,20 @@ def leftClickImage(self, event):
 
                 action = menu.exec_(self.mapToGlobal(event.pos()))
                 
-            else:
+            elif (self.db.isOpen()):
                 # Fast annotation mode. Just add GUIannotation.
                 GUIannotation.addSpotAnnotation( self, self.lastAnnotationClass, event)
 
-        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_FLAG):
+        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_FLAG) and self.db.isOpen():
                 GUIannotation.addSpotAnnotation( self, None, event, typeAnno=4)
             
         
-        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA) or (self.ui.mode == UIMainMode.MODE_ANNOTATE_CIRCLE):
+        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA) or (self.ui.mode == UIMainMode.MODE_ANNOTATE_CIRCLE) and self.db.isOpen():
             # Normal rectangular or circular GUIannotation. 
             self.ui.annotationMode=1
             self.ui.anno_pt1 =  getMouseEventPosition(self, event)
         
-        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON):
+        if (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) and self.db.isOpen():
             if (self.ui.annotationMode == 0):
                 self.ui.annotationsList = list()
                 self.ui.annotationMode=1
@@ -492,9 +492,6 @@ def rightClickImage(self, event):
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.copyAnnotation,self,clickedPluginAnno, clsname[1], event))
                 menuitems.append(act)
 
-#            addmenu = menu.addAction('Cancel', self.hitEscape)
-#            action = menu.exec_(self.mapToGlobal(event.pos()))
-#            return
 
         menu.addSeparator()
         submenu = menu.addMenu('Annotate as: ')
