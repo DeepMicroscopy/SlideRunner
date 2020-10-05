@@ -592,12 +592,13 @@ class Database(object):
             directory = slidepath
 
         ret = self.execute('SELECT uid,directory,uuid,filename from Slides ').fetchall()
-#        print('Looking up',slidename,'in',directory)
+        #print('All slides:',ret)
+        #print('Looking up',slidename,'in',directory)
         secondBest=None
         for (uid,slidedir,suuid,fname) in ret:
             if (uuid is not None) and (suuid==uuid):
                 return uid
-            elif (fname==slidename):
+            elif (fname==slidename) or (os.path.basename(fname)==slidename):
                 if slidedir is None:
                     secondBest=uid
                 elif (slidedir.upper() == directory.upper()):
@@ -904,10 +905,19 @@ class Database(object):
             
 
     def insertNewSlide(self,slidename:str,slidepath:str,uuid:str=""):
+            
+            # Should some put a path into the slide name, use that as a path
+            if (len(os.path.split(slidename)[0])>0):
+                if (slidepath==''):
+                    slidepath = os.path.dirname(slidename)
+                slidename = os.path.basename(slidename) 
+ 
+            # only use the last part of the path
             if (len(os.path.split(slidepath)[0])>0):
                 directory = os.path.dirname(os.path.realpath(slidepath))
             else:
                 directory = ''
+
             self.execute('INSERT INTO Slides (filename,directory,uuid) VALUES ("%s","%s", "%s")' % (slidename,directory,uuid))
             self.commit()
             query = 'SELECT last_insert_rowid()'
