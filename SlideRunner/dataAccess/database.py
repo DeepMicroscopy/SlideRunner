@@ -281,7 +281,7 @@ class Database(object):
         self.dbcur.execute('SELECT coordinateX, coordinateY, coordinateZ, annoid FROM Annotations_coordinates where annoId IN (SELECT uid FROM Annotations WHERE slide == %d) ORDER BY orderIdx' % (slideId))
         allCoords = np.asarray(self.dbcur.fetchall())
 
-        if self.transformer is not None:
+        if (self.transformer is not None) and len(allCoords.shape)>1:
             allCoords = self.transformer(allCoords)
 
         for uid, annotype,agreedClass,guid,lastModified,deleted,description in allAnnos:
