@@ -98,7 +98,7 @@ class RotatableOpenSlide(object):
         # zlevel is ignored for SVS files
         if (self.rotate):
             location = [int(x-y-(w*self.level_downsamples[level])) for x,y,w in zip(self.dimensions, location, size)]
-            return super().read_region(location, level, size, zLevel).rotate(180)
+            return super().read_region(location, level, size).rotate(180)
         else:
             if (self.isOpenSlide):
                 return super().read_region(location, level, size)
