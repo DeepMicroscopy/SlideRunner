@@ -2624,6 +2624,8 @@ class SlideRunnerUI(QMainWindow):
         self.slidepathname = filename
         self.ui.statusbar.showMessage(filename+': '+str(self.slide.dimensions))
 
+        self.imageOpened=True
+
         if (self.db.isOpen()):
             self.findSlideUID(self.slide.dimensions)
             if (self.slideUID is not None) and (self.db.isOpen()):
@@ -2631,8 +2633,6 @@ class SlideRunnerUI(QMainWindow):
                 self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
 
                 self.db.setPathForSlide(self.slideUID, self.slidepathname)
-
-        self.imageOpened=True
 
         self.relativeCoords = np.asarray([0,0], np.float32)
         self.lastScreeningLeftUpper = np.zeros(2)
