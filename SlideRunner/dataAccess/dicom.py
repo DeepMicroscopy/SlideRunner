@@ -24,8 +24,13 @@
 """
 
 import numpy as np
-import pydicom
-from pydicom.encaps import decode_data_sequence
+try:
+    import pydicom
+    from pydicom.encaps import decode_data_sequence
+    dic_fileformats = ['*.dcm']
+except:
+    dic_fileformats = []
+
 from PIL import Image
 import io
 import os

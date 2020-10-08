@@ -14,4 +14,11 @@
 
 """
 
-__all__ = ['database', 'slide', 'dicom', 'annotations']
+__all__ = ['database', 'slide', 'dicom', 'annotations', 'nifty']
+
+
+from .slide import os_fileformats
+from .nifty import nii_fileformats
+from .dicom import dic_fileformats
+
+fileformats = os_fileformats + nii_fileformats + dic_fileformats

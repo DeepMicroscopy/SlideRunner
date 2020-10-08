@@ -1,12 +1,14 @@
-import openslide
 import multiprocessing
 import queue
 import time
 import numpy as np
 import os
 from . import dicom
+from . import nifty
 from . import cellvizio
+import openslide
 from openslide.lowlevel import OpenSlideError, OpenSlideUnsupportedFormatError
+os_fileformats = ['*.svs','*.tif', '*.png', '*.bif', '*.svslide', '*.mrxs' ,'*.scn' ,'*.vms' ,'*.vmu', '*.ndpi', '*.tiff', '*.bmp']
 from PIL import Image
 import PIL
 PIL.Image.MAX_IMAGE_PIXELS = 933120000
@@ -67,6 +69,8 @@ class RotatableOpenSlide(object):
         if cls is RotatableOpenSlide:
             bname, ext = os.path.splitext(filename)
             if ext.upper() == '.DCM': return type("RotatableOpenSlide", (RotatableOpenSlide, dicom.ReadableDicomDataset,openslide.ImageSlide), {})(filename, rotate)
+            if (ext.upper() in ['.NII','.GZ']): 
+                return type("ReadableNIBDataset", (RotatableOpenSlide,nifty.ReadableNIBDataset, openslide.ImageSlide ), {})(filename, rotate)
             if ext.upper() == '.MKT': return type("ReadableCellVizioMKTDataset", (RotatableOpenSlide, cellvizio.ReadableCellVizioMKTDataset, openslide.ImageSlide), {})(filename,rotate)
 #            if ext.upper() == '.TIF': return type("RotatableOpenSlide", (RotatableOpenSlide, ImageSlide3D,openslide.ImageSlide), {})(filename, rotate)
             try:
