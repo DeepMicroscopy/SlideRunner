@@ -74,6 +74,8 @@ def test_images():
     dummy=np.random.randint(0,255, (200,200,3))
     cv2.imwrite('dummy.png', dummy)
 
+
+
     apis.images_api.create_image(file_path='dummy.png', image_type=0, image_set=imageset).results
 
     allImagesInSet = apis.images_api.list_images(omit="annotations").results
@@ -140,7 +142,9 @@ def test_pushannos():
     dummy=np.random.randint(0,255, (200,200,3))
     cv2.imwrite(imagename, dummy)
 
-    apis.images_api.create_image(file_path=imagename, image_type=0, image_set=imageset).results
+    exm = ExactManager(username=configuration.username, password=configuration.password, serverurl=configuration.host)
+    iset = exm.upload_image_to_imageset(imageset_id=imageset, filename=imagename)
+#    apis.images_api.create_image(file_path=imagename, image_type=0, image_set=imageset).results
     imageset_details = apis.image_sets_api.retrieve_image_set(id=imageset, expand='images')
 
     imageid=imageset_details.images[0]['id']
@@ -176,7 +180,6 @@ def test_pushannos():
     # All annotations have been removed
     assert(len(apis.annotations_api.list_annotations(id=imageid, pagination=False).results)==0)
 
-    exm = ExactManager(username=configuration.username, password=configuration.password, serverurl=configuration.host)
     exm.sync(imageid, imageset_id=imageset, product_id=product_id, slideuid=slideuid, database=DB)
 
     # Only 2 annotations have been inserted

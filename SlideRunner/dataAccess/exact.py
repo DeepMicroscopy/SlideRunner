@@ -117,6 +117,10 @@ class ExactManager():
         self.progress_denominator=float(denominator)
         self.offset=float(offset)
 
+    def upload_image_to_imageset(self, imageset_id:int, filename:str):
+        apic = self.APIs.images_api.create_image(file_path=filename, image_type=0, image_set=imageset_id)
+        pass
+        return apic.results
 
     def queueWorker(self):
         while (True):
