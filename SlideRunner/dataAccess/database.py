@@ -792,11 +792,6 @@ class Database(object):
         self.execute(f'UPDATE Annotations SET guid="{guid}" where uid={annoid}')
         self.guids[guid]=annoid
     
-    def last_inserted_id() -> int:
-            query = 'SELECT last_insert_rowid()'
-            self.execute(query)
-            return self.fetchone()[0]
-
     def removeImageAnnotation(self, slideUID:int, zLevel:int, annotator:int, exact_id="Null"):
         query = f'SELECT annoId FROM Annotations_coordinates where coordinateX IS NULL and coordinateY IS NULL and coordinateZ=={zLevel} and slide=={slideUID} and annoID in (SELECT annoID FROM Annotations_label where person=={annotator})'
         # delete all previous labels by current annotator

@@ -76,7 +76,7 @@ def get_filename_from_cd(cd):
 
 
 class ExactImageList():
-    def __init__(self, imagelist:list):
+    def __init__(self, imagelist):
         self._list = imagelist
         if len(imagelist)>0:
             if len(imagelist[0])!=2:

@@ -1,3 +1,5 @@
+#pylint: disable=return-in-init, no-member
+
 import multiprocessing
 import queue
 import time

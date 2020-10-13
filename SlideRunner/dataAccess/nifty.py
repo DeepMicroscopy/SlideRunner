@@ -24,7 +24,7 @@ try:
     import nibabel as nib 
     nii_fileformats = ['*.nii', '*.nii.gz']
 except:
-    nib = Null
+    nib = None
     print('Warning: nibabel not installed. Neuroimaging formats will not be available.')
     nii_fileformats = []
 
@@ -108,21 +108,6 @@ class ReadableNIBDataset():
             id_y=self.geometry_rows[level] # out of range
         return (id_x+(id_y*self.geometry_columns[level]))
     
-    def get_tile(self, pos, level:int):
-        if pos < self._dsstore[level].NumberOfFrames:
-            return np.array(Image.open(io.BytesIO(self._dsequence[level][pos])))
-        else:
-            if (self.channels>1):
-                return np.zeros((*self.geometry_tilesize[level], self.channels))
-            else:
-                return np.zeros(self.geometry_tilesize[level])
-
-    def get_id(self, pixelX:int, pixelY:int, level:int) -> (int, int, int):
-
-        id_x = round(-0.5+(pixelX/self.geometry_tilesize[level][1]))
-        id_y = round(-0.5+(pixelY/self.geometry_tilesize[level][0]))
-        
-        return (id_x,id_y), pixelX-(id_x*self.geometry_tilesize[level][0]), pixelY-(id_y*self.geometry_tilesize[level][1]),
 
         
     
