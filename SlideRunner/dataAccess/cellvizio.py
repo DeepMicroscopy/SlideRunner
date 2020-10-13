@@ -25,6 +25,7 @@ from pydicom.encaps import decode_data_sequence
 from PIL import Image
 import io
 import os
+import hashlib
 import struct
 from os import stat
 
@@ -74,6 +75,9 @@ class ReadableCellVizioMKTDataset():
        self.filestats = stat(self.fileName)
        self.fi.nImages = int((self.filestats.st_size-self.fi.offset) / (self.fi.size+self.fi.gapBetweenImages))
 
+       self.fileHandle.seek(0) # we find the image size at position 10
+       hashablecontent = self.fileHandle.read(1024)
+       self.hash_sha = hashlib.sha256(hashablecontent).hexdigest()
 
        self.numberOfFrames = self.fi.nImages
 
@@ -93,7 +97,7 @@ class ReadableCellVizioMKTDataset():
 
     @property
     def seriesInstanceUID(self) -> str:
-        return ''
+        return self.hash_sha
 
     @property
     def level_downsamples(self):
