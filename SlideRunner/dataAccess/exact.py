@@ -51,7 +51,7 @@ def list_to_exactvector(vector, zLevel=None):
     retdict = {f'x{(i+1)}': v[0] for i, v in enumerate(vector)}
     retdict.update({f'y{i+1}': v[1] for i, v in enumerate(vector)} )
     if zLevel is not None:
-        retdict['frame']=zLevel
+        retdict['frame']=zLevel+1
     return retdict
 
 def get_hex_color(id):
@@ -181,7 +181,7 @@ class ExactManager():
 
         def createDatabaseObject():
             database.deleteTriggers()
-            zLevel = anno.vector['frame'] if 'frame' in anno.vector else 0
+            zLevel = anno.vector['frame']-1 if 'frame' in anno.vector else 0
             if (vector_type == 3): # line
                 annoId = database.insertNewPolygonAnnotation(annoList=coords, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], exact_id=exact_id, description=anno.description, zLevel=zLevel)
             elif (vector_type in [4,5]): # polygon or line
@@ -401,7 +401,7 @@ class ExactManager():
 
         for zLevel in database.getAnnotationZLevels(slideuid):
             database.loadIntoMemory(slideuid, zLevel=zLevel)
-            print('Loading zLevel: ',zLevel,'annos=',len(database.annotations.keys()))
+#            print('Loading zLevel: ',zLevel,'annos=',len(database.annotations.keys()))
        
             for cntr,annokey in enumerate(database.annotations.keys()):
                 if not (self.multi_threaded):
@@ -410,11 +410,11 @@ class ExactManager():
                 # look through annotations
                 labelToSend = [lab.classId for lab in dbanno.labels if lab.annnotatorId==uidToSend]
                 labelToSendIdx = [i for i,lab in enumerate(dbanno.labels) if lab.annnotatorId==uidToSend]
-                print('LabelToSend:',uidToSend, labelToSend)
+#                print('LabelToSend:',uidToSend, labelToSend)
                 if len(labelToSend)==0:
                     # not from expert marked as exact user --> ignore
                     continue
-                print('DB ANNO: ',dbanno.guid,'ANNO DICT:',annodict.keys())
+#                print('DB ANNO: ',dbanno.guid,'ANNO DICT:',annodict.keys())
                 if (dbanno.guid in annodict.keys()):
                     le_array = [_anno.last_edit_time for _anno in annodict[dbanno.guid]]
                     lastedit = np.max(le_array) # maximum last_edit time is most recent for uuid
