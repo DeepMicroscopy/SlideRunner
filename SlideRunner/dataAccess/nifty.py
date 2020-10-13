@@ -45,9 +45,9 @@ class ReadableNIBDataset():
 
         self._dsstore = dict()
 
+        self.isOpenSlide = False
         self.nib = nib.load(filename)
         self.imdata = self.nib.dataobj.reshape((*self.nib.shape[0:2],-1)) # flatten 
-        print('imdata shape:',self.imdata.shape)
         
         self.levels = [0]
         self.channels = 1
@@ -58,7 +58,6 @@ class ReadableNIBDataset():
         self.geometry_rows = [1]
         self.geometry_columns = [1]
         self.extremes = np.min(self.imdata), np.max(self.imdata)
-        self.read_region = self.read_region_simple
 
     
 
@@ -70,7 +69,7 @@ class ReadableNIBDataset():
     def level_dimensions(self):
         return [self.geometry_imsize]
 
-    def read_region_simple(self, location: tuple, level:int, size:tuple, zLevel:int=0):
+    def read_region(self, location: tuple, level:int, size:tuple, zLevel:int=0, rotate:bool=True):
         img = np.zeros((size[1],size[0],4), np.uint8)
         img[:,:,3]=255
         offset=[0,0]
@@ -82,7 +81,7 @@ class ReadableNIBDataset():
             location = (0,location[1])
         imgcut = self.imdata[location[1]:location[1]+size[1]-offset[0],location[0]:location[0]+size[0]-offset[1],zLevel]
         ext = np.percentile(self.imdata[:,:,zLevel],5),np.percentile(self.imdata[:,:,zLevel],95)
-        print('Extremes:',ext)
+#        print('Extremes:',ext,'rotate:',rotate,'zLevel',zLevel)
         imgcut = np.uint8(np.clip(np.float32(imgcut)/(ext[1])*255.0,0,255))
         for k in range(3):
             img[offset[0]:imgcut.shape[0]+offset[0],offset[1]:offset[1]+imgcut.shape[1],k] = imgcut

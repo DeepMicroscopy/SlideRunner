@@ -58,6 +58,7 @@ class ReadableDicomDataset():
 
         self._ds = pydicom.dcmread(filename)
         self._sequenceInstanceUID = self._ds.SeriesInstanceUID
+        self.isOpenSlide=False
         
         self._path, _ = os.path.split(filename)
         if (self._path==""):
@@ -99,10 +100,12 @@ class ReadableDicomDataset():
             self.mpp_x = float(self._dsstore[0].SharedFunctionalGroupsSequence[0][0x028,0x9110][0][0x028,0x030][0])*1000
             self.mpp_y = float(self._dsstore[0].SharedFunctionalGroupsSequence[0][0x028,0x9110][0][0x028,0x030][1])*1000
             self.numberOfFrames = 1
+            self.loadIntoMemory=False
         except Exception as e:
             # Fall back to simple reader
             self.levels = sorted(list(self._dsstore.keys())) if not stack else [0]
-            self.read_region = self.read_region_simple
+            self.loadIntoMemory=True
+#            self.read_region = self.read_region_simple
             self.extremes = np.min(self._dsstore[0].pixel_array), np.max(self._dsstore[0].pixel_array)
             self.geometry_imsize = [self._dsstore[0].Columns, self._dsstore[0].Rows]
             self.geometry_tilesize = [(self._dsstore[0].Columns, self._dsstore[0].Rows)]
@@ -198,6 +201,11 @@ class ReadableDicomDataset():
 
         
     def read_region(self, location: tuple, level:int, size:tuple, zLevel:int=None):
+
+        # Use simplified region reader if dicom image is able to load into memory
+        if self.loadIntoMemory:
+            return self.read_region_simple(location=location, level=level, size=size, zLevel=zLevel)
+
         # convert to overall coordinates, if not in level 0
         if (self.level_downsamples[level]>1):
             location = [int(x/self.level_downsamples[level]) for x in location]

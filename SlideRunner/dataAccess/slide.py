@@ -50,7 +50,7 @@ class ImageSlide3D(openslide.ImageSlide):
         image_bottomright = [max(0, min(l + s - 1, limit - 1))
                     for l, s, limit in zip(location, size, self._image.size)]
         tile = Image.new("RGBA", size, (0,) * 4)
-        #print(self._image)
+
         if not ['fail' for tl, br in zip(image_topleft, image_bottomright)
                 if br - tl < 0]:  # "< 0" not a typo
             # Crop size is greater than zero in both dimensions.
@@ -102,7 +102,10 @@ class RotatableOpenSlide(object):
         # zlevel is ignored for SVS files
         if (self.rotate):
             location = [int(x-y-(w*self.level_downsamples[level])) for x,y,w in zip(self.dimensions, location, size)]
-            return super().read_region(location, level, size).rotate(180)
+            if (self.isOpenSlide):
+                return super().read_region(location, level, size).rotate(180)
+            else:
+                return super().read_region(location, level, size, zLevel=zLevel).rotate(180)
         else:
             if (self.isOpenSlide):
                 return super().read_region(location, level, size)
@@ -164,9 +167,9 @@ class SlideReader(multiprocessing.Process):
 
             self.slide.rotate = rotated
 
-            if not all([a==b for a,b in zip([location,level,size,zlevel],lastReq)]) or newSlide:
+            if not all([a==b for a,b in zip([location,level,size,zlevel,rotated],lastReq)]) or newSlide:
                 img = self.slide.read_region(location, level, size, zLevel=zlevel)
-                lastReq = [location, level, size,zlevel]
+                lastReq = [location, level, size,zlevel,rotated]
 
             self.outputQueue.put((np.array(img),id))
 
