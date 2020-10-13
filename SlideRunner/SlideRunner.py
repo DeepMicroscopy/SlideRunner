@@ -2056,12 +2056,12 @@ class SlideRunnerUI(QMainWindow):
 
 
             iselect = [k for k,name in enumerate(items) if name==item][0]
-            if ('products_set' not in imagesets[iselect]):
+            if not hasattr(imagesets[iselect], 'product_set'):
                 QtWidgets.QMessageBox.warning(self, 'Error','Please create a product for this team first.', 
                                             QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
 
                 return
-            products = ['%d: ' % p.id+p.name for p in imagesets[iselect].products_set]
+            products = ['%d: ' % p['id']+p['name'] for p in imagesets[iselect].product_set]
 
             pitem, ok = QInputDialog.getItem(self, "Select a product", "Products in image set", products, 0, False)
             if not (ok):
@@ -2070,8 +2070,9 @@ class SlideRunnerUI(QMainWindow):
             imageset_id = int(item.split(':')[0])
             product_id = int(pitem.split(':')[0])
 
-            from _thread import start_new_thread
-            start_new_thread(self.threadedExportAndSync, (exm,imageset_id,product_id, slidesToSync))          
+#            from _thread import start_new_thread
+#            start_new_thread(
+            self.threadedExportAndSync(exm,imageset_id,product_id, slidesToSync)          
 
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
@@ -2089,7 +2090,7 @@ class SlideRunnerUI(QMainWindow):
                 exm.set_progress_properties(denominator=len(slidesToSync), offset=float(cnt)/len(slidesToSync))
                 obj = exm.upload_image_to_imageset(imageset_id=imageset_id, filename=slidepathname)
 
-                image_id = obj['files'][0]['id']
+                image_id = obj[0]['id']
                 exact_id = f'{image_id}/{product_id}/{imageset_id}'
                 newDB.execute(f'UPDATE Slides set exactImageID="{exact_id}" where uid=={slideid}')
                 exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=slideid, database=newDB)
@@ -2098,7 +2099,7 @@ class SlideRunnerUI(QMainWindow):
             self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.REFRESH_DATABASE,None))
         except Exception as e:
                 self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.POPUP_MESSAGEBOX,'Unable to proceed: '+str(e)))
-    #            raise(e)
+                raise(e)
                 return
         exm.terminate()
         
@@ -2117,7 +2118,7 @@ class SlideRunnerUI(QMainWindow):
 
         except Exception as e:
             self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.POPUP_MESSAGEBOX,'Unable to proceed: '+str(e)))
-#            raise(e)
+            raise(e)
             return
 
         exm.terminate()
@@ -2241,12 +2242,27 @@ class SlideRunnerUI(QMainWindow):
             self.popupmessage('Please open a slide first.')
             return
         try:
-            ELD = ExactLinkDialog(self.db, self.settings)
+            exm = ExactManager(self.settings.value('exactUsername', 'Demo'), 
+                                self.settings.value('exactPassword', 'demodemo'),
+                                self.settings.value('exactHostname', 'https://exact.cs.fau.de'),
+                                statusqueue=self.progressBarQueue, loglevel=0)
+
+            imagesets = exm.APIs.image_sets_api.list_image_sets(pagination=False, expand='product_set').results
+            items = ['%d: ' % iset.id+iset.name for iset in imagesets]
+            item, ok = QInputDialog.getItem(self, "Select image set", "Image sets", items, 0, False)
+
+            if not (ok):
+                return
+
+            iselect = [k for k,name in enumerate(items) if name==item][0]
+
+            ELD = ExactLinkDialog(self.db, self.settings, imagesets[iselect].id)
 
             ELD.exec_()
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
                                           QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+            raise(e)
             return
 
         self.findSlideUID()

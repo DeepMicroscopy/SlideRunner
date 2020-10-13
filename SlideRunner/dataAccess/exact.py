@@ -229,7 +229,7 @@ class ExactManager():
 
 
         for zLevel in database.getAnnotationZLevels(slideuid):
-            database.loadIntoMemory(slideuid, zLevel=zLevel)
+            database.loadIntoMemory(slideuid, zLevel=None)
 
             # reformat to dict according to uuid
             uuids = np.array([anno.unique_identifier for anno in annos])
@@ -246,7 +246,6 @@ class ExactManager():
                 # TODO: expand this in the first place
                 for anno in annodict[uuid]:
                     class_name = anno.annotation_type['name']
-                    print('Calling retrieve user for:',anno.last_editor)
                     person_name = anno.last_editor['username'] if anno.last_editor is not None and 'username' in anno.last_editor else 'unknown'
                     exact_id = anno.id
 
@@ -315,6 +314,9 @@ class ExactManager():
             
         database.addTriggers()
 
+    def retrieve_imagesets(self):
+        imagesets = self.APIs.image_sets_api.list_image_sets(pagination=False, expand='product_set').results
+        return imagesets
 
     def sync(self, dataset_id:int,imageset_id:int, product_id:int, slideuid:int, database:Database, image_id:str=None, callback:callable=None, **kwargs ):
 

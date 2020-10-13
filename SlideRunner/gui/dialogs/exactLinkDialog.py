@@ -11,7 +11,7 @@ from SlideRunner.dataAccess.exact import *
 
 class ExactLinkDialog(QDialog):
 
-    def __init__(self, DB:Database, settingsObject):
+    def __init__(self, DB:Database, settingsObject, imageset):
         super().__init__()
         self.title = 'EXACT overview (%s)' % settingsObject.value('exactHostname', 'https://exact.cs.fau.de').replace('//','//'+settingsObject.value('exactUsername', 'Demo')+'@')
         self.left = 50
@@ -20,6 +20,7 @@ class ExactLinkDialog(QDialog):
         self.height = 500
         self.DB = DB
         self.setModal(True)
+        self.imageset = imageset
         hostname = settingsObject.value('exactHostname', 'https://exact.cs.fau.de')
         if hostname[-1] != '/':
             hostname += '/'
@@ -45,26 +46,28 @@ class ExactLinkDialog(QDialog):
             return str(image_id)+'/'+str(product_id)+'/'+str(imageset_id)
         DB = self.DB
         fileToAnnos = {exactimageid:slide for slide,exactimageid in DB.execute('SELECT filename, exactImageID from Slides').fetchall()}
-        self.loi = self.exm.retrieve_imagesets()
+
+        print('Retrieving imageset: ',self.imageset)
+        self.loi = self.exm.APIs.image_sets_api.retrieve_image_set(self.imageset, expand='images,product_set')
         rowcount=0
         self.los = []
-        for imageset in self.loi:
-            for row,image in enumerate(imageset['images']):
-                for product in imageset['products']:
-                    self.los.append([image_and_product_to_id(image['id'], product['id'],imageset['id']),imageset['name']+'('+product['name']+')', str(image['name']),fileToAnnos[image_and_product_to_id(image['id'], product['id'],imageset['id'])] if image_and_product_to_id(image['id'], product['id'],imageset['id']) in fileToAnnos else '' ])
+
+        for product in self.loi.product_set:
+            for im in self.loi.images:
+                self.los.append([image_and_product_to_id(im['id'], product['id'],self.imageset), str(im['name']),fileToAnnos[image_and_product_to_id(im['id'], product['id'],self.imageset)] if image_and_product_to_id(im['id'], product['id'],self.imageset) in fileToAnnos else '' ])
                 rowcount+=1
+
         self.tableWidget.setRowCount(rowcount)
-        for row,(id,imset,im,linked) in enumerate(self.los):
+        for row,(id,im,linked) in enumerate(self.los):
             self.tableWidget.setItem(row,0, QTableWidgetItem(str(id)))
-            self.tableWidget.setItem(row,1, QTableWidgetItem(str(imset)))
-            self.tableWidget.setItem(row,2, QTableWidgetItem(str(im)))
-            self.tableWidget.setItem(row,3, QTableWidgetItem(str(linked)))
+            self.tableWidget.setItem(row,1, QTableWidgetItem(str(im)))
+            self.tableWidget.setItem(row,2, QTableWidgetItem(str(linked)))
 
     def createTable(self):
        # Create table
         self.tableWidget = QTableWidget()
-        self.tableWidget.setColumnCount(4)
-        self.tableWidget.setHorizontalHeaderLabels(['ID','Imageset','Image','Assigned to'])
+        self.tableWidget.setColumnCount(3)
+        self.tableWidget.setHorizontalHeaderLabels(['ID','Image','Assigned to'])
         self.updateTable()
         self.tableWidget.move(0,0)
         self.tableWidget.resizeColumnsToContents()
@@ -72,7 +75,7 @@ class ExactLinkDialog(QDialog):
         
     
     def link(self, los):
-        exactid, _, _, linked = los
+        exactid, _, linked = los
         if not (linked==''):
             reply = QtWidgets.QMessageBox.question(self, 'Question',
                                             'Do you really want to link this image to a new image?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)

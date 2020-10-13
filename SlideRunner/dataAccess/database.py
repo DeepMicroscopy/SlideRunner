@@ -261,6 +261,11 @@ class Database(object):
 
 
 
+    """
+
+        Loads the current DB entry into memory. If the zLevel (for stack / time series images) is None, loads all annotations
+    """
+
     def loadIntoMemory(self, slideId, transformer=None, zLevel=0):
         if not (self.isOpen()):
             return
@@ -288,7 +293,8 @@ class Database(object):
             coords = allCoords[allCoords[:,3]==uid,0:2]
             zCoord = allCoords[allCoords[:,3]==uid,2][0] if allCoords.shape[0]>0 else 0
 
-            if (zCoord != zLevel):
+            self.guids[guid] = uid
+            if (zCoord != zLevel) and (zLevel is not None):
                 continue
             if (annotype == AnnotationType.SPOT):
                 self.annotations[uid] = spotAnnotation(uid, coords[0][0], coords[0][1], text=description)
@@ -306,11 +312,11 @@ class Database(object):
                 print('Unknown annotation type %d found :( ' % annotype)
             self.annotations[uid].agreedClass = agreedClass
             self.annotations[uid].guid = guid
+            self.annotations[uid].zLevel = zCoord
             self.annotations[uid].lastModified = lastModified
             self.annotations[uid].deleted = deleted
             if (deleted):
                 self.annotations[uid].clickable = False
-            self.guids[guid] = uid
         # Add all labels
         self.dbcur.execute('SELECT annoid, person, class,uid, exact_id FROM Annotations_label WHERE annoID in (SELECT uid FROM Annotations WHERE slide == %d)'% slideId)
         allLabels = self.dbcur.fetchall()
