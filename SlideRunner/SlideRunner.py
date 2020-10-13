@@ -1886,6 +1886,7 @@ class SlideRunnerUI(QMainWindow):
             if (self.imageOpened):
                 self.findSlideUID(self.slide.dimensions)
                 self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates)
+                self.ui.statusbar.showMessage('Found image in database at UID: '+str(self.slideUID))
                 if not (self.db.isOpen()):
                     return
 
@@ -2030,7 +2031,7 @@ class SlideRunnerUI(QMainWindow):
                         if reply == QtWidgets.QMessageBox.Cancel:
                             break
                     
-                    pathname = '.' if pathname is None else str(pathname)
+                    pathname = '.' if pathname is None or len(pathname)==0 else str(pathname)
                     if not (os.path.exists(str(pathname)+os.sep+filename)):
                         reply = QtWidgets.QMessageBox.question(self, 'Image not found',
                                                 f'{filename} could not be found in {pathname}. Exclude from list and continue with export?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
@@ -2053,7 +2054,13 @@ class SlideRunnerUI(QMainWindow):
             if not (ok):
                 return
 
+
             iselect = [k for k,name in enumerate(items) if name==item][0]
+            if ('products_set' not in imagesets[iselect]):
+                QtWidgets.QMessageBox.warning(self, 'Error','Please create a product for this team first.', 
+                                            QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+
+                return
             products = ['%d: ' % p.id+p.name for p in imagesets[iselect].products_set]
 
             pitem, ok = QInputDialog.getItem(self, "Select a product", "Products in image set", products, 0, False)
