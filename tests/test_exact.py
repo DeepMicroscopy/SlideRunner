@@ -233,7 +233,7 @@ def test_pushannos():
     created = apis.annotations_api.create_annotation(body=annotation )
 
     exm.sync(imageid, imageset_id=imageset, product_id=product_id, slideuid=slideuid, database=DB)
-    DB.loadIntoMemory(1, zLevel=2)
+    DB.loadIntoMemory(1, zLevel=None)
     found=False
     for annoI in DB.annotations:
         anno=DB.annotations[annoI]

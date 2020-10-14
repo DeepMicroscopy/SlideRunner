@@ -51,7 +51,7 @@ def list_to_exactvector(vector, zLevel=None):
     retdict = {f'x{(i+1)}': v[0] for i, v in enumerate(vector)}
     retdict.update({f'y{i+1}': v[1] for i, v in enumerate(vector)} )
     if zLevel is not None:
-        retdict['frame']=zLevel+1
+        retdict['frame']=int(zLevel+1)
     return retdict
 
 def get_hex_color(id):
@@ -207,7 +207,7 @@ class ExactManager():
             return annoId
 
         self.progress(0, callback=callback)
-        annos = np.array(self.APIs.annotations_api.list_annotations(dataset_id, expand='annotation_type,last_editor').results)
+        annos = np.array(self.APIs.annotations_api.list_annotations(image=dataset_id, expand='annotation_type,last_editor', pagination=False).results)
         #print('Annos: ',annos)
         self.log(0, f'Found {len(annos)} annotations for dataset {dataset_id}')
 
@@ -380,7 +380,7 @@ class ExactManager():
             raise ExactProcessError('No matching image found.')
 
 #        annos = self.APIs.annotations_api.list_annotations(id=image_id).results
-        annos = np.array(self.APIs.annotations_api.list_annotations(dataset_id, expand=['last_editor','annotation_type']).results)
+        annos = np.array(self.APIs.annotations_api.list_annotations(image=dataset_id, expand=['last_editor','annotation_type'], pagination=False).results)
 
         # retrieve all annotation types
         annotypedict = getAnnotationTypes()
@@ -399,100 +399,95 @@ class ExactManager():
         pending_requests=0
 #        self.log(0,f'Checking all {len(database.annotations.keys())} entries of DB slide {slideuid}')
 
-        for zLevel in database.getAnnotationZLevels(slideuid):
-            database.loadIntoMemory(slideuid, zLevel=zLevel)
+        database.loadIntoMemory(slideuid, zLevel=None)
 #            print('Loading zLevel: ',zLevel,'annos=',len(database.annotations.keys()))
        
-            for cntr,annokey in enumerate(database.annotations.keys()):
-                if not (self.multi_threaded):
-                    self.progress(0.5+(float(cntr)*0.5/(len(database.annotations.keys())+0.0001)), callback=callback)
-                dbanno = database.annotations[annokey]
-                # look through annotations
-                labelToSend = [lab.classId for lab in dbanno.labels if lab.annnotatorId==uidToSend]
-                labelToSendIdx = [i for i,lab in enumerate(dbanno.labels) if lab.annnotatorId==uidToSend]
+        for cntr,annokey in enumerate(database.annotations.keys()):
+            if not (self.multi_threaded):
+                self.progress(0.5+(float(cntr)*0.5/(len(database.annotations.keys())+0.0001)), callback=callback)
+            dbanno = database.annotations[annokey]
+            # look through annotations
+            labelToSend = [lab.classId for lab in dbanno.labels if lab.annnotatorId==uidToSend]
+            labelToSendIdx = [i for i,lab in enumerate(dbanno.labels) if lab.annnotatorId==uidToSend]
 #                print('LabelToSend:',uidToSend, labelToSend)
-                if len(labelToSend)==0:
-                    # not from expert marked as exact user --> ignore
-                    continue
+            if len(labelToSend)==0:
+                # not from expert marked as exact user --> ignore
+                continue
 #                print('DB ANNO: ',dbanno.guid,'ANNO DICT:',annodict.keys())
-                if (dbanno.guid in annodict.keys()):
-                    le_array = [_anno.last_edit_time for _anno in annodict[dbanno.guid]]
-                    lastedit = np.max(le_array) # maximum last_edit time is most recent for uuid
-                    # highlander rule --> whoever edited last will win (for the complete annotation)
+            if (dbanno.guid in annodict.keys()):
+                le_array = [_anno.last_edit_time for _anno in annodict[dbanno.guid]]
+                lastedit = np.max(le_array) # maximum last_edit time is most recent for uuid
+                # highlander rule --> whoever edited last will win (for the complete annotation)
 
-                    if (lastedit.timestamp()>dbanno.lastModified):
-                        pass
-                        print('A more recent version of ',dbanno.guid,'is available',lastedit.timestamp(), dbanno.lastModified)
-                        # more recent version exists online
-                        # TODO: Implement storing of my version in case of creation
-                    elif (lastedit.timestamp()+EPS_TIME_CONVERSION<dbanno.lastModified):
-                        # local annotation is more recent --> update
-                        IdToSend = [lab.exact_id for lab in dbanno.labels if lab.annnotatorId==uidToSend]
-                        for lts, idts,i in zip(labelToSend,IdToSend,labelToSendIdx):
-                            # case: exact_id is known
-                            classToSend=lts # used in embedded function
-                            if (idts is not None) and (idts>0):
-    #                            print('Remote ID known:',idts,'=> Forcing update, remote is:', lastedit.timestamp(), 'local is:',dbanno.lastModified)
-                                lastModified=datetime.datetime.fromtimestamp(dbanno.lastModified).strftime( "%Y-%m-%dT%H:%M:%S.%f")
-                                vector = list_to_exactvector(dbanno.coordinates.tolist(),zLevel=zLevel)
-                                self.APIs.annotations_api.partial_update_annotation(id=idts, annotation_type=get_or_create_annotationtype(lts,dbanno.annotationType), last_edit_time=lastModified, vector=vector, deleted=dbanno.deleted, unique_identifier=dbanno.guid, description=dbanno.text)
-    #                            self.update_annotation(,annotation_id=idts, )      
-                                print('UPDATING Annotation')           
-                            else:
-                                # case: exact_id is unknown
-                                # can have the following causes:
-                                # 1. label is new for annotation --> in this case, it has to be created
-                                # 2. exact_id is missing in database --> avoided by first receiving from server
-                                annotationtype = get_or_create_annotationtype(lts, dbanno.annotationType)
-                                vector = list_to_exactvector(dbanno.coordinates.tolist(),zLevel=zLevel)
-                                
-                                lastModified=datetime.datetime.fromtimestamp(dbanno.lastModified).strftime( "%Y-%m-%dT%H:%M:%S.%f")
-                                annotation = Annotation(annotation_type=annotationtype, vector=vector, image=image_id, unique_identifier=dbanno.guid, last_edit_time=lastModified, time=lastModified, description=dbanno.text, deleted=dbanno.deleted)
-                                if (self.multi_threaded):
-                                    context = {'labeluid': i, 'annouid': dbanno.uid}
-                                    print('CREATING ANNOTATION 1:',annotation)
-                                    self.jobqueue.put((0,partial(self.APIs.annotations_api.create_annotation, body=annotation ),context))
-                                    pending_requests+=1
-                                else:
-                                    det = self.APIs.annotations_api.create_annotation(body=annotation)
-                                    print('CREATING ANNOTATION 2:',annotation)
-    #                                det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(lts, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid, description=dbanno.text)
-                                    # add new exact_id to DB field
-                                    label = dbanno.labels[i]
-                                    database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['id'])
-                                    label.exact_id = det['annotations']['id']
-                                    self.log(1,'Updating local exact_id (previously unknown)')
-                    else:
-                        # Equal time stamps --> ignore
-                        print('EQUAL TIME STAMPS FOR ',dbanno.guid,'is available',lastedit.timestamp(), dbanno.lastModified)
-                        pass
-                else:
-                    for i, classToSend in zip(labelToSendIdx,labelToSend):
-                        lastModified=datetime.datetime.fromtimestamp(dbanno.lastModified).strftime( "%Y-%m-%dT%H:%M:%S.%f")
-                        if (self.multi_threaded):
-                            context = {'labeluid': i, 'annouid': dbanno.uid}
-                            annotationtype = get_or_create_annotationtype(classToSend, dbanno.annotationType)
-                            vector = list_to_exactvector(dbanno.coordinates.tolist(),zLevel=zLevel)
-                            annotation = Annotation(annotation_type=annotationtype, vector=vector, image=image_id, unique_identifier=dbanno.guid, last_edit_time=lastModified, time=lastModified,   description=dbanno.text, deleted=dbanno.deleted)
-                            print('CREATING ANNOTATION 3a:',annotation)
-    #                        self.jobqueue.put((0,partial(self.create_annotation, image_id=image_id, annotationtype_id=get_or_create_annotationtype(classToSend, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid, description=dbanno.text),context))
-                            self.jobqueue.put((0,partial(self.APIs.annotations_api.create_annotation, body=annotation ),context))
-                            pending_requests+=1
+                if (lastedit.timestamp()>dbanno.lastModified):
+                    pass
+                    print('A more recent version of ',dbanno.guid,'is available',lastedit.timestamp(), dbanno.lastModified)
+                    # more recent version exists online
+                    # TODO: Implement storing of my version in case of creation
+                elif (lastedit.timestamp()+EPS_TIME_CONVERSION<dbanno.lastModified):
+                    # local annotation is more recent --> update
+                    IdToSend = [lab.exact_id for lab in dbanno.labels if lab.annnotatorId==uidToSend]
+                    for lts, idts,i in zip(labelToSend,IdToSend,labelToSendIdx):
+                        # case: exact_id is known
+                        classToSend=lts # used in embedded function
+                        if (idts is not None) and (idts>0):
+#                            print('Remote ID known:',idts,'=> Forcing update, remote is:', lastedit.timestamp(), 'local is:',dbanno.lastModified)
+                            lastModified=datetime.datetime.fromtimestamp(dbanno.lastModified).strftime( "%Y-%m-%dT%H:%M:%S.%f")
+                            vector = list_to_exactvector(dbanno.coordinates.tolist(),zLevel=dbanno.zLevel)
+                            self.APIs.annotations_api.partial_update_annotation(id=idts, annotation_type=get_or_create_annotationtype(lts,dbanno.annotationType), last_edit_time=lastModified, vector=vector, deleted=dbanno.deleted, unique_identifier=dbanno.guid, description=dbanno.text)
+#                            self.update_annotation(,annotation_id=idts, )      
+#                            print('UPDATING Annotation')           
                         else:
-                            annotationtype=get_or_create_annotationtype(classToSend, dbanno.annotationType)
-    #                        det = self.create_annotation(image_id=image_id, annotationtype_id=annotationtype, deleted=dbanno.deleted, last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid, description=dbanno.text)
-                            vector = list_to_exactvector(dbanno.coordinates.tolist(), zLevel=zLevel)
+                            # case: exact_id is unknown
+                            # can have the following causes:
+                            # 1. label is new for annotation --> in this case, it has to be created
+                            # 2. exact_id is missing in database --> avoided by first receiving from server
+                            annotationtype = get_or_create_annotationtype(lts, dbanno.annotationType)
+                            vector = list_to_exactvector(dbanno.coordinates.tolist(),zLevel=dbanno.zLevel)
+                            
+                            lastModified=datetime.datetime.fromtimestamp(dbanno.lastModified).strftime( "%Y-%m-%dT%H:%M:%S.%f")
                             annotation = Annotation(annotation_type=annotationtype, vector=vector, image=image_id, unique_identifier=dbanno.guid, last_edit_time=lastModified, time=lastModified, description=dbanno.text, deleted=dbanno.deleted)
-                            print('CREATING ANNOTATION 4a',annotation)
-                            det = self.APIs.annotations_api.create_annotation(body=annotation)
+                            if (self.multi_threaded):
+                                context = {'labeluid': i, 'annouid': dbanno.uid}
+                                self.jobqueue.put((0,partial(self.APIs.annotations_api.create_annotation, body=annotation ),context))
+                                pending_requests+=1
+                            else:
+                                det = self.APIs.annotations_api.create_annotation(body=annotation)
+#                                det = self.create_annotation(image_id=image_id, annotationtype_id=get_or_create_annotationtype(lts, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid, description=dbanno.text)
+                                # add new exact_id to DB field
+                                label = dbanno.labels[i]
+                                database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['id'])
+                                label.exact_id = det['annotations']['id']
+                                self.log(1,'Updating local exact_id (previously unknown)')
+                else:
+                    # Equal time stamps --> ignore
+#                    print('EQUAL TIME STAMPS FOR ',dbanno.guid,'is available',lastedit.timestamp(), dbanno.lastModified)
+                    pass
+            else: # database annotation not in 
+                for i, classToSend in zip(labelToSendIdx,labelToSend):
+                    lastModified=datetime.datetime.fromtimestamp(dbanno.lastModified).strftime( "%Y-%m-%dT%H:%M:%S.%f")
+                    if (self.multi_threaded):
+                        context = {'labeluid': i, 'annouid': dbanno.uid}
+                        annotationtype = get_or_create_annotationtype(classToSend, dbanno.annotationType)
+                        vector = list_to_exactvector(dbanno.coordinates.tolist(),zLevel=dbanno.zLevel)
+                        annotation = Annotation(annotation_type=annotationtype, vector=vector, image=image_id, unique_identifier=str(dbanno.guid), last_edit_time=lastModified, time=lastModified,   description=dbanno.text, deleted=dbanno.deleted)
+#                        self.jobqueue.put((0,partial(self.create_annotation, image_id=image_id, annotationtype_id=get_or_create_annotationtype(classToSend, dbanno.annotationType), deleted=dbanno.deleted,last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid, description=dbanno.text),context))
+                        self.jobqueue.put((0,partial(self.APIs.annotations_api.create_annotation, body=annotation ),context))
+                        pending_requests+=1
+                    else:
+                        annotationtype=get_or_create_annotationtype(classToSend, dbanno.annotationType)
+#                        det = self.create_annotation(image_id=image_id, annotationtype_id=annotationtype, deleted=dbanno.deleted, last_modified=dbanno.lastModified, vector=dbanno.coordinates.tolist(), guid=dbanno.guid, description=dbanno.text)
+                        vector = list_to_exactvector(dbanno.coordinates.tolist(), zLevel=dbanno.zLevel)
+                        annotation = Annotation(annotation_type=annotationtype, vector=vector, image=image_id, unique_identifier=dbanno.guid, last_edit_time=lastModified, time=lastModified, description=dbanno.text, deleted=dbanno.deleted)
+                        det = self.APIs.annotations_api.create_annotation(body=annotation)
 
-                            # add new exact_id to DB field
-                            label = dbanno.labels[i]
-                            # for local update, do not set Annotation.lastModified
-                            database.deleteTriggers()
-                            database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
-                            database.addTriggers()
-                            label.exact_id = det['annotations']['id']
+                        # add new exact_id to DB field
+                        label = dbanno.labels[i]
+                        # for local update, do not set Annotation.lastModified
+                        database.deleteTriggers()
+                        database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
+                        database.addTriggers()
+                        label.exact_id = det['annotations']['id']
 
             # make updates to local database until final.
             while (pending_requests>0):
@@ -503,6 +498,7 @@ class ExactManager():
                 i = context['labeluid']
                 label = dbanno.labels[i]
                 database.deleteTriggers()
+                print('Received reply:',res)
                 database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=res.id)
                 database.addTriggers()
                 label.exact_id = res.id
