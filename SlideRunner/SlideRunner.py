@@ -2090,7 +2090,7 @@ class SlideRunnerUI(QMainWindow):
                 exm.set_progress_properties(denominator=len(slidesToSync), offset=float(cnt)/len(slidesToSync))
                 obj = exm.upload_image_to_imageset(imageset_id=imageset_id, filename=slidepathname)
 
-                image_id = obj[0]['id']
+                image_id = obj[0].id
                 exact_id = f'{image_id}/{product_id}/{imageset_id}'
                 newDB.execute(f'UPDATE Slides set exactImageID="{exact_id}" where uid=={slideid}')
                 exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=slideid, database=newDB)
