@@ -21,8 +21,6 @@ class ExactDownloadDialog(QDialog):
         self.DB = DB
         self.setModal(True)
         hostname = settingsObject.value('exactHostname', 'https://exact.cs.fau.de')
-        if hostname[-1] != '/':
-            hostname += '/'
         self.exm = ExactManager(settingsObject.value('exactUsername', 'Demo'), 
                                 settingsObject.value('exactPassword', 'demodemo'),
                                 hostname)

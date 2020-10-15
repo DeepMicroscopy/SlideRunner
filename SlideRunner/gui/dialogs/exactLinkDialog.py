@@ -22,8 +22,6 @@ class ExactLinkDialog(QDialog):
         self.setModal(True)
         self.imageset = imageset
         hostname = settingsObject.value('exactHostname', 'https://exact.cs.fau.de')
-        if hostname[-1] != '/':
-            hostname += '/'
         self.exm = ExactManager(settingsObject.value('exactUsername', 'Demo'), 
                                 settingsObject.value('exactPassword', 'demodemo'),
                                 hostname)
