@@ -126,7 +126,6 @@ class ExactManager():
         while (True):
             status, newjob, context = self.jobqueue.get()
             if (status==-1):
-#                print('Stopping worker')
                 break
             ret = newjob()
             self.resultQueue.put((ret, context))
@@ -227,91 +226,89 @@ class ExactManager():
         exactPersonId, _ = database.getExactPerson()
         persons[self.configuration.username] = exactPersonId
 
+        database.loadIntoMemory(slideuid, zLevel=None)
 
-        for zLevel in database.getAnnotationZLevels(slideuid):
-            database.loadIntoMemory(slideuid, zLevel=None)
+        # reformat to dict according to uuid
+        uuids = np.array([anno.unique_identifier for anno in annos])
 
-            # reformat to dict according to uuid
-            uuids = np.array([anno.unique_identifier for anno in annos])
+        annodict = {uuid:annos[np.where(uuids==uuid)] for uuid in uuids}
+        # TODO: resolve conflict if one guid has multiple shapes
 
-            annodict = {uuid:annos[np.where(uuids==uuid)] for uuid in uuids}
-            # TODO: resolve conflict if one guid has multiple shapes
-
-            for cntr, uuid in enumerate(uuids):
-                self.progress(float(cntr)*0.5/(len(uuids)+0.001), callback=callback)
-                le_array = [sanno.last_edit_time for sanno in annodict[uuid]]
-                lastedit = np.max(le_array) # maximum last_edit time is most recent for uuid
+        for cntr, uuid in enumerate(uuids):
+            self.progress(float(cntr)*0.5/(len(uuids)+0.001), callback=callback)
+            le_array = [sanno.last_edit_time for sanno in annodict[uuid]]
+            lastedit = np.max(le_array) # maximum last_edit time is most recent for uuid
 
 
-                # TODO: expand this in the first place
-                for anno in annodict[uuid]:
-                    class_name = anno.annotation_type['name']
-                    person_name = anno.last_editor['username'] if anno.last_editor is not None and 'username' in anno.last_editor else 'unknown'
-                    exact_id = anno.id
+            # TODO: expand this in the first place
+            for anno in annodict[uuid]:
+                class_name = anno.annotation_type['name']
+                person_name = anno.last_editor['username'] if anno.last_editor is not None and 'username' in anno.last_editor else 'unknown'
+                exact_id = anno.id
 
-                    # check if annotator exists already, if not, create
-                    if person_name not in persons.keys():
-                        database.insertAnnotator(person_name)
-                        self.log(1,f'Adding annotator {person_name} found in EXACT')
-                        persons = {x:y for x,y in database.getAllPersons()}
-                        persons[self.configuration.username] = exactPersonId
-                        
-
-                    # check if class exists already in DB, if not, create
-                    if (class_name not in classes.values()):
-                        if not createClasses:
-                            raise AccessViolationError('Not permitted to create new classes, but class %d not found' % anno.annotation_type['name'])
-                        else:
-                            database.insertClass(class_name)
-                            classes = {x:y for y,x,col in database.getAllClasses()}
-                            classes_rev = {x:y for x,y,col in database.getAllClasses()}
-                            classes_col = {y:col for x,y,col in database.getAllClasses()}
+                # check if annotator exists already, if not, create
+                if person_name not in persons.keys():
+                    database.insertAnnotator(person_name)
+                    self.log(1,f'Adding annotator {person_name} found in EXACT')
+                    persons = {x:y for x,y in database.getAllPersons()}
+                    persons[self.configuration.username] = exactPersonId
                     
-                    vector_type = anno.annotation_type['vector_type']
-                    vlen = int(len(anno.vector)/2)
-                    
-                    #lastedit = datetime.datetime.strptime(anno['last_edit_time'], "%Y-%m-%dT%H:%M:%S.%f")
 
-                    # reformat coords               
-    #                coords = np.array(anno.vector).T.tolist()
-                    coords = [[anno.vector['x%d' % (x+1)] for x in range(vlen)],[anno.vector['y%d' % (x+1)]for x in range(vlen)]]
-                    coords = np.array(coords).T.tolist() # transpose
+                # check if class exists already in DB, if not, create
+                if (class_name not in classes.values()):
+                    if not createClasses:
+                        raise AccessViolationError('Not permitted to create new classes, but class %d not found' % anno.annotation_type['name'])
+                    else:
+                        database.insertClass(class_name)
+                        classes = {x:y for y,x,col in database.getAllClasses()}
+                        classes_rev = {x:y for x,y,col in database.getAllClasses()}
+                        classes_col = {y:col for x,y,col in database.getAllClasses()}
+                
+                vector_type = anno.annotation_type['vector_type']
+                vlen = int(len(anno.vector)/2)
+                
+                #lastedit = datetime.datetime.strptime(anno['last_edit_time'], "%Y-%m-%dT%H:%M:%S.%f")
 
-                    # TODO: The last edited object defines currently the coords --> this is a problem.
+                # reformat coords               
+#                coords = np.array(anno.vector).T.tolist()
+                coords = [[anno.vector['x%d' % (x+1)] for x in range(vlen)],[anno.vector['y%d' % (x+1)]for x in range(vlen)]]
+                coords = np.array(coords).T.tolist() # transpose
 
-                    if (uuid not in database.guids.keys()) and (vlen>0):
-                        # Is new - woohay!
-                        annoId = createDatabaseObject()
+                # TODO: The last edited object defines currently the coords --> this is a problem.
+
+                if (uuid not in database.guids.keys()) and (vlen>0):
+                    # Is new - woohay!
+                    annoId = createDatabaseObject()
+                    database.setGUID(annoid=annoId, guid=uuid)
+                    database.setLastModified(annoid=annoId, lastModified=lastedit.timestamp())
+                    self.log(1, f'Importing remote object with guid {uuid}')
+                elif (vlen>0):
+#                    print('Object exists, last edit was: ',lastedit.timestamp(), database.annotations[database.guids[uuid]].lastModified)
+                    if (lastedit.timestamp()-EPS_TIME_CONVERSION>database.annotations[database.guids[uuid]].lastModified):
+                        self.log(1,f'Recreating local object with guid {uuid}, remote was more recent')
+                        database.removeAnnotation(database.guids[uuid],onlyMarkDeleted=False)
+                        createDatabaseObject()
                         database.setGUID(annoid=annoId, guid=uuid)
                         database.setLastModified(annoid=annoId, lastModified=lastedit.timestamp())
-                        self.log(1, f'Importing remote object with guid {uuid}')
-                    elif (vlen>0):
-    #                    print('Object exists, last edit was: ',lastedit.timestamp(), database.annotations[database.guids[uuid]].lastModified)
-                        if (lastedit.timestamp()-EPS_TIME_CONVERSION>database.annotations[database.guids[uuid]].lastModified):
-                            self.log(1,f'Recreating local object with guid {uuid}, remote was more recent')
-                            database.removeAnnotation(database.guids[uuid],onlyMarkDeleted=False)
-                            createDatabaseObject()
-                            database.setGUID(annoid=annoId, guid=uuid)
-                            database.setLastModified(annoid=annoId, lastModified=lastedit.timestamp())
-                            
-                        elif abs(lastedit.timestamp()-database.annotations[database.guids[uuid]].lastModified)<EPS_TIME_CONVERSION:
-                            # equal time stamp --> maybe further annotation with same guid, let's check.
-    #                        print('Time stamps difference: ', lastedit.timestamp()-database.annotations[database.guids[uuid]].lastModified)
-    #                        print('Last edit (online): ',lastedit.timestamp())
-    #                        print('Last modified (DB): ',database.annotations[database.guids[uuid]].lastModified)
-                            labels_exactids = [lab.exact_id for lab in database.annotations[database.guids[uuid]].labels]
-                            if anno.id not in labels_exactids: 
-                                # need to create in local DB
-                                database.addAnnotationLabel(classId=classes_rev[class_name], person=persons[person_name], annoId=database.guids[uuid], exact_id=anno.id)
-                                self.log(1,'Adding new local label for annotation uuid = ',uuid,classes_rev[class_name],persons[person_name])
-                        else:
-                            # remote is older --> but maybe a remote label is not yet known
-                            labels_exactids = [lab.exact_id for lab in database.annotations[database.guids[uuid]].labels]
-                            if anno.id not in labels_exactids: 
-                                # need to create in local DB
-                                database.addAnnotationLabel(classId=classes_rev[class_name], person=persons[person_name], annoId=database.guids[uuid], exact_id=anno.id)
-                                self.log(1,'Adding new label for annotation uuid = ',uuid,classes_rev[class_name],persons[person_name])
-            
+                        
+                    elif abs(lastedit.timestamp()-database.annotations[database.guids[uuid]].lastModified)<EPS_TIME_CONVERSION:
+                        # equal time stamp --> maybe further annotation with same guid, let's check.
+#                        print('Time stamps difference: ', lastedit.timestamp()-database.annotations[database.guids[uuid]].lastModified)
+#                        print('Last edit (online): ',lastedit.timestamp())
+#                        print('Last modified (DB): ',database.annotations[database.guids[uuid]].lastModified)
+                        labels_exactids = [lab.exact_id for lab in database.annotations[database.guids[uuid]].labels]
+                        if anno.id not in labels_exactids: 
+                            # need to create in local DB
+                            database.addAnnotationLabel(classId=classes_rev[class_name], person=persons[person_name], annoId=database.guids[uuid], exact_id=anno.id)
+                            self.log(1,'Adding new local label for annotation uuid = ',uuid,classes_rev[class_name],persons[person_name])
+                    else:
+                        # remote is older --> but maybe a remote label is not yet known
+                        labels_exactids = [lab.exact_id for lab in database.annotations[database.guids[uuid]].labels]
+                        if anno.id not in labels_exactids: 
+                            # need to create in local DB
+                            database.addAnnotationLabel(classId=classes_rev[class_name], person=persons[person_name], annoId=database.guids[uuid], exact_id=anno.id)
+                            self.log(1,'Adding new label for annotation uuid = ',uuid,classes_rev[class_name],persons[person_name])
+        
         database.addTriggers()
 
     def retrieve_imagesets(self):
@@ -360,7 +357,7 @@ class ExactManager():
             elif (name_alt not in annotypedict.keys()): # non matching type for original name -> create alterntive name
 #                self.create_annotationtype(product_id=product_id,name=name_alt, vector_type=annotationtype_to_vectortype[annotationType], color_code=classes_col[classToSend], sort_order=classToSend)
                 annotation_type = ExactAnnotationType(name=name_alt, vector_type=annotationtype_to_vectortype[annotationType], product=product_id, color_code=classes_col[classToSend], sort_order=classToSend)
-                c = self.APIs.annotation_types_api.create_annotation_type(body=annotation_type)
+                annotypeID = self.APIs.annotation_types_api.create_annotation_type(body=annotation_type)
                 print('CREATING NEW ANNOTATION TYPE B:',annotation_type)
                 annotypedict = getAnnotationTypes()
                 mergeLocalClasses[(annotationType,labelId)] = name_alt
@@ -397,9 +394,9 @@ class ExactManager():
 
         uidToSend, nameToSend = database.getExactPerson()
         pending_requests=0
-#        self.log(0,f'Checking all {len(database.annotations.keys())} entries of DB slide {slideuid}')
 
         database.loadIntoMemory(slideuid, zLevel=None)
+        self.log(0,f'Checking all {len(database.annotations.keys())} entries of DB slide {slideuid}')
 #            print('Loading zLevel: ',zLevel,'annos=',len(database.annotations.keys()))
        
         for cntr,annokey in enumerate(database.annotations.keys()):
