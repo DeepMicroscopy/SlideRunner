@@ -1667,6 +1667,13 @@ class SlideRunnerUI(QMainWindow):
                         else:
                             for c in range(3):
                                 npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
+                    elif (len(olm.shape)==3) and (olm.shape[2]==4) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
+                        if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE):
+                            for c in range(4):
+                                npi[:,:,c] = olm[:,:,c] 
+                        else:
+                            for c in range(4):
+                                npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
                     
         if(self.activePlugin is not None and hasattr(self.activePlugin.instance, 'overlayHeatmap')):
             try:
