@@ -2516,6 +2516,13 @@ class SlideRunnerUI(QMainWindow):
         self.db.loadIntoMemory(self.slideUID, transformer=self.slide.transformCoordinates, zLevel=self.zPosition)
         self.showImage()
 
+    def fullOpacity(self):
+        self.ui.opacitySlider.setValue(100)
+        self.showImage()
+
+    def noOpacity(self):
+        self.ui.opacitySlider.setValue(0)
+        self.showImage()
 
     def frameChanged(self):
         self.zPosition = self.ui.frameSlider.getValue()
