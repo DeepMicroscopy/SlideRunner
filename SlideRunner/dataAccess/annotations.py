@@ -320,7 +320,7 @@ class rectangularAnnotation(annotation):
 
             image = cv2.rectangle(image, thickness=thickness, pt1=(xpos1,ypos1), pt2=(xpos2,ypos2),color=self.getColor(vp), lineType=cv2.LINE_AA)
 
-            if (self.text is not None and len(self.text)>0) and (zoomLevel < self.minimumAnnotationLabelZoom):
+            if self.text is not None and (len(self.text)>0) and (zoomLevel < self.minimumAnnotationLabelZoom):
                   cv2.putText(image, self.text, (xpos1+3, ypos2+10), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
 class polygonAnnotation(annotation):
