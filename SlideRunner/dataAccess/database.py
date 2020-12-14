@@ -137,7 +137,7 @@ class Database(object):
         self.exactUser = 0
         self.databaseStructure['Log'] = DatabaseTable('Log').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('dateTime','FLOAT')).add(DatabaseField('labelId','INTEGER'))
         self.databaseStructure['Slides'] = DatabaseTable('Slides').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('filename','TEXT')).add(DatabaseField('width','INTEGER')).add(DatabaseField('EXACTUSER','INTEGER',defaultValue=0)).add(DatabaseField('height','INTEGER')).add(DatabaseField('directory','TEXT')).add(DatabaseField('uuid','TEXT')).add(DatabaseField('exactImageID', 'TEXT'))
-        self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time()))).add(DatabaseField('description','TEXT'))
+        self.databaseStructure['Annotations'] = DatabaseTable('Annotations').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('guid','TEXT')).add(DatabaseField('deleted','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('type','INTEGER')).add(DatabaseField('agreedClass','INTEGER')).add(DatabaseField('lastModified','REAL',defaultValue=str(time.time()))).add(DatabaseField('description','TEXT')).add(DatabaseField('clickable', 'INTEGER', defaultValue=1))
         self.databaseStructure['Annotations_coordinates'] = DatabaseTable('Annotations_coordinates').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('coordinateX','INTEGER')).add(DatabaseField('coordinateY','INTEGER')).add(DatabaseField('coordinateZ','INTEGER',defaultValue=0)).add(DatabaseField('slide','INTEGER')).add(DatabaseField('annoId','INTEGER')).add(DatabaseField('orderIdx','INTEGER'))
         self.databaseStructure['Persons'] = DatabaseTable('Persons').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('isExactUser','INTEGER', defaultValue=0))
         self.databaseStructure['Classes'] = DatabaseTable('Classes').add(DatabaseField('uid','INTEGER',isAutoincrement=True, primaryKey=1)).add(DatabaseField('name','TEXT')).add(DatabaseField('color','TEXT'))
@@ -279,7 +279,7 @@ class Database(object):
         if (slideId is None):
             return
 
-        self.dbcur.execute('SELECT uid, type,agreedClass,guid,lastModified,deleted,description FROM Annotations WHERE slide == %d'% slideId)
+        self.dbcur.execute('SELECT uid, type,agreedClass,guid,lastModified,deleted,description,clickable FROM Annotations WHERE slide == %d'% slideId)
         allAnnos = self.dbcur.fetchall()
 
 
@@ -289,7 +289,7 @@ class Database(object):
         if (self.transformer is not None) and len(allCoords.shape)>1:
             allCoords = self.transformer(allCoords)
 
-        for uid, annotype,agreedClass,guid,lastModified,deleted,description in allAnnos:
+        for uid, annotype,agreedClass,guid,lastModified,deleted,description, clickable in allAnnos:
             coords = allCoords[allCoords[:,3]==uid,0:2]
             zCoord = allCoords[allCoords[:,3]==uid,2][0] if allCoords.shape[0]>0 else 0
 
@@ -315,6 +315,7 @@ class Database(object):
             self.annotations[uid].zLevel = zCoord
             self.annotations[uid].lastModified = lastModified
             self.annotations[uid].deleted = deleted
+            self.annotations[uid].clickable = clickable
             if (deleted):
                 self.annotations[uid].clickable = False
         # Add all labels
@@ -439,11 +440,13 @@ class Database(object):
                 self.dbcur.execute('PRAGMA user_version = 2')
                 print('Successfully migrated DB to version 2')
                 self.commit()
+                DBversion = self.dbcur.execute('PRAGMA user_version').fetchone()
 
             if (DBversion[0]==2):
                 self.dbcur.execute('PRAGMA user_version = 3')
                 print('Successfully migrated DB to version 3')
                 self.commit()
+                DBversion = self.dbcur.execute('PRAGMA user_version').fetchone()
 
 
             self.dbOpened = True
