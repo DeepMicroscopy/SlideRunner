@@ -1099,7 +1099,8 @@ class Database(object):
          	'`deleted`	INTEGER DEFAULT 0,'
             '`type`	INTEGER,'
             '`agreedClass`	INTEGER,'
-            '`description` TEXT'
+            '`description` TEXT,'
+            '`clickable` INTEGER DEFAULT 1'
             ');')
 
         tempcur.execute('CREATE TABLE `Classes` ('
