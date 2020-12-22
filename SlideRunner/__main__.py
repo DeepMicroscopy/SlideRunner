@@ -5,7 +5,7 @@ from PyQt5 import QtWidgets
 from SlideRunner.gui import splashScreen
 import sys
 
-version = '1.99beta10'
+version = '2.00'
 
 rollbar.init('98503f735c5648f5ae21b6c18e04926a')
 def main():
@@ -27,7 +27,7 @@ def main():
     	import traceback
     	print('Error: ',e)
     	traceback.print_exc()
-    	rollbar.report_exc_info()
+#    	rollbar.report_exc_info()
     	# equivalent to rollbar.report_exc_info(sys.exc_info())
     	print('An error has been reported to rollbar.')
 

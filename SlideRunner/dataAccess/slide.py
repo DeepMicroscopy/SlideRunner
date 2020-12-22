@@ -160,7 +160,6 @@ class SlideReader(multiprocessing.Process):
                 return
 
             if (slidename!=self.slidename):
-                print('Opening new slide, name differs')
                 self.slide = RotatableOpenSlide(slidename, rotate=rotated)
                 self.slidename = slidename
                 newSlide=True

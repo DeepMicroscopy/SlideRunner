@@ -1543,6 +1543,8 @@ class SlideRunnerUI(QMainWindow):
 
         slidecenter = np.asarray(self.slide.level_dimensions[0])/2
 
+        self.mainImageSize = np.asarray([self.ui.MainImage.frameGeometry().width(),self.ui.MainImage.frameGeometry().height()])
+
         if (self.ui.iconAnnoTN.isChecked()):
             npi = np.copy(self.tn_annot)
         else:
