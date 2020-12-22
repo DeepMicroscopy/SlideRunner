@@ -40,11 +40,12 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     outQueue = Queue()
     initialOpacity=1.0
     updateTimer=0.1
-    outputType = SlideRunnerPlugin.PluginOutputType.RGB_IMAGE
+    outputType = SlideRunnerPlugin.PluginOutputType.NO_OVERLAY
     description = 'Visualize secondary SlideRunner database'
     pluginType = SlideRunnerPlugin.PluginTypes.WHOLESLIDE_PLUGIN
     configurationList = list((
                             SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Database file', mask='*.sqlite'),
+                            SlideRunnerPlugin.ComboboxPluginConfigurationEntry(uid='mode', name='Mode', options=['clickable','non-clickable'], selected_value=0),
                             ))
     
     COLORS = [[0,128,0,255],
@@ -112,6 +113,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             for annoId in self.secondaryDB.annotations.keys():
                 anno = self.secondaryDB.annotations[annoId]
                 anno.pluginAnnotationLabel = self.annotationLabels[anno.agreedClass]
+                anno.clickable=job.configuration['mode']==0
                 self.annos.append(anno)
             self.sendAnnotationLabelUpdate()
 
