@@ -7,7 +7,7 @@
 
 *SlideRunner* is a tool for massive cell annotations in whole slide images.
 
-It has been created in close cooperation between the [Pattern Recognition Lab](https://www5.cs.fau.de), Friedrich-Alexander-Universität Erlangen-Nürnberg and the [Institute of Veterenary Pathology](http://www.vetmed.fu-berlin.de/einrichtungen/institute/we12/index.html), Freie Universität Berlin. 
+It has been created in close cooperation between the [Pattern Recognition Lab](https://www5.cs.fau.de), Friedrich-Alexander-Universität Erlangen-Nürnberg and the [Institute of Veterenary Pathology](http://www.vetmed.fu-berlin.de/einrichtungen/institute/we12/index.html), Freie Universität Berlin. Development is continued now at Technische Hochschule Ingolstadt.
 
 If you use the software for research purposes, please cite our paper: 
 
@@ -42,7 +42,7 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 | Operating System | Version | Download link|
 |---|---|---|
 | Windows 10 (google drive) | V. 2.0.0 | [link](https://drive.google.com/file/d/1RqijZ2n2hyV6B1UsqOA5Oh7eXBGvA56c/view?usp=sharing) |
-| Mac OS X (10.15) (google drive) | V. 1.99beta7 | [link](https://drive.google.com/file/d/1qP3tu9lALr5R5GeseerA-1WtNGyzHQ7o/view?usp=sharing) |
+| Mac OS X (10.15) (google drive) | V. 2.0.0 | [link](https://drive.google.com/file/d/1wQxPPUSKYdpBTwHt5PbJCut0-zh1UbTn/view?usp=sharing) |
 
 ## Updates
 
