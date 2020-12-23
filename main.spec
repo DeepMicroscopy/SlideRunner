@@ -2,13 +2,12 @@
 
 block_cipher = None
 
-
 a = Analysis(['main.py'],
              pathex=['C:\\Users\\Marc\\SlideRunner\\SlideRunner'],
              binaries=[('libopenslide-0.dll','.')],
              datas=[('SlideRunner/artwork/*.png','SlideRunner/artwork'),
                     ('SlideRunner/plugins/*.*','SlideRunner/plugins')],
-             hiddenimports=['openslide','shapely'],
+             hiddenimports=['openslide','shapely','sklearn', 'scipy.ndimage', 'sklearn.neighbors.typedefs', 'sklearn.neighbors.quadtree'],
              hookspath=[],
              runtime_hooks=[],
              excludes=[],
