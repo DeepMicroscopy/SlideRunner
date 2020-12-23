@@ -7,28 +7,16 @@
 
 *SlideRunner* is a tool for massive cell annotations in whole slide images.
 
-It has been created in close cooperation between the [Pattern Recognition Lab](https://www5.cs.fau.de), Friedrich-Alexander-Universität Erlangen-Nürnberg and the [Institute of Veterenary Pathology](http://www.vetmed.fu-berlin.de/einrichtungen/institute/we12/index.html), Freie Universität Berlin.
+It has been created in close cooperation between the [Pattern Recognition Lab](https://www5.cs.fau.de), Friedrich-Alexander-Universität Erlangen-Nürnberg and the [Institute of Veterenary Pathology](http://www.vetmed.fu-berlin.de/einrichtungen/institute/we12/index.html), Freie Universität Berlin. 
 
 If you use the software for research purposes, please cite our paper: 
 
 > M. Aubreville, C. Bertram, R. Klopfleisch and A. Maier (2018) SlideRunner - A Tool for Massive Cell Annotations in Whole Slide Images. In: Bildverarbeitung für die Medizin 2018. Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314. [link](https://www.springerprofessional.de/sliderunner/15478976) [arXiv:1802.02347](https://arxiv.org/abs/1802.02347) 
 
 
-Please find the authors webpage at: https://lme.tf.fau.de/person/aubreville/
+Please find the authors webpage at: https://imi.thi.de
 
-## New file formats (1.99beta6)
-[![Watch the video](https://img.youtube.com/vi/JMQdywxgVlE/hqdefault.jpg)](https://youtu.be/JMQdywxgVlE)
-
-## New polygon annotation tools (1.99beta3)
-
-[![Watch the video](https://img.youtube.com/vi/Yfw3XmgvUuM/hqdefault.jpg)](https://youtu.be/Yfw3XmgvUuM)
-
-
-## A short introduction of the basic tools (NEW!)
-[![Watch the video](https://img.youtube.com/vi/S9GaXPAnyiE/hqdefault.jpg)](https://youtu.be/S9GaXPAnyiE)
-
-
-## Version 2 coming up ##
+## Version 2.0.0
 
 With so many new features, it is time to declare Version 2. While we initially wanted to declare the version on this years BVM, it has all been delayed a bit. But for a good reason: Following requests by our pathologists, SlideRunner now has support for a much broader range of image formats.
 
@@ -37,9 +25,14 @@ List of new features:
     - DICOM supprt (including DICOM WSI, through pydicom, new in 1.99beta4)
     - CellVizio MKT (Confocal Laser Endomicroscopy, new in 1.99beta4)
     - TIFF stacks (previously was only for 2D images, new in 1.99beta6) 
+    - NII files (thanks to nibabel package, new in 2.0.0)
 - Synchronization support with [EXACT](https://github.com/ChristianMarzahl/Exact)
 - Much enhanced polygon annotation support, including modifying and simplification
 - Support for z Stacks as well as time series
+- Support for non-clickable annotations (to aid some annotation tasks) (new in 2.0.0)
+- New plugins, e.g.:
+   - WSI co-registration using the method of Jun Jiang [https://doi.org/10.1371/journal.pone.0220074](link)
+   - Secondary Database visualization
 - and uncountable small fixes and improvements
 
 ## Download and Installation 
@@ -48,8 +41,9 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 
 | Operating System | Version | Download link|
 |---|---|---|
-| Windows 10 (google drive) | V. 1.99beta7 | [link](https://drive.google.com/file/d/1umaHkyGegpliwRb21mEPQjkROAMpp-Yg/view?usp=sharing) |
+| Windows 10 (google drive) | V. 2.0.0 | [link](https://drive.google.com/file/d/1RqijZ2n2hyV6B1UsqOA5Oh7eXBGvA56c/view?usp=sharing) |
 | Mac OS X (10.15) (google drive) | V. 1.99beta7 | [link](https://drive.google.com/file/d/1qP3tu9lALr5R5GeseerA-1WtNGyzHQ7o/view?usp=sharing) |
+
 ## Updates
 
 Starting V. 1.31.0, SlideRunner has support for the DICOM WSI image format (thanks, pydicom team, for your support!). Use wsi2dcm to convert images into dicom format.
