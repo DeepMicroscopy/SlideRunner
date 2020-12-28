@@ -41,8 +41,8 @@ For Windows 10 and Mac OS X, we provide a binary file, that you can download her
 
 | Operating System | Version | Download link|
 |---|---|---|
-| Windows 10 (google drive) | V. 2.0.0 | [link](https://drive.google.com/file/d/1RqijZ2n2hyV6B1UsqOA5Oh7eXBGvA56c/view?usp=sharing) |
-| Mac OS X (10.15) (google drive) | V. 2.0.0 | [link](https://drive.google.com/file/d/1wQxPPUSKYdpBTwHt5PbJCut0-zh1UbTn/view?usp=sharing) |
+| Windows 10 (google drive) | V. 2.0.0 | [link](https://drive.google.com/file/d/1obd4WtIdSfr88pRNGktZkUYzRjMQt7xp/view?usp=sharing) |
+| Mac OS X (10.15) (google drive) | V. 2.0.0 | [link](https://drive.google.com/file/d/1xzAnnHaz4LnLGGjNMUCm4aIr-KkfWCAe/view?usp=sharing) |
 
 ## Updates
 
