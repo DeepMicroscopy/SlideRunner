@@ -93,7 +93,7 @@ class annotation():
           self.guid = ''
           self.deleted = 0
           self.lastModified = 0.
-          self.minimumAnnotationLabelZoom = 1
+          self.minimumAnnotationLabelZoom = 4
           self.pluginAnnotationLabel = None
           if (pluginAnnotationLabel is not None):
               if (isinstance(pluginAnnotationLabel, SlideRunnerPlugin.PluginAnnotationLabel)):
