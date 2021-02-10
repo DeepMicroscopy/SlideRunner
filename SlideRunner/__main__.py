@@ -1,6 +1,6 @@
 import rollbar
 import multiprocessing
-from SlideRunner.dataAccess.slide import SlideReader
+from SlideRunner_dataAccess.slide import SlideReader
 from PyQt5 import QtWidgets
 from SlideRunner.gui import splashScreen
 import sys
