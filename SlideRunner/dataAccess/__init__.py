@@ -14,11 +14,17 @@
 
 """
 
-__all__ = ['database', 'slide', 'dicom', 'annotations', 'nifty']
+__all__ = []
 
 
-from .slide import os_fileformats
-from .nifty import nii_fileformats
-from .dicom import dic_fileformats
 
+
+import SlideRunner_dataAccess.annotations as annotations
+import SlideRunner_dataAccess.database as database
+import SlideRunner_dataAccess.nifty as nifty
+import SlideRunner_dataAccess.slide as slide
+
+from SlideRunner_dataAccess.slide import os_fileformats
+from SlideRunner_dataAccess.nifty import nii_fileformats
+from SlideRunner_dataAccess.dicomimage import dic_fileformats
 fileformats = os_fileformats + nii_fileformats + dic_fileformats
