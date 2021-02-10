@@ -5,6 +5,7 @@ from queue import Queue
 import numpy as np 
 import cv2
 from typing import List
+from SlideRunner_dataAccess.annotations import PluginAnnotationLabel
 
 class StatusInformation(enumerate):
       PROGRESSBAR = 0
@@ -78,30 +79,7 @@ class FilePickerDialogType(enumerate):
       SAVE_FILE = 1
       OPEN_DIRECTORY = 2
 
-class PluginAnnotationLabel():
 
-      def __set_color(self, color:tuple):
-            if len(color) != 4:
-                  raise ValueError('Color needs to be a tuple of four integer values.')
-            elif all([isinstance(x,int) for x in color]):
-                  self.__color = color
-            elif all([isinstance(x,float) for x in color]):
-                  self.__color = [int(x*255) for x in color]
-            else:
-                  raise ValueError('Color needs to be a tuple of four integer values (<255) or three float values (=<1)')
-      
-      def __get_color(self):
-            return self.__color
-
-      color = property(__get_color, __set_color)
-                  
-      def __init__(self, uid: int, name: str, color: tuple):
-            self.uid = uid
-            self.name = name
-            self.color = color
-      
-      def __str__(self):
-            return self.name
 
 
 

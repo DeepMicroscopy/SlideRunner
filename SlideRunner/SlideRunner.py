@@ -59,8 +59,8 @@ from PyQt5.QtWidgets import QMainWindow
 # Splash screen is displayed, go on with the rest.
 
 from SlideRunner.general.dependencies import *
-from SlideRunner.dataAccess.annotations import ViewingProfile
-from SlideRunner.dataAccess.slide import SlideReader
+from SlideRunner_dataAccess.annotations import ViewingProfile
+from SlideRunner_dataAccess.slide import SlideReader
 from PyQt5.QtCore import QSettings
 
 # Thread for receiving images from the plugin

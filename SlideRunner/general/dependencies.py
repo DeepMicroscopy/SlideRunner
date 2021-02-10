@@ -119,10 +119,10 @@ from SlideRunner.gui.dialogs.dbmanager import DatabaseManager
 from SlideRunner.gui.dialogs.exactLinkDialog import ExactLinkDialog
 from SlideRunner.dataAccess.exact import ExactManager, ExactProcessError
 from SlideRunner.gui.dialogs.exactDownloadDialog import ExactDownloadDialog
-from SlideRunner.dataAccess.slide import RotatableOpenSlide
+from SlideRunner_dataAccess.slide import RotatableOpenSlide
 from SlideRunner.gui.dialogs.getCoordinates import getCoordinatesDialog
 from SlideRunner.gui import shortcuts, toolbar, mouseEvents, annotation
-from SlideRunner.dataAccess.database import Database, annotation, hex_to_rgb, rgb_to_hex
+from SlideRunner_dataAccess.database import Database, annotation, hex_to_rgb, rgb_to_hex
 from SlideRunner.processing import screening, thumbnail
 from SlideRunner.general import SlideRunnerPlugin
 from SlideRunner.gui.types import *
