@@ -705,9 +705,20 @@ class SlideRunnerUI(QMainWindow):
 
     """
 
+    HElper function: Set the coordinate as the new image center
+
+    """
+
+    def setAsCenter(self, cx,cy):
+        self.setCenterTo(cx,cy)
+        self.showImage()
+    
+    """
+
     Helper function for the screening mode. Redefines the last position for screening.
     
     """
+
 
     def redefineScreeningLastUpper(self):
         if not (self.imageOpened):

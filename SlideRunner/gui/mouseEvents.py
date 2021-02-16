@@ -414,7 +414,7 @@ def rightClickImage(self, event):
         else:
             clickedPluginAnno = None
 
-
+        
         menuitems = list()
         if (clickedAnno is None) and (clickedPluginAnno is None):
             addmenu = menu.addMenu('Add annotation')
@@ -500,6 +500,11 @@ def rightClickImage(self, event):
             act.setCheckable(True)
             if (self.annotator == clsname[1]):
                 act.setChecked(True)
+
+    if (self.imageOpened):
+        posx,posy = getMouseEventPosition(self, event)
+        cx,cy = self.screenToSlide((posx,posy))
+        addmenu = menu.addAction('Set as center', partial(self.setAsCenter,cx,cy))
 
     if (self.screeningMode):
         menu.addSeparator()
