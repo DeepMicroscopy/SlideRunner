@@ -809,7 +809,7 @@ class SlideRunnerUI(QMainWindow):
             if (self.lastScreeningLeftUpper[0] > 1):
                 ycoord = self.lastScreeningLeftUpper[1]
                 if (self.lastScreeningLeftUpper[1] == 1.0 - relOffset_y):
-                    self.ui.iconScreening.setEnabled(False)
+                    self.ui.iconScreening.setChecked(False)
                     reply = QtWidgets.QMessageBox.information(self, 'Message',
                             'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     return
@@ -817,7 +817,7 @@ class SlideRunnerUI(QMainWindow):
                 if (self.lastScreeningLeftUpper[1]>1):
                     self.lastScreeningLeftUpper[1] = 1.0 - relOffset_y
                 if (self.lastScreeningLeftUpper[1]<ycoord):
-                    self.ui.iconScreening.setEnabled(False)
+                    self.ui.iconScreening.setChecked(False)
                     reply = QtWidgets.QMessageBox.information(self, 'Message',
                             'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     
