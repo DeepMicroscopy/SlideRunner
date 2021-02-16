@@ -780,6 +780,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.iconPreviousScreen.setEnabled(True)
         self.writeDebug('Next screen in screening mode')
 
+
         if (self.screeningIndex<0):
             self.screeningIndex+= 1
     #        self.setCenterTo(self.screeningHistory[self.screeningIndex])
@@ -787,6 +788,7 @@ class SlideRunnerUI(QMainWindow):
             self.showImage()
             return
             self.ui.iconPreviousScreen.setEnabled(True)
+
 
 
         relOffset_x = self.mainImageSize[0] / self.slide.level_dimensions[0][0]
@@ -805,14 +807,21 @@ class SlideRunnerUI(QMainWindow):
             self.lastScreeningLeftUpper[0] += relOffset_x*0.9
 
             if (self.lastScreeningLeftUpper[0] > 1):
+                ycoord = self.lastScreeningLeftUpper[1]
+                if (self.lastScreeningLeftUpper[1] == 1.0 - relOffset_y):
+                    self.ui.iconScreening.setEnabled(False)
+                    reply = QtWidgets.QMessageBox.information(self, 'Message',
+                            'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                    return
                 self.lastScreeningLeftUpper[1] += relOffset_y*0.9
+                if (self.lastScreeningLeftUpper[1]>1):
+                    self.lastScreeningLeftUpper[1] = 1.0 - relOffset_y
+                if (self.lastScreeningLeftUpper[1]<ycoord):
+                    self.ui.iconScreening.setEnabled(False)
+                    reply = QtWidgets.QMessageBox.information(self, 'Message',
+                            'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                    
                 self.lastScreeningLeftUpper[0] = 0
-
-            if (self.lastScreeningLeftUpper[1] > 1):
-                self.ui.iconScreening.setEnabled(False)
-                reply = QtWidgets.QMessageBox.information(self, 'Message',
-                           'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
-                return
 
 
         # there is at least one pixel that was not covered

@@ -55,9 +55,9 @@ class screeningMap(object):
         check_y = np.int16(np.floor((coordinates[1])*self.map.shape[0]))
 
         sumMap = np.sum(self.mapWorkingCopy[check_y:check_y+self.dims_screeningmap[1], check_x:check_x+self.dims_screeningmap[0]])
-        if (sumMap>0.01*self.dims_screeningmap[0]*self.dims_screeningmap[1]):
+        if (sumMap>0):
             return True
-        
+
         return False
 
     def __init__(self,overview, mainImageSize, slideLevelDimensions, thumbNailSize, thresholding:str):
