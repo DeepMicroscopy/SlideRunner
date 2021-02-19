@@ -155,6 +155,7 @@ def defineMenu(self, MainWindow, pluginList, initial=True):
 
         self.menuItemView = self.zoomMenu.addAction('Go to coordinate', MainWindow.goToCoordinate)
         self.saveSnapshot = self.zoomMenu.addAction('Create snapshot of current view', MainWindow.savescreenshot)
+        self.copySnapshot = self.zoomMenu.addAction('Copy snapshot of current view (clipboard)', MainWindow.copyscreenshot)
 
         self.saveto = self.menuDatabase.addAction('Copy To ...')
         self.saveto.setEnabled(False)

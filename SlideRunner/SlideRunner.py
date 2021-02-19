@@ -53,7 +53,7 @@ dependencies.check_qt_dependencies()
 
 from PyQt5 import QtWidgets, QtGui, QtCore
 from SlideRunner.gui import splashScreen, menu, style
-from PyQt5.QtWidgets import QMainWindow
+from PyQt5.QtWidgets import QMainWindow, QApplication
 
 
 # Splash screen is displayed, go on with the rest.
@@ -1967,6 +1967,9 @@ class SlideRunnerUI(QMainWindow):
         filename = QFileDialog.getSaveFileName(filter='PNG Images (*.png)')[0]
         if filename is not None and len(filename)>0:
             cv2.imwrite(filename, cv2.cvtColor(self.displayedImage, cv2.COLOR_BGRA2RGBA))
+
+    def copyscreenshot(self):
+        QApplication.clipboard().setPixmap(self.ui.MainImage.pixmap())
 
     def goToCoordinate(self):
         if (self.imageOpened == False):

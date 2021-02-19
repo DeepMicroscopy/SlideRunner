@@ -98,6 +98,7 @@ def defineMenuShortcuts(self):
     self.ui.action_Quit.setShortcut('Ctrl+Q')
     self.ui.action_Quit.triggered.connect(self.close)
     self.menuItemAnnotateOutline.setShortcut('P')
+    self.ui.copySnapshot.setShortcut('Ctrl+Alt+C')
     self.menuItemAnnotateCenter.setShortcut('S')
     self.menuItemAnnotateCircle.setShortcut('C')
     self.menuItemAnnotateArea.setShortcut('R')
