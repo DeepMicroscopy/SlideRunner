@@ -24,6 +24,7 @@ from threading import Thread
 from queue import Queue
 import cv2
 import os
+import json
 import numpy as np
 import matplotlib.pyplot as plt 
 import matplotlib.colors
@@ -44,7 +45,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     description = 'Visualize secondary SlideRunner database'
     pluginType = SlideRunnerPlugin.PluginTypes.WHOLESLIDE_PLUGIN
     configurationList = list((
-                            SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Database file', mask='*.sqlite'),
+                            SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Database file', mask='*.sqlite;;*.json'),
                             SlideRunnerPlugin.ComboboxPluginConfigurationEntry(uid='mode', name='Mode', options=['clickable','non-clickable'], selected_value=0),
                             ))
     
@@ -97,24 +98,51 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             oldArchive = job.configuration['file']
             oldSlide = job.slideFilename
 
-            self.secondaryDB.open(oldArchive)
+            if (oldArchive.split('.')[-1].upper()=='SQLITE'):
+                self.secondaryDB.open(oldArchive)
 
-            self.annos = list()
-            self.annotationLabels = dict()
+                self.annos = list()
+                self.annotationLabels = dict()
 
-            for key, (label, annoId,col) in enumerate(self.secondaryDB.getAllClasses()):
-                self.annotationLabels[annoId] = SlideRunnerPlugin.PluginAnnotationLabel(0,'%s' % label, [*hex_to_rgb(col), 0])
-            
-            pname,fname = os.path.split(job.slideFilename)
-            self.slideUID = self.secondaryDB.findSlideWithFilename(fname,pname)
-            self.secondaryDB.loadIntoMemory(self.slideUID)
-            self.annos = list()
+                for key, (label, annoId,col) in enumerate(self.secondaryDB.getAllClasses()):
+                    self.annotationLabels[annoId] = SlideRunnerPlugin.PluginAnnotationLabel(0,'%s' % label, [*hex_to_rgb(col), 0])
+                
+                pname,fname = os.path.split(job.slideFilename)
+                self.slideUID = self.secondaryDB.findSlideWithFilename(fname,pname)
+                self.secondaryDB.loadIntoMemory(self.slideUID)
+                self.annos = list()
 
-            for annoId in self.secondaryDB.annotations.keys():
-                anno = self.secondaryDB.annotations[annoId]
-                anno.pluginAnnotationLabel = self.annotationLabels[anno.agreedClass]
-                anno.clickable=job.configuration['mode']==0
-                self.annos.append(anno)
+                for annoId in self.secondaryDB.annotations.keys():
+                    anno = self.secondaryDB.annotations[annoId]
+                    anno.pluginAnnotationLabel = self.annotationLabels[anno.agreedClass]
+                    anno.clickable=job.configuration['mode']==0
+                    self.annos.append(anno)
+            elif (oldArchive.split('.')[-1].upper()=='JSON'):
+                self.secondaryDB = json.load(open(oldArchive,'r'))
+
+                fname_id = {x['file_name']:x['id'] for x in  self.secondaryDB['images']}
+
+                if (job.slideFilename not in fname_id):
+                    self.setMessage('Slide not found in database')
+                    continue
+                
+                slide_id = fname_id[job.slideFilename]
+
+                id_category = {x['id']:x['name'] for x in self.secondaryDB['categories']}
+                for key, (cat) in enumerate(self.secondaryDB['categories']):
+                    self.annotationLabels[int(cat['id'])] = SlideRunnerPlugin.PluginAnnotationLabel(0,'%s' % cat['name'], self.COLORS[key%len(self.COLORS)])
+                
+                print('Added all labels')
+
+                self.annos = list()
+                for k, anno in enumerate(self.secondaryDB['annotations']):
+                    if (anno['image_id']==slide_id):
+                        bbox = anno['bbox']
+                        myanno = annotations.rectangularAnnotation(uid=k, x1=bbox[0], y1=bbox[1], x2=bbox[2], y2=bbox[3], pluginAnnotationLabel=self.annotationLabels[int(anno['category_id'])])                
+                        self.annos.append(myanno)
+            else:
+                selt.setMessage('Could not interpret database format: '+oldArchive.split('.')[-1].upper())
+
             self.sendAnnotationLabelUpdate()
 
             self.updateAnnotations()
