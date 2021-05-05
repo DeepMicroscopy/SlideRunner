@@ -19,6 +19,7 @@ class StatusInformation(enumerate):
       UPDATE_INFORMATION = 8
       REFRESH_VIEW = 9
       REFRESH_DATABASE = 10
+      SHOW_EXCEPTION = 11
 
 class AnnotationUpdatePolicy(enumerate):
       UPDATE_ON_SCROLL_CHANGE = 0,

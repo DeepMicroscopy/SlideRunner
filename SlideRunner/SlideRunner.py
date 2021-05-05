@@ -121,6 +121,8 @@ class PluginStatusReceiver(threading.Thread):
                 self.selfObj.refreshReceived.emit()
             elif (msgId == SlideRunnerPlugin.StatusInformation.REFRESH_DATABASE):
                 self.selfObj.refreshDatabase.emit()
+            elif (msgId == SlideRunnerPlugin.StatusInformation.SHOW_EXCEPTION):
+                self.selfObj.showException.emit(value)
 
 
 class SlideRunnerUI(QMainWindow):
@@ -137,6 +139,7 @@ class SlideRunnerUI(QMainWindow):
     updatePluginLabels = pyqtSignal()
     refreshReceived = pyqtSignal()
     refreshDatabase = pyqtSignal()
+    showException = pyqtSignal(Exception)
     pluginPopupMessageReceived = pyqtSignal(str)
     annotator = bool # ID of curent annotator
     db = Database()
@@ -220,6 +223,7 @@ class SlideRunnerUI(QMainWindow):
         self.annotationReceived.connect(self.receiveAnno)
         self.refreshReceived.connect(self.receiveRefresh)
         self.refreshDatabase.connect(self.reopenDatabase)
+        self.showException.connect(self.showPluginException)
         self.updatePluginConfig.connect(self.updatePluginConfiguration)
         self.updatePluginLabels.connect(self.showDatabaseUIelements)
         self.updatedCacheAvailable.connect(self.updateCache)
@@ -315,6 +319,19 @@ class SlideRunnerUI(QMainWindow):
             if os.path.isfile(sys.argv[2]):
                 self.openDatabase(True, filename=sys.argv[2])
 
+    def showPluginException(self, exc):
+        excmsg = '\n'.join(traceback.format_exception(exc.exc_type, exc.exc_type, exc.exc_traceback))
+        msgBox = QtWidgets.QMessageBox()
+        msgBox.setText("Uncaught exception")
+        msgBox.setInformativeText('Plugin exception')
+        msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        btn = msgBox.addButton(QtWidgets.QPushButton('Report to developers'), QtWidgets.QMessageBox.YesRole)
+        msgBox.setDetailedText(excmsg)
+        msgBox.setDefaultButton(btn)
+        ret = msgBox.exec()      
+        if (ret == 0): # Yes was pressed  
+            rollbar.report_exc_info((exctype, value, tb))
+
     def show_exception(self, headline, exctype, value, tb):
         excmsg = '\n'.join(traceback.format_exception(exctype, value, tb))
         msgBox = QtWidgets.QMessageBox()
@@ -328,8 +345,11 @@ class SlideRunnerUI(QMainWindow):
         if (ret == 0): # Yes was pressed  
             rollbar.report_exc_info((exctype, value, tb))
 
-    def exceptionHook_threading(self, exctype, value, tb):
-        self.show_exception("Thread was terminated", exctype, value, tb)
+    def exceptionHook_threading(self, exc:threading.ExceptHookArgs):
+        print('exc:',exc)
+
+        self.statusQueue.put((SlideRunnerPlugin.StatusInformation.SHOW_EXCEPTION,exc))
+
 
     def exceptionHook(self, exctype, value, tb):
         self.show_exception("Exception", exctype, value, tb)
@@ -1767,7 +1787,11 @@ class SlideRunnerUI(QMainWindow):
 
         legendWidth=150.0
         legendQuantization = 2.5
-        if (viewMicronsPerPixel*legendWidth>2000):
+        if (viewMicronsPerPixel*legendWidth>100000):
+            legendQuantization = 10000.0
+        elif (viewMicronsPerPixel*legendWidth>10000):
+            legendQuantization = 5000.0
+        elif (viewMicronsPerPixel*legendWidth>2000):
             legendQuantization = 500.0
         elif (viewMicronsPerPixel*legendWidth>1000):
             legendQuantization = 100.0
@@ -1792,7 +1816,10 @@ class SlideRunnerUI(QMainWindow):
         npi[positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:] = np.clip(npi[positionLegendY+20,positionLegendX:positionLegendX+actualLegendWidth,:]*0.2,0,255)
         
         if (legendMicrons>0):
-            cv2.putText(npi, '%d microns' % legendMicrons, (positionLegendX, positionLegendY+15), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+            if (legendMicrons>2000):
+                cv2.putText(npi, '%.1d mm' % int(legendMicrons/1000), (positionLegendX, positionLegendY+15), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
+            else:
+                cv2.putText(npi, '%d microns' % legendMicrons, (positionLegendX, positionLegendY+15), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
         if (self.overlayExtremes is not None):
             # Add legend for colour code
