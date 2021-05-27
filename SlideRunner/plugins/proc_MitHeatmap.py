@@ -234,7 +234,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
             W_x = int(W_hpf / self.ds)
             W_y = int(H_hpf / self.ds)
             kernel = np.ones((W_y,W_x),np.float32)
-            mitoticCount = cv2.filter2D(self.downsampledMap, -1, kernel )
+            mitoticCount = cv2.filter2D(self.downsampledMap, -1, kernel, borderType = cv2.BORDER_CONSTANT )
 
             coords_ds = np.int16(np.array(job.coordinates)/self.ds)
 
