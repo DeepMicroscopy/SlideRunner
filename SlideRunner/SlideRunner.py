@@ -346,9 +346,10 @@ class SlideRunnerUI(QMainWindow):
             rollbar.report_exc_info((exctype, value, tb))
 
     def exceptionHook_threading(self, exc:threading.ExceptHookArgs):
-        print('exc:',exc)
-
-        self.statusQueue.put((SlideRunnerPlugin.StatusInformation.SHOW_EXCEPTION,exc))
+        print('Error:',exc)
+        excmsg = '\n'.join(traceback.format_exception(exc.exc_type, exc.exc_value, exc.exc_traceback))
+        print(excmsg)
+        #self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.SHOW_EXCEPTION,exc))
 
 
     def exceptionHook(self, exctype, value, tb):
@@ -854,7 +855,9 @@ class SlideRunnerUI(QMainWindow):
 
         self.setCenterTo( (leftupper_x+relOffset_x/2)*self.slide.level_dimensions[0][0], (leftupper_y+relOffset_y/2)*self.slide.level_dimensions[0][1])
         self.screeningHistory.append( ( (leftupper_x+relOffset_x/2)*self.slide.level_dimensions[0][0], (leftupper_y+relOffset_y/2)*self.slide.level_dimensions[0][1] ) )
+        self.overlayMap = None
         self.showImage()
+
 
     def setCenter(self, target):
         self.setCenterTo(target[0], target[1])
@@ -2571,6 +2574,11 @@ class SlideRunnerUI(QMainWindow):
     def fullOpacity(self):
         self.ui.opacitySlider.setValue(100)
         self.showImage()
+
+    def halfOpacity(self):
+        self.ui.opacitySlider.setValue(50)
+        self.showImage()
+
 
     def noOpacity(self):
         self.ui.opacitySlider.setValue(0)

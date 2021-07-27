@@ -185,6 +185,12 @@ def definePluginMenu(self,pluginList):
                 menuItem.setCheckable(True)
                 menuItem.setEnabled(True)
                 self.ui.pluginItems.append(menuItem)
+        pluginMenu.addSeparator()
+        
+        self.ui.pluginFullOpacity = pluginMenu.addAction('Full opacity', self.fullOpacity)
+        self.ui.pluginHalfOpacity = pluginMenu.addAction('half opacity', self.halfOpacity)
+        self.ui.pluginNoOpacity = pluginMenu.addAction('No opacity', self.noOpacity)
+
         self.pluginList = pluginList
 
 def updateOpenRecentSlide(self):

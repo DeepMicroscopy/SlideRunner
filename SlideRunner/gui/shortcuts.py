@@ -57,11 +57,9 @@ def defineShortcuts(self):
     shortcutprevframe = QShortcut(QKeySequence("Shift+-"), self)
     shortcutprevframe.activated.connect(self.previousFrame)
 
-    shortcutopacityfull = QShortcut(QKeySequence("X"), self)
-    shortcutopacityfull.activated.connect(self.fullOpacity)
-
-    shortcutopacityno = QShortcut(QKeySequence("Y"), self)
-    shortcutopacityno.activated.connect(self.noOpacity)
+    self.ui.pluginNoOpacity.setShortcut('Y')
+    self.ui.pluginHalfOpacity.setShortcut('V')
+    self.ui.pluginFullOpacity.setShortcut('X')
 
 
     shortcuts.append(shortcutEsc)
