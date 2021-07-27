@@ -788,6 +788,7 @@ class SlideRunnerUI(QMainWindow):
 
         if (self.screeningIndex+len(self.screeningHistory)<=0):
             self.ui.iconPreviousScreen.setEnabled(False)
+        self.overlayMap = None
         self.showImage()
         return
 
