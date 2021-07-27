@@ -12,11 +12,16 @@ def iter_namespace(ns_pkg):
     # the name.
     return pkgutil.iter_modules(ns_pkg.__path__, ns_pkg.__name__ + ".")
 
-sliderunner_plugins = {
-    name: importlib.import_module(name)
-    for finder, name, ispkg
-    in sorted(iter_namespace(SlideRunner.plugins))
-}
+sliderunner_plugins={}
+
+for finder, name, ispkg in sorted(iter_namespace(SlideRunner.plugins)):
+    try:
+        mod = importlib.import_module(name)
+        sliderunner_plugins[name] = mod
+    except Exception as e:
+        print('+++ Unable to active plugin: '+name,e)
+        pass
+
 
 pluginList = list()
 
