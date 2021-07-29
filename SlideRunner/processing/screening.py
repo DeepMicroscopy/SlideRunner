@@ -50,15 +50,20 @@ class screeningMap(object):
         self.map = er
         self.mapWorkingCopy = np.copy(er)
 
-    def checkIsNew(self,coordinates):
+
+    def checkIsNew(self,coordinates,imgarea_w):
         check_x = np.int16(np.floor((coordinates[0])*self.map.shape[1]))
         check_y = np.int16(np.floor((coordinates[1])*self.map.shape[0]))
+        self.w_screeningmap = np.int16(np.floor(0.9*imgarea_w[0]/self.slideLevelDimensions[0][0]*self.mapWorkingCopy.shape[1]))
+        self.h_screeningmap = np.int16(np.floor(0.9*imgarea_w[1]/self.slideLevelDimensions[0][1]*self.mapWorkingCopy.shape[0]))
 
-        sumMap = np.sum(self.mapWorkingCopy[check_y:check_y+self.dims_screeningmap[1], check_x:check_x+self.dims_screeningmap[0]])
+        sumMap = np.sum(self.mapWorkingCopy[check_y:check_y+self.h_screeningmap, check_x:check_x+self.w_screeningmap])
         if (sumMap>0):
+            self.mapWorkingCopy[check_y:check_y+self.h_screeningmap, check_x:check_x+self.w_screeningmap]=0
             return True
 
         return False
+    
 
     def __init__(self,overview, mainImageSize, slideLevelDimensions, thumbNailSize, thresholding:str):
             super(screeningMap, self).__init__()        
@@ -96,10 +101,15 @@ class screeningMap(object):
     
     
     def annotate(self, imgarea_p1, imgarea_w):
+
         x_screeningmap = np.int16(np.floor(imgarea_p1[0]/self.slideLevelDimensions[0][0]*self.mapWorkingCopy.shape[1]))
         y_screeningmap = np.int16(np.floor(imgarea_p1[1]/self.slideLevelDimensions[0][1]*self.mapWorkingCopy.shape[0]))
 
-        self.mapWorkingCopy[y_screeningmap:y_screeningmap+self.dims_screeningmap[1],x_screeningmap:x_screeningmap+self.dims_screeningmap[0]] = 0
+        self.w_screeningmap = np.int16(np.floor(0.9*imgarea_w[0]/self.slideLevelDimensions[0][0]*self.mapWorkingCopy.shape[1]))
+        self.h_screeningmap = np.int16(np.floor(0.9*imgarea_w[1]/self.slideLevelDimensions[0][1]*self.mapWorkingCopy.shape[0]))
+
+
+        self.mapWorkingCopy[y_screeningmap:y_screeningmap+self.h_screeningmap,x_screeningmap:x_screeningmap+self.w_screeningmap] = 0
 
         image_dims=self.slideLevelDimensions[0]
 

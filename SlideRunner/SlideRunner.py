@@ -884,12 +884,13 @@ class SlideRunnerUI(QMainWindow):
         while (not newImageFound):
             # advance one step to the right
 
-            if (self.screeningMap.checkIsNew(self.lastScreeningLeftUpper)):
+            if (self.screeningMap.checkIsNew(self.lastScreeningLeftUpper,self.mainImageSize * self.getZoomValue())):
                 newImageFound=True
+
                 continue
 
             # Find next open spot in current row, if not, advance rows until one is found
-            self.lastScreeningLeftUpper[0] += relOffset_x*0.9
+            self.lastScreeningLeftUpper[0] += self.mainImageSize[0] * self.getZoomValue()*0.9/ self.slide.level_dimensions[0][0]
 
             if (self.lastScreeningLeftUpper[0] > 1):
                 ycoord = self.lastScreeningLeftUpper[1]
@@ -898,7 +899,7 @@ class SlideRunnerUI(QMainWindow):
                     reply = QtWidgets.QMessageBox.information(self, 'Message',
                             'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
                     return
-                self.lastScreeningLeftUpper[1] += relOffset_y*0.9
+                self.lastScreeningLeftUpper[1] += self.mainImageSize[1] * self.getZoomValue()*0.9/ self.slide.level_dimensions[0][1]
                 if (self.lastScreeningLeftUpper[1]>1):
                     self.lastScreeningLeftUpper[1] = 1.0 - relOffset_y
                 if (self.lastScreeningLeftUpper[1]<ycoord):
