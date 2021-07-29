@@ -28,7 +28,7 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import matplotlib.colors
 import pickle
-import SlideRunner.dataAccess.annotations as annotations 
+import SlideRunner_dataAccess.annotations as annotations 
 import matplotlib.path as path
 
 
@@ -128,6 +128,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                 for idx in range(len(self.resultsArchive[fname])):
                         row = self.resultsArchive[fname][idx]
+                        # Jede Zeile: 
+                        # x1, x2, y1, y2, ignorieren, probability, Text
                         if (row[5]>job.configuration['threshold']):
                             myanno = annotations.rectangularAnnotation(uid=idx, x1=row[0], x2=row[2], y1=row[1], y2=row[3], text='%.2f' % row[5], pluginAnnotationLabel=self.annotationLabels[row[4]])                
                             self.annos.append(myanno)

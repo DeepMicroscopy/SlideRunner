@@ -4,8 +4,10 @@
 from queue import Queue
 import numpy as np 
 import cv2
-from typing import List
+from typing import List, Tuple
 from SlideRunner_dataAccess.annotations import PluginAnnotationLabel
+
+
 
 class StatusInformation(enumerate):
       PROGRESSBAR = 0
@@ -28,9 +30,10 @@ class AnnotationUpdatePolicy(enumerate):
 class PluginTypes(enumerate):
       IMAGE_PLUGIN = 0
       WHOLESLIDE_PLUGIN = 1
+      NONE_PLUGIN = 2
 
 class PluginOutputType(enumerate):
-      BINARY_MASK = 0
+      HEATMAP = 0
       RGB_IMAGE = 1
       RGB_OVERLAY = 2
       NO_OVERLAY = 3
@@ -174,7 +177,7 @@ class SlideRunnerPlugin:
       updateTimer = 5
       initialOpacity = 0.5
       statusQueue = None
-      outputType = PluginOutputType.BINARY_MASK
+      outputType = PluginOutputType.HEATMAP
       pluginType = PluginTypes.IMAGE_PLUGIN
       configurationList = list()
       
@@ -191,31 +194,31 @@ class SlideRunnerPlugin:
       # Set the progress bar in SlideRunner. 
       # value: between 0 and 100, -1 for disable
       def setProgressBar(self, value : int):
-            self.statusQueue.put((StatusInformation.PROGRESSBAR,value))
+            self.statusQueue.put((self.shortName, StatusInformation.PROGRESSBAR,value))
 
       def setMessage(self, msg:str):
-            self.statusQueue.put((StatusInformation.TEXT,msg))
+            self.statusQueue.put((self.shortName, StatusInformation.TEXT,msg))
 
       def setCenter(self, tup:str):
-            self.statusQueue.put((StatusInformation.SET_CENTER,tup))
+            self.statusQueue.put((self.shortName, StatusInformation.SET_CENTER,tup))
 
       def setZoomLevel(self, zoom:float):
-            self.statusQueue.put((StatusInformation.SET_ZOOM,zoom))
+            self.statusQueue.put((self.shortName, StatusInformation.SET_ZOOM,zoom))
 
       def sendAnnotationLabelUpdate(self):
-            self.statusQueue.put((StatusInformation.UPDATE_LABELS, None))
+            self.statusQueue.put((self.shortName, StatusInformation.UPDATE_LABELS, None))
 
       def triggerRefreshView(self):
-            self.statusQueue.put((StatusInformation.REFRESH_VIEW, None))
+            self.statusQueue.put((self.shortName, StatusInformation.REFRESH_VIEW, None))
       # Show a simple message box with a string message      
       def showMessageBox(self, msg:str):
-            self.statusQueue.put((StatusInformation.POPUP_MESSAGEBOX,msg))
+            self.statusQueue.put((self.shortName, StatusInformation.POPUP_MESSAGEBOX,msg))
 
       # Update configuration from plugin (e.g. as reaction to slide change, etc..)
       # example:
       # self.updateConfiguration(PluginConfigUpdate([PluginConfigUpdateFloatSlider(uid=0, value=0.5),]))
       def updateConfiguration(self, update: PluginConfigUpdate):
-            self.statusQueue.put((StatusInformation.UPDATE_CONFIG,update))
+            self.statusQueue.put((self.shortName, StatusInformation.UPDATE_CONFIG,update))
 
       # Return an image to SlideRunner UI
       def returnImage(self, img : np.ndarray, procId = None):
@@ -229,10 +232,10 @@ class SlideRunnerPlugin:
             return
 
       def updateAnnotations(self):
-            self.statusQueue.put((StatusInformation.ANNOTATIONS, self.getAnnotations()))
+            self.statusQueue.put((self.shortName, StatusInformation.ANNOTATIONS, self.getAnnotations()))
 
       def updateInformation(self, pluginInformation):
-            self.statusQueue.put((StatusInformation.UPDATE_INFORMATION, pluginInformation))
+            self.statusQueue.put((self.shortName, StatusInformation.UPDATE_INFORMATION, pluginInformation))
 
 
       def findClickAnnotation(self, clickPosition, pluginVP, zoom:float):
@@ -262,8 +265,11 @@ class SlideRunnerPlugin:
             print('Sent empty annotation list.')
             return list()
 
+class NonePlugin(SlideRunnerPlugin):
+      outputType = PluginOutputType.NO_OVERLAY
+      pluginType = PluginTypes.NONE_PLUGIN
 
-def generateMinMaxCoordsList( annoList) -> (np.ndarray, np.ndarray):
+def generateMinMaxCoordsList( annoList) -> Tuple[np.ndarray, np.ndarray]:
       # MinMaxCoords lists shows extreme coordinates from object, to decide if an object shall be shown
       minCoords = np.zeros(shape=(len(annoList),2))
       maxCoords = np.zeros(shape=(len(annoList),2))
@@ -275,7 +281,127 @@ def generateMinMaxCoordsList( annoList) -> (np.ndarray, np.ndarray):
       return minCoords, maxCoords
 
 def getVisibleAnnotations(leftUpper:list, rightLower:list, annotations:np.ndarray, minCoords:np.ndarray, maxCoords:np.ndarray) -> list:
+#      print('Getting visible annotations from: ',annotations, minCoords, maxCoords)
+      if len(minCoords)==0:
+            return np.array([])
       potentiallyVisible =  ( (maxCoords[:,0] > leftUpper[0]) & (minCoords[:,0] < rightLower[0]) & 
                               (maxCoords[:,1] > leftUpper[1]) & (minCoords[:,1] < rightLower[1]) )
       return np.array(annotations)[np.where(potentiallyVisible)[0]].tolist()
 
+class activePlugins:
+      """
+          List of active SlideRunner plugins, and the capabilities to manage them
+      """
+      _list = []      
+      def __init__(self):
+          self._list = []
+          self.recalculatePlugins()
+          self.__activeOverlay = None
+      
+      def setActiveOverlay(self, plugin:SlideRunnerPlugin):
+            if (isinstance(plugin,str)):
+                  for k in self._list:
+                        if k.shortName==plugin:
+                              self.__activeOverlay = k
+            else:
+                  self.__activeOverlay = plugin
+            
+            print('Active overlay is now',self.__activeOverlay)
+      
+      @property
+      def activeOverlayPluginType(self):
+            if self.__activeOverlay is None:
+                  return PluginTypes.NONE_PLUGIN
+            else:
+                  return self.activeOverlay.pluginType
+
+      def activatePlugin(self, plugin:SlideRunnerPlugin):
+            
+            for k in self._list:
+                  if (plugin.shortName==k.shortName):
+                        # plugin already active
+                        return
+
+            print('Activated plugin: ',plugin.shortName)
+            self._list.append(plugin)
+            self.recalculatePlugins()
+
+            # only one overlay available ==> this is the active overlay
+            if len(self.pluginsWithOverlays)==1:
+                  self.setActiveOverlay(self.pluginsWithOverlays[0])
+                  
+      
+      def deactivatePlugin(self, plugin: SlideRunnerPlugin):
+            for k,v in enumerate(self._list):
+                  if (plugin.shortName==self._list[k].shortName):
+                        # plugin already active
+                        del self._list[k]
+                        print('Deactivated plugin: ',plugin.shortName)
+            # not found, don't throw error
+            self.recalculatePlugins()
+            if len(self.pluginsWithOverlays)==0:
+                  self.setActiveOverlay(NonePlugin)
+            
+            return
+
+      @property
+      def numberActive(self):
+            return len(self._list)
+      
+      @property
+      def activePlugins(self):
+            return {x.shortName:x for x in self._list}
+      
+      @property
+      def activeOverlay(self) -> SlideRunnerPlugin:
+            return self.__activeOverlay
+
+      def recalculatePlugins(self):
+            self.recalculatePluginsWithOverlays()
+            self.recalculateImagePlugins()
+            self.recalculateAnnotationPolicys()
+
+      def recalculatePluginsWithOverlays(self):
+          self.__pluginsWithOverlays=[]
+          self.__RGBimagePlugins=[]
+          for k in self._list:
+                if k.outputType in [PluginOutputType.HEATMAP, PluginOutputType.RGB_OVERLAY, PluginOutputType.RGB_IMAGE]:
+                      self.__pluginsWithOverlays.append(k)
+                if k.outputType == PluginOutputType.RGB_IMAGE:
+                      self.__RGBimagePlugins.append(k)
+
+      def recalculateAnnotationPolicys(self):
+          self.__annotation_policy_slideupdate=[]
+          self.__annotation_policy_scrollupdate=[]
+          for k in self._list:
+                if k.getAnnotationUpdatePolicy() in [AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE]:
+                      self.__annotation_policy_slideupdate.append(k)
+                if k.getAnnotationUpdatePolicy() in [AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE]:
+                      self.__annotation_policy_scrollupdate.append(k)
+                if k.pluginType in [PluginTypes.IMAGE_PLUGIN]: # image plugins are also update_on_scroll_change
+                      self.__annotation_policy_scrollupdate.append(k)
+
+      def recalculateImagePlugins(self):
+          self.__image_plugins=[]
+          for k in self._list:
+                if k.pluginType in [PluginTypes.IMAGE_PLUGIN]:
+                      self.__image_plugins.append(k)
+      
+      @property
+      def RGBimagePlugins(self):
+            return self.__RGBimagePlugins
+
+      @property
+      def pluginsWithOverlays(self):
+            return self.__pluginsWithOverlays
+      
+      @property
+      def imagePlugins(self):
+            return self.__image_plugins
+      
+      @property
+      def pluginsWithScrollUpdatePolicy(self):
+            return self.__annotation_policy_scrollupdate
+      
+      
+      

@@ -88,20 +88,20 @@ def addSidebar(self, parentObject):
 
 
 
-        self.categoryView = ClassSelectTableWidget(self.centralwidget, parentObject)
+        self.annotationTypeTableView = ClassSelectTableWidget(self.centralwidget, parentObject)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
-        sizePolicy.setHeightForWidth(self.categoryView.sizePolicy().hasHeightForWidth())
-        self.categoryView.setSizePolicy(sizePolicy)
-        self.categoryView.setMinimumSize(QtCore.QSize(200, 100))
-#        self.categoryView.setMaximumSize(QtCore.QSize(16777215, 120))
-        self.categoryView.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.categoryView.setObjectName("categoryView")
-        self.categoryView.setColumnCount(0)
-        self.categoryView.setRowCount(0)
-        self.categoryView.setVisible(False)
-        self.tab1Layout.addWidget(self.categoryView)
+        sizePolicy.setHeightForWidth(self.annotationTypeTableView.sizePolicy().hasHeightForWidth())
+        self.annotationTypeTableView.setSizePolicy(sizePolicy)
+        self.annotationTypeTableView.setMinimumSize(QtCore.QSize(200, 100))
+#        self.annotationTypeTableView.setMaximumSize(QtCore.QSize(16777215, 120))
+        self.annotationTypeTableView.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.annotationTypeTableView.setObjectName("annotationTypeTableView")
+        self.annotationTypeTableView.setColumnCount(0)
+        self.annotationTypeTableView.setRowCount(0)
+        self.annotationTypeTableView.setVisible(False)
+        self.tab1Layout.addWidget(self.annotationTypeTableView)
         self.annotatorComboBox = QtWidgets.QComboBox(self.tab1widget)
        # self.annotatorComboBox.setSizeAdjustPolicy(QtWidgets.QComboBox.AdjustToContents)
         self.annotatorComboBox.setObjectName("comboBox")
@@ -169,10 +169,20 @@ def addSidebar(self, parentObject):
         self.tab3widget.setLayout(self.tab3Layout)
         self.tab3Layout.setObjectName("tab3Layout")
 
+        cb = QtWidgets.QComboBox()
+        cb.setToolTip('Overlay selection')
+        cb.addItems([])
+        cb.setHidden(True)
+        self.overlaySelect = cb
+        
+
+        self.tab3Layout.addWidget(cb)
+
         self.opacityLabel = QtWidgets.QLabel(self.centralwidget)
         self.opacityLabel.setObjectName("opacityLabel")
         self.tab3Layout.addWidget(self.opacityLabel)
         self.tab3Layout.addWidget(self.opacitySlider)
+
 
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)

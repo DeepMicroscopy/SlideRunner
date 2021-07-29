@@ -29,8 +29,8 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import matplotlib.colors
 import pickle
-import SlideRunner.dataAccess.annotations as annotations 
-from SlideRunner.dataAccess.database import Database
+import SlideRunner_dataAccess.annotations as annotations 
+from SlideRunner_dataAccess.database import Database
 import matplotlib.path as path
 import openslide
 
@@ -41,7 +41,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     outQueue = Queue()
     initialOpacity=0.6
     updateTimer=0.1
-    outputType = SlideRunnerPlugin.PluginOutputType.BINARY_MASK
+    outputType = SlideRunnerPlugin.PluginOutputType.HEATMAP
     description = 'Show heatmap of mitotic figures in WSI'
     pluginType = SlideRunnerPlugin.PluginTypes.WHOLESLIDE_PLUGIN
     configurationList = list((

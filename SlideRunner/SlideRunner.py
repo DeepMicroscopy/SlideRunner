@@ -44,6 +44,7 @@
 SLIDERUNNER_DEBUG = False
 
 
+from SlideRunner.general.SlideRunnerPlugin import PluginTypes, activePlugins
 from SlideRunner.general import dependencies
 import sys
 import multiprocessing
@@ -66,15 +67,16 @@ from PyQt5.QtCore import QSettings
 # Thread for receiving images from the plugin
 class imageReceiverThread(threading.Thread):
 
-    def __init__(self, queue, selfObj):
+    def __init__(self, pluginName, queue, selfObj):
         threading.Thread.__init__(self)
         self.queue = queue
+        self.pluginName = pluginName
         self.selfObj = selfObj
 
     def run(self):
         while True:
             (img, procId) = self.queue.get()
-            self.selfObj.overlayMap = img
+            self.selfObj.overlayMap[self.pluginName] = img
             self.selfObj.showImage3Request.emit(np.empty(0), procId)
                         
 
@@ -100,23 +102,23 @@ class PluginStatusReceiver(threading.Thread):
     def run(self):
         while True:
             # grabs host from queue
-            msgId, value = self.queue.get()
+            pluginId, msgId, value = self.queue.get()
             if (msgId == SlideRunnerPlugin.StatusInformation.PROGRESSBAR):
                 self.selfObj.progressBarChanged.emit(value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.TEXT):
                 self.selfObj.statusViewChanged.emit(value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.ANNOTATIONS):
-                self.selfObj.annotationReceived.emit(value)
+                self.selfObj.annotationReceived.emit(pluginId,value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.SET_ZOOM):
                 self.selfObj.setZoomReceived.emit(value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.SET_CENTER):
                 self.selfObj.setCenterReceived.emit(value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.POPUP_MESSAGEBOX):
-                self.selfObj.pluginPopupMessageReceived.emit(value)
+                self.selfObj.pluginPopupMessageReceived.emit(pluginId,value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.UPDATE_CONFIG):
-                self.selfObj.updatePluginConfig.emit(value)
+                self.selfObj.updatePluginConfig.emit(pluginId,value)
             elif (msgId == SlideRunnerPlugin.StatusInformation.UPDATE_LABELS):
-                self.selfObj.updatePluginLabels.emit()
+                self.selfObj.updatePluginLabels.emit(pluginId)
             elif (msgId == SlideRunnerPlugin.StatusInformation.REFRESH_VIEW):
                 self.selfObj.refreshReceived.emit()
             elif (msgId == SlideRunnerPlugin.StatusInformation.REFRESH_DATABASE):
@@ -131,28 +133,31 @@ class SlideRunnerUI(QMainWindow):
     showImage3Request = pyqtSignal(np. ndarray, int)
     readRegionCompleted = pyqtSignal(np.ndarray, int)
     statusViewChanged = pyqtSignal(str)
-    annotationReceived = pyqtSignal(list)
+    annotationReceived = pyqtSignal(str,list)
     updatedCacheAvailable = pyqtSignal(dict)
     setZoomReceived = pyqtSignal(float)
     setCenterReceived = pyqtSignal(tuple)
-    updatePluginConfig = pyqtSignal(SlideRunnerPlugin.PluginConfigUpdate)
-    updatePluginLabels = pyqtSignal()
+    updatePluginConfig = pyqtSignal(str,SlideRunnerPlugin.PluginConfigUpdate)
+    updatePluginLabels = pyqtSignal(str)
     refreshReceived = pyqtSignal()
     refreshDatabase = pyqtSignal()
     showException = pyqtSignal(Exception)
-    pluginPopupMessageReceived = pyqtSignal(str)
+    pluginPopupMessageReceived = pyqtSignal(str,str)
     annotator = bool # ID of curent annotator
     db = Database()
     receiverThread = None
     activePlugin = None
-    overlayMap = None
+    overlayMap = dict()
     processingStep = 0
     statusViewOffTimer = None
     slideMagnification = 1
     slideMicronsPerPixel = 20
-    pluginAnnos = list()
+    pluginAnnos = dict()
     pluginFilepickers = dict()
+    pluginConfigLabels=dict()
+    redrawDBClasses=True
     pluginComboboxes = dict()
+    pluginPushbuttons=dict()
     currentVP = ViewingProfile()
     currentPluginVP = ViewingProfile()
     lastReadRequest = None
@@ -162,6 +167,7 @@ class SlideRunnerUI(QMainWindow):
     cachedImage = None
     selectedPluginAnno = None
     selectedAnno = None
+    annotationClasses={0:{}}
     pluginParameterSliders = dict()
     refreshTimer = None
 
@@ -180,6 +186,7 @@ class SlideRunnerUI(QMainWindow):
         # Set up the user interface from Designer.
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.activePlugins = SlideRunnerPlugin.activePlugins()
         # Add sidebar
         self.onOpen = True
         self.ui = addSidebar(self.ui, self)
@@ -190,6 +197,8 @@ class SlideRunnerUI(QMainWindow):
         self.annotationsArea = list()
         self.annotationsCircle = list()
         self.annotationsList = list()
+        self.pluginMinCoords = dict()
+        self.pluginMaxCoords = dict()
         self.ui.wandAnnotation = WandAnnotation()
         self.slidename=''
         self.slideUID = 0
@@ -401,11 +410,11 @@ class SlideRunnerUI(QMainWindow):
     def popupmessage(self, msg):
         reply = QtWidgets.QMessageBox.about(self, "Plugin says", msg)
     
-    def updatePluginConfiguration(self, newConfig:SlideRunnerPlugin.PluginConfigUpdate):
+    def updatePluginConfiguration(self, plugin, newConfig:SlideRunnerPlugin.PluginConfigUpdate):
         for entry in newConfig.updateList:
             if (entry.getType()==SlideRunnerPlugin.PluginConfigurationType.SLIDER_WITH_FLOAT_VALUE):
-                self.pluginParameterSliders[entry.uid].setValue(1000*entry.value)
-        self.triggerPluginConfigChanged()
+                self.pluginParameterSliders[plugin][entry.uid].setValue(1000*entry.value)
+        self.triggerPluginConfigChanged(plugin)
 
     def receiveRefresh(self):
         self.showImage()
@@ -415,9 +424,9 @@ class SlideRunnerUI(QMainWindow):
         self.showDatabaseUIelements()
         self.showDBstatistics()
 
-    def receiveAnno(self, anno):
-        self.pluginAnnos = anno
-        self.pluginMinCoords, self.pluginMaxCoords = SlideRunnerPlugin.generateMinMaxCoordsList(anno)
+    def receiveAnno(self, plugin, anno):
+        self.pluginAnnos[plugin] = anno
+        self.pluginMinCoords[plugin], self.pluginMaxCoords[plugin] = SlideRunnerPlugin.generateMinMaxCoordsList(anno)
         self.showImage_part3(np.empty(shape=(1)), self.processingStep)
 
     #receivePluginInformation
@@ -454,16 +463,14 @@ class SlideRunnerUI(QMainWindow):
         This is triggered, whenever a plugin configuration option has been changed
     """
 
-    def triggerPluginConfigChanged(self):
-        self.overlayMap = None
-        self.pluginAnnos = list()
+    def triggerPluginConfigChanged(self, plugin:str):
+        self.overlayMap[plugin] = None
         self.showImage()
-        for key in self.pluginConfigLabels.keys():
-            self.pluginConfigLabels[key].setText('%.3f' % (self.pluginParameterSliders[key].value() / 1000.0 ))
+        for key in self.pluginConfigLabels[plugin].keys():
+            self.pluginConfigLabels[plugin][key].setText('%.3f' % (self.pluginParameterSliders[plugin][key].value() / 1000.0 ))
 
-    def pluginFilePickerButtonHit(self, config: SlideRunnerPlugin.FilePickerConfigurationEntry, labelObj:QtWidgets.QLabel):
-        self.overlayMap = None
-        self.pluginAnnos = list()
+    def pluginFilePickerButtonHit(self, plugin, config: SlideRunnerPlugin.FilePickerConfigurationEntry, labelObj:QtWidgets.QLabel):
+        self.overlayMap[plugin] = None
         if (config.dialogType == SlideRunnerPlugin.FilePickerDialogType.OPEN_FILE):
             ret,err = QFileDialog.getOpenFileName(self,config.title, "",config.mask)
 
@@ -474,20 +481,19 @@ class SlideRunnerUI(QMainWindow):
             ret = QFileDialog.getExistingDirectory(self,config.title, "")
         
         labelObj.setText('...'+ret[-20:] if len(ret)>20 else ret)
-        self.pluginFilepickers[config.uid]['value'] = ret
+        self.pluginFilepickers[plugin][config.uid]['value'] = ret
 
         if (ret is not None) and (self.imageOpened):
-            self.triggerPlugin(self.cachedLastImage, trigger=config)
+            self.triggerPlugin(plugin, self.cachedLastImage, trigger=config)
 
-    def pluginControlButtonHit(self, btn):
-        self.overlayMap = None
-        self.pluginAnnos = list()
-        self.triggerPlugin(self.cachedLastImage, trigger=btn)
+    def pluginControlButtonHit(self, plugin, btn):
+        self.overlayMap[plugin] = None
+        self.triggerPlugin(plugin, self.cachedLastImage, trigger=btn)
 
-    def pluginComboboxChanged(self, option, index):
+    def pluginComboboxChanged(self, plugin:str, option, index):
 
         option.selected_value = index.currentText()
-        self.triggerPlugin(self.cachedLastImage, trigger=option)
+        self.triggerPlugin(plugin, self.cachedLastImage, trigger=option)
 
 
 
@@ -496,12 +502,12 @@ class SlideRunnerUI(QMainWindow):
     """
     def addActivePluginToSidebar(self, plugin:SlideRunnerPlugin):
         if len(plugin.configurationList)>0:
-            self.pluginParameterSliders=dict()
-            self.pluginConfigLabels=dict()
-            self.pluginTextLabels = dict()
-            self.pluginPushbuttons = dict()
-            self.pluginFilepickers = dict()
-            self.pluginComboboxes = dict()
+            self.pluginParameterSliders[plugin.shortName]=dict()
+            self.pluginConfigLabels[plugin.shortName]=dict()
+            self.pluginTextLabels[plugin.shortName] = dict()
+            self.pluginPushbuttons[plugin.shortName] = dict()
+            self.pluginFilepickers[plugin.shortName] = dict()
+            self.pluginComboboxes[plugin.shortName] = dict()
             sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
             sizePolicy.setHorizontalStretch(1.0)
             sizePolicy.setVerticalStretch(0)
@@ -511,9 +517,9 @@ class SlideRunnerUI(QMainWindow):
                     newButton.setText(pluginConfig.name)
                     newButton.setSizePolicy(sizePolicy)
                     newButton.setStyleSheet('font-size:8px')
-                    newButton.clicked.connect(partial(self.pluginControlButtonHit, pluginConfig))
+                    newButton.clicked.connect(partial(self.pluginControlButtonHit, plugin.shortName, pluginConfig))
                     self.ui.tab3Layout.addWidget(newButton)
-                    self.pluginPushbuttons[pluginConfig.uid] = newButton
+                    self.pluginPushbuttons[plugin.shortName][pluginConfig.uid] = newButton
                 elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.FILEPICKER):
                     hLayout = QtWidgets.QHBoxLayout(self.ui.tab3widget)
                     newButton = QtWidgets.QPushButton(self.ui.tab3widget)
@@ -527,9 +533,9 @@ class SlideRunnerUI(QMainWindow):
                     newLabel.setStyleSheet('font-size:8px')
                     hLayout.addWidget(newButton)
                     hLayout.addWidget(newLabel)
-                    newButton.clicked.connect(partial(self.pluginFilePickerButtonHit, pluginConfig, newLabel))
+                    newButton.clicked.connect(partial(self.pluginFilePickerButtonHit, plugin.shortName, pluginConfig, newLabel))
                     self.ui.tab3Layout.addLayout(hLayout)
-                    self.pluginFilepickers[pluginConfig.uid] = {'button' : newButton, 'label' : newLabel, 'value' : ''}
+                    self.pluginFilepickers[plugin.shortName][pluginConfig.uid] = {'button' : newButton, 'label' : newLabel, 'value' : ''}
                     
                 elif (pluginConfig.type == SlideRunnerPlugin.PluginConfigurationType.SLIDER_WITH_FLOAT_VALUE):
                     newLabel = QtWidgets.QLabel(self.ui.tab3widget)
@@ -537,7 +543,7 @@ class SlideRunnerUI(QMainWindow):
                     newLabel.setSizePolicy(sizePolicy)
                     newLabel.setStyleSheet('font-size:8px')
                     self.ui.tab3Layout.addWidget(newLabel)
-                    self.pluginTextLabels[pluginConfig.uid] = newLabel
+                    self.pluginTextLabels[plugin.shortName][pluginConfig.uid] = newLabel
                     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Minimum)
                     sizePolicy.setHorizontalStretch(1.0)
                     sizePolicy.setVerticalStretch(0)
@@ -550,7 +556,7 @@ class SlideRunnerUI(QMainWindow):
                     sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
                     sizePolicy.setHorizontalStretch(1.0)
                     sizePolicy.setVerticalStretch(0)
-                    newSlider.valueChanged.connect(self.triggerPluginConfigChanged)
+                    newSlider.valueChanged.connect(partial(self.triggerPluginConfigChanged, plugin.shortName))
                     hLayout = QtWidgets.QHBoxLayout(self.ui.tab3widget)
                     hLayout.addWidget(newSlider)
                     valLabel = QtWidgets.QLabel(self.ui.tab3widget)
@@ -560,8 +566,8 @@ class SlideRunnerUI(QMainWindow):
                     valLabel.setSizePolicy(sizePolicy)
                     hLayout.addWidget(valLabel)
                     self.ui.tab3Layout.addLayout(hLayout)
-                    self.pluginParameterSliders[pluginConfig.uid] = newSlider
-                    self.pluginConfigLabels[pluginConfig.uid] = valLabel
+                    self.pluginParameterSliders[plugin.shortName][pluginConfig.uid] = newSlider
+                    self.pluginConfigLabels[plugin.shortName][pluginConfig.uid] = valLabel
                     newSlider.setStyleSheet("""
                     QSlider:horizontal {
                         min-height: 10px;
@@ -582,10 +588,10 @@ class SlideRunnerUI(QMainWindow):
                     cb.addItems(pluginConfig.options)
 
                     self.ui.tab3Layout.addWidget(cb)
-                    self.pluginComboboxes[pluginConfig.uid] = cb
+                    self.pluginComboboxes[plugin.shortName][pluginConfig.uid] = cb
                     if (isinstance(pluginConfig.selected_value,int)):
                         cb.setCurrentIndex(pluginConfig.selected_value)
-                    cb.currentIndexChanged.connect(partial(self.pluginComboboxChanged, pluginConfig, cb))
+                    cb.currentIndexChanged.connect(partial(self.pluginComboboxChanged, plugin.shortName, pluginConfig, cb))
 
                 
                 
@@ -596,60 +602,72 @@ class SlideRunnerUI(QMainWindow):
     def togglePlugin(self, plugin:pluginEntry):
         active = False
         for pluginItem in self.ui.pluginItems:
-            if (plugin.commonName == pluginItem.text()):
+            if (plugin.shortName == pluginItem.text()):
                 active = pluginItem.isChecked()
-            else:
-                pluginItem.setChecked(False)
+#            else:
+#                pluginItem.setChecked(False)
 
-        if (len(self.pluginParameterSliders) > 0):
-            for slider in self.pluginParameterSliders.keys():
-                self.ui.tab3Layout.removeWidget(self.pluginParameterSliders[slider])
-                self.pluginParameterSliders[slider].deleteLater()
-            for label in self.pluginConfigLabels.keys():
-                self.ui.tab3Layout.removeWidget(self.pluginConfigLabels[label])
-                self.pluginConfigLabels[label].deleteLater()
-            for label in self.pluginTextLabels.keys():
-                self.ui.tab3Layout.removeWidget(self.pluginTextLabels[label])
-                self.pluginTextLabels[label].deleteLater()
-            for btn in self.pluginPushbuttons.keys():
-                self.ui.tab3Layout.removeWidget(self.pluginPushbuttons[btn])
-                self.pluginPushbuttons[btn].deleteLater()
-            for uid in self.pluginFilepickers.keys():
-                self.ui.tab3Layout.removeWidget(self.pluginFilepickers[uid]['button'])
-                self.ui.tab3Layout.removeWidget(self.pluginFilepickers[uid]['label'])
-                self.pluginFilepickers[uid]['label'].deleteLater()
-                self.pluginFilepickers[uid]['button'].deleteLater()
-            for uid in self.pluginComboboxes.keys():
-                self.ui.tab3Layout.removeWidget(self.pluginComboboxes[uid])
-                self.pluginComboboxes[uid].deleteLater()
+        if plugin.shortName in self.pluginParameterSliders:
+            if (len(self.pluginParameterSliders[plugin.shortName]) > 0):
+                for slider in self.pluginParameterSliders[plugin.shortName].keys():
+                    self.ui.tab3Layout.removeWidget(self.pluginParameterSliders[plugin.shortName][slider])
+                    self.pluginParameterSliders[plugin.shortName][slider].deleteLater()
+            if (len(self.pluginConfigLabels[plugin.shortName]) > 0):
+                for label in self.pluginConfigLabels[plugin.shortName].keys():
+                    self.ui.tab3Layout.removeWidget(self.pluginConfigLabels[plugin.shortName][label])
+                    self.pluginConfigLabels[plugin.shortName][label].deleteLater()
+            if (len(self.pluginTextLabels[plugin.shortName]) > 0):
+                for label in self.pluginTextLabels[plugin.shortName].keys():
+                    self.ui.tab3Layout.removeWidget(self.pluginTextLabels[plugin.shortName][label])
+                    self.pluginTextLabels[plugin.shortName][label].deleteLater()
+            if (len(self.pluginPushbuttons[plugin.shortName]) > 0):
+                for btn in self.pluginPushbuttons[plugin.shortName].keys():
+                    self.ui.tab3Layout.removeWidget(self.pluginPushbuttons[plugin.shortName][btn])
+                    self.pluginPushbuttons[plugin.shortName][btn].deleteLater()
+            if (len(self.pluginFilepickers[plugin.shortName]) > 0):
+                for uid in self.pluginFilepickers[plugin.shortName].keys():
+                    self.ui.tab3Layout.removeWidget(self.pluginFilepickers[plugin.shortName][uid]['button'])
+                    self.ui.tab3Layout.removeWidget(self.pluginFilepickers[plugin.shortName][uid]['label'])
+                    self.pluginFilepickers[plugin.shortName][uid]['label'].deleteLater()
+                    self.pluginFilepickers[plugin.shortName][uid]['button'].deleteLater()
+            if (len(self.pluginComboboxes[plugin.shortName]) > 0):
+                for uid in self.pluginComboboxes[plugin.shortName].keys():
+                    self.ui.tab3Layout.removeWidget(self.pluginComboboxes[plugin.shortName][uid])
+                    self.pluginComboboxes[plugin.shortName][uid].deleteLater()
 
 
 
-            self.pluginParameterSliders = dict()
-            self.pluginConfigLabels = dict()
-            self.pluginTextLabels = dict()
-            self.pluginPushbuttons = dict()
-            self.pluginFilepickers = dict()
+            self.pluginParameterSliders[plugin.shortName] = dict()
+            self.pluginConfigLabels[plugin.shortName] = dict()
+            self.pluginTextLabels[plugin.shortName] = dict()
+            self.pluginPushbuttons[plugin.shortName] = dict()
+            self.pluginFilepickers[plugin.shortName] = dict()
+            self.pluginComboboxes[plugin.shortName] = dict()
 
-        if (plugin.receiverThread is None):
-            plugin.receiverThread = imageReceiverThread(plugin.outQueue, self)
+        if not (hasattr(plugin,'receiverThread')):
+            plugin.receiverThread = imageReceiverThread(plugin.shortName, plugin.outQueue, self)
             plugin.receiverThread.setDaemon(True)
             plugin.receiverThread.start()
 
         if (active):
-            if (self.activePlugin is not plugin):
-                    self.overlayMap=None
-                    self.overlayExtremes=None
+#            if (self.activePlugin is not plugin):
+#                    self.overlayMap=None
+#                    self.overlayExtremes=None
 
             self.activePlugin = plugin
+            self.activePlugins.activatePlugin(plugin)
+            
             self.pluginItemsSelected = None
-            self.addActivePluginToSidebar(plugin.plugin)
+            self.addActivePluginToSidebar(plugin)
             self.showDatabaseUIelements()
-            if ((plugin.plugin.outputType != SlideRunnerPlugin.PluginOutputType.NO_OVERLAY)
-                and (plugin.plugin.outputType != SlideRunnerPlugin.PluginOutputType.RGB_IMAGE)):
+            if (len(self.activePlugins.pluginsWithOverlays)>0): # activate opacity slider if not sensible
                 self.ui.opacitySlider.valueChanged.disconnect(self.changeOpacity)                
-                self.ui.opacitySlider.setValue(int(plugin.plugin.initialOpacity*100))
-                self.opacity = plugin.plugin.initialOpacity
+                if (len(self.activePlugins.pluginsWithOverlays)==1): # set opacity only in case of only one plugin
+                    if hasattr(plugin,'currentOpacity'):
+                        self.opacity = plugin.currentOpacity
+                    else:
+                        self.opacity = plugin.initialOpacity
+                self.ui.opacitySlider.setValue(int(self.opacity*100))
                 self.ui.opacitySlider.valueChanged.connect(self.changeOpacity)
                 self.ui.opacitySlider.setHidden(False)
                 self.ui.opacitySlider.setEnabled(True)
@@ -658,30 +676,64 @@ class SlideRunnerUI(QMainWindow):
                 self.ui.opacityLabel.setHidden(True)
                 self.ui.opacitySlider.setHidden(True)
             if (self.imageOpened):
-                self.triggerPlugin(self.rawImage)
+                self.triggerPlugin(plugin.shortName, self.rawImage)
         else:
             self.activePlugin = None
             self.ui.opacityLabel.setHidden(True)
             self.ui.opacitySlider.setHidden(True)
+            self.activePlugins.deactivatePlugin(plugin)
+            del self.overlayMap[plugin.shortName]
+            self.showDatabaseUIelements()
+        
+        if (len(self.activePlugins.pluginsWithOverlays)>1):
+            try:
+                self.ui.overlaySelect.currentIndexChanged.disconnect(self.changeOverlay)
+            except Exception:
+                pass
+            self.ui.overlaySelect.setHidden(False)
+            self.ui.overlaySelect.clear()
+            self.ui.overlaySelect.addItems([x.shortName for x in self.activePlugins.pluginsWithOverlays])
+            self.ui.overlaySelect.currentIndexChanged.connect(self.changeOverlay)
 
         print('Active plugin is now ', self.activePlugin)
-        self.overlayMap = None
-        self.pluginAnnos = list()
+        self.overlayMap[plugin.shortName] = None
+        self.clearPluginAnnos(plugin.shortName)
         if not active:
             self.showImage()
+
+    """
+        Change active overlay
+    """
+    def changeOverlay(self):
+        items = [x.shortName for x in self.activePlugins.pluginsWithOverlays]
+        selected = items[self.ui.overlaySelect.currentIndex()]
+        self.activePlugins.activeOverlay.currentOpacity = self.opacity
+        self.activePlugins.setActiveOverlay(selected)
+        if hasattr(self.activePlugins.activeOverlay, 'currentOpacity'):
+            self.opacity = self.activePlugins.activeOverlay.currentOpacity
+        else:
+            self.opacity = self.activePlugins.activeOverlay.initialOpacity
+            
+        self.ui.opacitySlider.valueChanged.disconnect(self.changeOpacity)
+        self.ui.opacitySlider.setValue(int(self.opacity*100))
+        self.ui.opacitySlider.valueChanged.connect(self.changeOpacity)
+        self.showImage()
 
     """
         Aggregate plugin configuration alltogether
     """
 
-    def gatherPluginConfig(self):
+    def gatherPluginConfig(self,plugin):
         config = dict()
-        for key in self.pluginParameterSliders.keys():
-            config[key] = self.pluginParameterSliders[key].value()/1000.0
-        for key in self.pluginFilepickers.keys():
-            config[key] = self.pluginFilepickers[key]['value']
-        for key in self.pluginComboboxes.keys():
-            config[key] = self.pluginComboboxes[key].currentIndex()
+        if plugin in self.pluginParameterSliders:
+            for key in self.pluginParameterSliders[plugin].keys():
+                config[key] = self.pluginParameterSliders[plugin][key].value()/1000.0
+        if plugin in self.pluginFilepickers:
+            for key in self.pluginFilepickers[plugin].keys():
+                config[key] = self.pluginFilepickers[plugin][key]['value']
+        if plugin in self.pluginComboboxes:
+            for key in self.pluginComboboxes[plugin].keys():
+                config[key] = self.pluginComboboxes[plugin][key].currentIndex()
         return config
 
 
@@ -689,16 +741,15 @@ class SlideRunnerUI(QMainWindow):
         Send annotation to plugin
     """
 
-    def sendAnnoToPlugin(self, anno, actionUID = None ):
-        self.triggerPlugin(self.rawImage, (anno,), actionUID=actionUID)
+    def sendAnnoToPlugin(self, plugin:str, anno, actionUID = None ):
+        self.triggerPlugin(plugin, self.rawImage, (anno,), actionUID=actionUID)
 #        self.triggerPlugin(self.rawImage, (self.db.annoDetails(anno),))
 
     """
     Helper function to trigger the plugin
     """
-    def triggerPlugin(self,currentImage, annotations=None, trigger=None, actionUID=None):
+    def triggerPlugin(self,plugin:str, currentImage, annotations=None, trigger=None, actionUID=None):
 
-        print('Plugin triggered...',self.gatherPluginConfig())
         image_dims=self.slide.level_dimensions[0]
         actual_downsample = self.getZoomValue()
         visualarea = self.mainImageSize
@@ -709,8 +760,19 @@ class SlideRunnerUI(QMainWindow):
 
         coordinates = (int(imgarea_p1[0]), int(imgarea_p1[1]), int(imgarea_w[0]), int(imgarea_w[1]))
 
-        if (self.activePlugin is not None):
-            self.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, configuration=self.gatherPluginConfig(), annotations=annotations, trigger=trigger,coordinates=coordinates, actionUID=actionUID, openedDatabase=self.db))
+
+        if (self.activePlugins.numberActive>0) and not isinstance(plugin,list):
+            print('Plugin triggered...', plugin)
+            self.activePlugins.activePlugins[plugin].inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, configuration=self.gatherPluginConfig(plugin), annotations=annotations, trigger=trigger,coordinates=coordinates, actionUID=actionUID, openedDatabase=self.db))
+
+        elif (self.activePlugins.numberActive>0): # send to all (none particular specified)
+            plugins=plugin # multiple plugins omitted
+            print('Plugins triggered...', plugin)
+            for plugin in plugins:
+                if not isinstance(plugin,str):
+                    plugin=plugin.shortName # if the real plugin was omitted
+                self.activePlugins.activePlugins[plugin].inQueue.put(SlideRunnerPlugin.jobToQueueTuple(currentImage=currentImage, slideFilename=self.slidepathname, configuration=self.gatherPluginConfig(plugin), annotations=annotations, trigger=trigger,coordinates=coordinates, actionUID=actionUID, openedDatabase=self.db))
+
 
 
     """
@@ -788,7 +850,8 @@ class SlideRunnerUI(QMainWindow):
 
         if (self.screeningIndex+len(self.screeningHistory)<=0):
             self.ui.iconPreviousScreen.setEnabled(False)
-        self.overlayMap = None
+        for k in self.overlayMap:
+            self.overlayMap[k] = None
         self.showImage()
         return
 
@@ -856,7 +919,9 @@ class SlideRunnerUI(QMainWindow):
 
         self.setCenterTo( (leftupper_x+relOffset_x/2)*self.slide.level_dimensions[0][0], (leftupper_y+relOffset_y/2)*self.slide.level_dimensions[0][1])
         self.screeningHistory.append( ( (leftupper_x+relOffset_x/2)*self.slide.level_dimensions[0][0], (leftupper_y+relOffset_y/2)*self.slide.level_dimensions[0][1] ) )
-        self.overlayMap = None
+
+        for k in self.overlayMap:
+            self.overlayMap[k] = None
         self.showImage()
 
 
@@ -972,7 +1037,7 @@ class SlideRunnerUI(QMainWindow):
             self.discoverUnclassified(force=True)
 
     def setBlindedMode(self):
-        self.modelItems[0].setChecked(True) # enable unknown class
+        self.annotationTypesTable[0].setChecked(True) # enable unknown class
         self.blindedMode = self.ui.iconBlinded.isChecked()
         self.currentVP.blindMode = self.blindedMode
         self.currentVP.annotator = self.annotator
@@ -1091,13 +1156,22 @@ class SlideRunnerUI(QMainWindow):
                 self.relativeCoords[1]=1.0
 
             self.relativeCoords -= 0.5
-        
+    
+    def clearPluginAnnos(self, plugin:SlideRunnerPlugin):
+        if not isinstance(plugin,str):
+            plugin=plugin.shortName
+        self.pluginAnnos[plugin] = dict()
+        self.pluginMaxCoords[plugin] = dict()
+        self.pluginMinCoords[plugin] = dict()
+
 
     def pressOverviewImage(self,event):
         if (self.imageOpened):
-            self.overlayMap=None
-            if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
-                self.pluginAnnos = list()
+            for k in self.overlayMap:
+                self.overlayMap[k]=None
+            if len(self.activePlugins.pluginsWithScrollUpdatePolicy)>0:
+                for plugin in self.activePlugins.pluginsWithScrollUpdatePolicy:
+                    self.clearPluginAnnos(plugin)
             self.relativeCoords=np.asarray([event.x()/self.thumbnail.size[0], event.y()/self.thumbnail.size[1]])
             if (self.relativeCoords[1]>1.0):
                 self.relativeCoords[1]=1.0
@@ -1375,6 +1449,7 @@ class SlideRunnerUI(QMainWindow):
         if (ok):
             self.db.insertClass(name)
             # show DB overview
+            self.redrawDBClasses=True
             self.showDatabaseUIelements()
 
 
@@ -1383,9 +1458,12 @@ class SlideRunnerUI(QMainWindow):
             Callback function when the scrollbars (horizontal/vertical) are changed.
         """
         if (self.imageOpened):
-            self.overlayMap=None
-            if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
-                self.pluginAnnos = list()
+            for k in self.overlayMap:
+                self.overlayMap[k]=None
+
+            if len(self.activePlugins.pluginsWithScrollUpdatePolicy)>0:
+                for plugin in self.activePlugins.pluginsWithScrollUpdatePolicy:
+                    self.clearPluginAnnos(plugin)
             self.relativeCoords[0] = (self.ui.horizontalScrollBar.value()/self.ui.hsteps)-0.5
             self.relativeCoords[1] = (self.ui.verticalScrollBar.value()/self.ui.vsteps)-0.5
             self.showImage()
@@ -1404,9 +1482,12 @@ class SlideRunnerUI(QMainWindow):
         except Exception: pass
         viewsize = self.mainImageSize * self.getZoomValue()
 
-        self.overlayMap=None
-        if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
-            self.pluginAnnos = list()
+        for k in self.overlayMap:
+            self.overlayMap[k] = None
+
+        if len(self.activePlugins.pluginsWithScrollUpdatePolicy)>0:
+            for plugin in self.activePlugins.pluginsWithScrollUpdatePolicy:
+                self.clearPluginAnnos(plugin)
         self.ui.horizontalScrollBar.setMaximum(0)
         self.ui.hsteps=int(10*self.slide.level_dimensions[0][0]/viewsize[0])
         self.ui.vsteps=int(10*self.slide.level_dimensions[0][1]/viewsize[1])
@@ -1471,9 +1552,12 @@ class SlideRunnerUI(QMainWindow):
             return
         
 
-        self.overlayMap=None
-        if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
-            self.pluginAnnos = list()
+        for k in self.overlayMap:
+            self.overlayMap[k] = None
+
+        if len(self.activePlugins.pluginsWithScrollUpdatePolicy)>0:
+            for plugin in self.activePlugins.pluginsWithScrollUpdatePolicy:
+                self.clearPluginAnnos(plugin)
         if (self.imageOpened):
             self.showImage()
             self.updateScrollbars()
@@ -1501,9 +1585,13 @@ class SlideRunnerUI(QMainWindow):
         """
             Sets the zoom of the current image.
         """
-        self.overlayMap=None
-        if (self.activePlugin is not None) and (self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SCROLL_CHANGE):
-            self.pluginAnnos = list()
+        for k in self.overlayMap:
+            self.overlayMap[k] = None
+
+        if len(self.activePlugins.pluginsWithScrollUpdatePolicy)>0:
+            for plugin in self.activePlugins.pluginsWithScrollUpdatePolicy:
+                self.clearPluginAnnos(plugin)
+
         self.currentZoom = zoomValue
         if (self.currentZoom < 0.25):
             self.currentZoom = 0.25
@@ -1660,37 +1748,45 @@ class SlideRunnerUI(QMainWindow):
         npi=cv2.resize(npi, dsize=(self.mainImageSize[0],self.mainImageSize[1]))
         self.rawImage = np.copy(npi)
         if ((id<self.processingStep) and 
-            ((self.activePlugin is None) or (self.activePlugin.instance.pluginType != SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN))):
+            ((self.activePlugins.numberActive == 0) or (len(self.activePlugins.imagePlugins)==0))):
             self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.rawImage)))
             return
 
-        if ((self.activePlugin is not None) and (self.overlayMap is None) and 
-           ((self.activePlugin.plugin.getAnnotationUpdatePolicy() == SlideRunnerPlugin.AnnotationUpdatePolicy.UPDATE_ON_SLIDE_CHANGE ) or 
-            self.activePlugin.instance.pluginType == SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN)):
+        activeOverlays = [x for x in self.overlayMap.keys() if x is not None]
+        print('Len activeOverlays:',len(activeOverlays))
+        if ((self.activePlugins.numberActive > 0) and 
+           ((len(self.activePlugins.pluginsWithScrollUpdatePolicy)==0 ) or 
+            len(self.activePlugins.imagePlugins)>0)):
             from threading import Timer
             if (self.updateTimer is not None):
                 self.updateTimer.cancel()
-            self.updateTimer = Timer(self.activePlugin.plugin.updateTimer, partial(self.triggerPlugin,np.copy(npi)))                
+            
+            self.updateTimer = Timer(0.2, partial(self.triggerPlugin,self.activePlugins.pluginsWithScrollUpdatePolicy, np.copy(npi)))                
             self.updateTimer.start()
         
         self.cachedLastImage = np.copy(npi)
         self.showImage_part3(npi, id)
 
     def showImage_part3(self, npi, id):
+        activeOverlays = [x for x in self.overlayMap.keys() if x is not None]
+
         if (len(npi.shape)==1): # empty was given as parameter - i.e. trigger comes from plugin
             npi = np.copy(self.cachedLastImage)
 
-        if (self.activePlugin is not None) and (self.overlayMap is None) and ((self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE)):
+        if (self.activePlugins.numberActive > 0) and (len(activeOverlays)==0) and (len(self.activePlugins.RGBimagePlugins)>0):
             return
 
-        if (self.overlayMap is not None) and (self.activePlugin is not None):
-                if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.BINARY_MASK):
-                    olm = self.overlayMap
+        if (len(activeOverlays)>0) and (len(self.activePlugins.pluginsWithOverlays)>0):
+                print('Trying to display overlay')
+                if ((self.activePlugins.activeOverlay.outputType == SlideRunnerPlugin.PluginOutputType.HEATMAP)
+                    and (self.overlayMap[self.activePlugins.activeOverlay.shortName] is not None)):
+                    olm = self.overlayMap[self.activePlugins.activeOverlay.shortName]
+                    # Heatmap
                     if ((len(olm.shape)==2) or ((len(olm.shape)==3) and (olm.shape[2]==1))) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
                         self.overlayExtremes = [np.min(olm), np.max(olm)+np.finfo(np.float32).eps]
                         # Normalize overlay
                         if (self.overlayMap is not None):
-                            olm = cv2.resize(self.overlayMap, dsize=(npi.shape[1],npi.shape[0]))
+                            olm = cv2.resize(olm, dsize=(npi.shape[1],npi.shape[0]))
                             olm = (olm - self.overlayExtremes[0]) / (np.diff(np.array(self.overlayExtremes)))
                             
                             cm = matplotlib.cm.get_cmap(self.settings.value('OverlayColorMap'))
@@ -1702,26 +1798,28 @@ class SlideRunnerUI(QMainWindow):
                     else:
                         print('Overlay map shape not proper')
                         print('OLM shape: ', olm.shape, 'NPI shape: ', npi.shape)
-                elif ((self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE) or
-                     (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_OVERLAY)):
-                    olm = self.overlayMap
-                    self.overlayExtremes = None
-                    if (len(olm.shape)==3) and (olm.shape[2]==3) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
-                        if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE):
-                            for c in range(3):
-                                npi[:,:,c] = olm[:,:,c] 
-                        else:
-                            for c in range(3):
-                                npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
-                    elif (len(olm.shape)==3) and (olm.shape[2]==4) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
-                        if (self.activePlugin.plugin.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE):
-                            for c in range(4):
-                                npi[:,:,c] = olm[:,:,c] 
-                        else:
-                            for c in range(4):
-                                npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
-                    
-        if(self.activePlugin is not None and hasattr(self.activePlugin.instance, 'overlayHeatmap')):
+                elif ((self.activePlugins.activeOverlay.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE) or
+                     (self.activePlugins.activeOverlay.outputType == SlideRunnerPlugin.PluginOutputType.RGB_OVERLAY)):
+                    olm = self.overlayMap[self.activePlugins.activeOverlay.shortName]
+                    if olm is not None:
+                        self.overlayExtremes = None
+                        if (len(olm.shape)==3) and (olm.shape[2]==3) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
+                            if (self.activePlugins.activeOverlay.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE):
+                                for c in range(3):
+                                    npi[:,:,c] = olm[:,:,c] 
+                            else:
+                                for c in range(3):
+                                    npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
+                        elif (len(olm.shape)==3) and (olm.shape[2]==4) and np.all(npi.shape[0:2] == olm.shape[0:2]): 
+                            if (self.activePlugins.activeOverlay.outputType == SlideRunnerPlugin.PluginOutputType.RGB_IMAGE):
+                                for c in range(4):
+                                    npi[:,:,c] = olm[:,:,c] 
+                            else:
+                                for c in range(4):
+                                    npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
+        else:
+            print('No overlay', len(activeOverlays), len(self.activePlugins.pluginsWithOverlays))
+        if((self.activePlugins.activeOverlayPluginType != SlideRunnerPlugin.PluginTypes.NONE_PLUGIN) and hasattr(self.activePlugin.instance, 'overlayHeatmap')):
             try:
                 heatmap = self.activePlugin.instance.overlayHeatmap(self.overviewimage)
                 # Set pixmap of overview image (display overview image)
@@ -1733,20 +1831,21 @@ class SlideRunnerUI(QMainWindow):
 
 
         # Draw annotations by the plugin
-        if (self.activePlugin is not None):
-            labels = self.activePlugin.instance.getAnnotationLabels()
-            if (len(self.pluginAnnos)>0):
-                annoKeys=np.array([x.uid for x in labels])[np.where(self.pluginItemsSelected)[0]].tolist()
+        for plugin in self.activePlugins.activePlugins.values():
+            labels = plugin.instance.getAnnotationLabels()
+            if (len(self.pluginAnnos[plugin.shortName])>0) and (plugin.shortName in self.annotationClasses):
                 for anno in SlideRunnerPlugin.getVisibleAnnotations(leftUpper=self.region[0], rightLower=self.region[0]+self.region[1], 
-                                                                    annotations=self.pluginAnnos, minCoords=self.pluginMinCoords, maxCoords=self.pluginMaxCoords):
-                    if (anno.pluginAnnotationLabel is None) or (anno.pluginAnnotationLabel.uid in annoKeys):
-                        anno.draw(image=npi, leftUpper=self.region[0], 
-                                zoomLevel=self.getZoomValue(), thickness=2, vp=self.currentPluginVP,
-                                selected=(self.selectedPluginAnno==anno.uid))
+                                                                    annotations=self.pluginAnnos[plugin.shortName], minCoords=self.pluginMinCoords[plugin.shortName], maxCoords=self.pluginMaxCoords[plugin.shortName]):
+                    if (anno.pluginAnnotationLabel is None) or (anno.pluginAnnotationLabel.uid in self.annotationClasses[plugin.shortName]):
+                        if (self.annotationClasses[plugin.shortName][anno.pluginAnnotationLabel.uid]['Active']):
+                            anno.draw(image=npi, leftUpper=self.region[0], 
+                                    zoomLevel=self.getZoomValue(), thickness=2, vp=self.currentPluginVP,
+                                    selected=(self.selectedPluginAnno==anno.uid))
+
 
         # Overlay Annotations by the user
         if (self.db.isOpen()):
-                self.db.annotateImage(npi, self.region[0], self.region[0]+self.region[1], self.getZoomValue(), self.currentVP, self.selectedAnno)
+            self.db.annotateImage(npi, self.region[0], self.region[0]+self.region[1], self.getZoomValue(), self.currentVP, self.selectedAnno, annotationClasses=self.annotationClasses[0])
 
 
         # Show the current polygon (if in polygon annotation mode)
@@ -1768,7 +1867,6 @@ class SlideRunnerUI(QMainWindow):
                 self.ui.wandAnnotation.mask = 255-mask
                 polygons = cv2.findContours(self.ui.wandAnnotation.mask, cv2.RETR_LIST,
                                             cv2.CHAIN_APPROX_SIMPLE)
-#                polygons = polygons[0]
                 polygons = polygons[0]
 
                 lenpoly = [len(x) for x in polygons]
@@ -1847,47 +1945,41 @@ class SlideRunnerUI(QMainWindow):
             cv2.putText(npi, '%.2f' % self.overlayExtremes[1], (positionColorLegendX+colorLegendWidth+10, positionColorLegendY+5),cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
             cv2.putText(npi, '%.2f' % self.overlayExtremes[0], (positionColorLegendX+colorLegendWidth+10, positionColorLegendY+colorLegendHeight),cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
-
-
         # Display image in GUI
         self.ui.MainImage.setPixmap(QPixmap.fromImage(self.toQImage(self.displayedImage)))
 
     def toggleOneClass(self, row):
         if (self.db.isOpen()==False):
             return
-        if (row>=len(self.modelItems)):
+        if (row>=len(self.annotationTypesTable)):
             return
-        self.modelItems[row].stateChanged.disconnect(self.selectClasses)
-        self.modelItems[row].setChecked(not(self.modelItems[row].checkState()))
+        self.annotationTypesTable[row].stateChanged.disconnect(self.selectClasses)
+        self.annotationTypesTable[row].setChecked(not(self.annotationTypesTable[row].checkState()))
     
-        self.modelItems[row].stateChanged.connect(self.selectClasses)
+        self.annotationTypesTable[row].stateChanged.connect(self.selectClasses)
        
         self.selectClasses(None)
 
 
     def toggleAllClasses(self):
-        for item in range(len(self.modelItems)):
-            self.modelItems[item].stateChanged.disconnect(self.selectClasses)
-            self.modelItems[item].setChecked(not(self.modelItems[item].checkState()))
+        for item in range(len(self.annotationTypesTable)):
+            self.annotationTypesTable[item].stateChanged.disconnect(self.selectClasses)
+            self.annotationTypesTable[item].setChecked(not(self.annotationTypesTable[item].checkState()))
         
-        for item in range(len(self.modelItems)):
-            self.modelItems[item].stateChanged.connect(self.selectClasses)
+        for item in range(len(self.annotationTypesTable)):
+            self.annotationTypesTable[item].stateChanged.connect(self.selectClasses)
        
         self.selectClasses(None)
  
-    def selectClasses(self,event):
+    def selectClasses(self,plugin, row:int):
         """
             Helper function to select classes for enabling/disabling display of annotations
 
         """
+        for plugin in self.annotationClasses:
+            for row in self.annotationClasses[plugin]:
+                self.annotationClasses[plugin][row]['Active'] = self.annotationClasses[plugin][row]['checkbox'].checkState()
 
-        items=np.zeros(len(self.modelItems))
-        for item in range(len(self.modelItems)):
-            if (self.modelItems[item].checkState()):
-                items[item] = 1
-
-        self.itemsSelected=items
-        self.currentVP.activeClasses = items
         self.showAnnotationsInOverview()
         self.showImage()
 
@@ -1897,9 +1989,9 @@ class SlideRunnerUI(QMainWindow):
 
         """
 
-        items=np.zeros(len(self.pluginModelItems))
-        for item in range(len(self.pluginModelItems)):
-            if (self.pluginModelItems[item].checkState()):
+        items=np.zeros(len(self.pluginannotationTypesTable))
+        for item in range(len(self.pluginannotationTypesTable)):
+            if (self.pluginannotationTypesTable[item].checkState()):
                 items[item] = 1
 
         self.pluginItemsSelected=items
@@ -1957,7 +2049,7 @@ class SlideRunnerUI(QMainWindow):
 
             menu.updateOpenRecentDatabase(self)
 
-
+            self.redrawDBClasses=True
             self.showDatabaseUIelements()
             self.showAnnotationsInOverview()
             self.writeDebug('Opened database')
@@ -2050,7 +2142,7 @@ class SlideRunnerUI(QMainWindow):
         self.ui.annotatorComboBox.setVisible(False)
         self.ui.annotatorComboBox.setEnabled(False)
         self.ui.inspectorTableView.setVisible(False)
-        self.ui.categoryView.setVisible(False)
+        self.ui.annotationTypeTableView.setVisible(False)
         self.showImage()
 
     def setExactUser(self):
@@ -2427,129 +2519,148 @@ class SlideRunnerUI(QMainWindow):
             self.db.updateViewingProfile(self.currentVP)
             self.db.updateViewingProfile(self.currentPluginVP)
 
-        if (self.db.isOpen() or (self.activePlugin is not None)):
-            self.ui.inspectorTableView.setVisible(True)
-            self.ui.categoryView.setVisible(True)
+        self.ui.inspectorTableView.setVisible(True)
+        self.ui.annotationTypeTableView.setVisible(True)
 
 
-            tableRows = dict()
-            model = QStandardItemModel()
-            
-            self.modelItems = list()
-            self.pluginModelItems = list()
-            classes =   self.db.getAllClasses() if self.db.isOpen() else []
-            self.classButtons = list()
-            if (self.activePlugin is None):
-                self.ui.categoryView.setRowCount(len(classes)+1)
-            else:
-                self.ui.categoryView.setRowCount(len(classes)+1+len(self.activePlugin.instance.getAnnotationLabels()))
+        tableRows = dict()
+        model = QStandardItemModel()
+        
+        self.annotationTypesTable = list()
+        self.pluginannotationTypesTable = list()
+        classes =   self.db.getAllClasses() if self.db.isOpen() else []
+        self.classButtons = list()
+        allAnnotationLabels = []
+        for k in self.activePlugins.activePlugins.values():
+            allAnnotationLabels += k.instance.getAnnotationLabels()
 
-            self.ui.categoryView.setColumnCount(4)
-            item = QTableWidgetItem('unknown')
+        self.ui.annotationTypeTableView.setRowCount(len(classes)+1+len(allAnnotationLabels))
+
+        self.ui.annotationTypeTableView.setColumnCount(4)
+        item = QTableWidgetItem('unknown')
+        pixmap = QPixmap(10,10)
+        pixmap.fill(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
+        itemcol = QTableWidgetItem('')
+        itemcol.setBackground(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
+        checkbx = QCheckBox()
+        checkbx.setChecked(True)
+        tableRows[0] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, 0, uid=0, color='#000000')
+        checkbx.stateChanged.connect(self.selectClasses)
+        self.ui.annotationTypeTableView.setItem(0,2, item)
+        self.ui.annotationTypeTableView.setItem(0,1, itemcol)
+        self.ui.annotationTypeTableView.setCellWidget(0,0, checkbx)
+        self.annotationClassOrigin = {}
+        if (self.db.isOpen()):
+            self.annotationTypesTable.append(checkbx)
+
+        # For all classes in the database, make an entry in the table with
+        # a class button and respective correct color
+        
+        if (self.redrawDBClasses):
+            self.redrawDBClasses=False
+            self.annotationClasses[0] = {}
+
+        for clsid in range(len(classes)):
+            clsname = classes[clsid]
+            item = QTableWidgetItem(clsname[0])
+            item.setFlags(Qt.ItemIsSelectable)
             pixmap = QPixmap(10,10)
-            pixmap.fill(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
+            pixmap.fill(QColor.fromRgb(*hex_to_rgb(clsname[2])))
+            btn = QPushButton('')
+
+            btn.clicked.connect(partial(self.clickAnnoclass, clsid+1))
+            self.classButtons.append(btn)
             itemcol = QTableWidgetItem('')
-            itemcol.setBackground(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
+            itemcol.setFlags(Qt.NoItemFlags)
             checkbx = QCheckBox()
-            checkbx.setChecked(True)
-            tableRows[0] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, 0, uid=0, color='#000000')
-            checkbx.stateChanged.connect(self.selectClasses)
-            self.ui.categoryView.setItem(0,2, item)
-            self.ui.categoryView.setItem(0,1, itemcol)
-            self.ui.categoryView.setCellWidget(0,0, checkbx)
-            if (self.db.isOpen()):
-                self.modelItems.append(checkbx)
+            itemcol.setBackground(QColor.fromRgb(*hex_to_rgb(clsname[2])))
+            self.annotationTypesTable.append(checkbx)
+            self.ui.annotationTypeTableView.setItem(clsid+1,2, item)
+            self.ui.annotationTypeTableView.setItem(clsid+1,1, itemcol)
+            self.ui.annotationTypeTableView.setCellWidget(clsid+1,0, checkbx)
+            self.ui.annotationTypeTableView.setCellWidget(clsid+1,3, btn)
+            if (clsid+1) in self.annotationClasses[0]:
+                checked=self.annotationClasses[0][clsid+1]['Active']
+            else:
+                checked=True
+            self.annotationClasses[0][clsid+1] = {'plugin':0, 'checkbox':checkbx, 'Class':clsname[0], 'Active':checked}
+            checkbx.setChecked(checked)
 
-            # For all classes in the database, make an entry in the table with
-            # a class button and respective correct color
-            
-            for clsid in range(len(classes)):
-                clsname = classes[clsid]
-                item = QTableWidgetItem(clsname[0])
-                item.setFlags(Qt.ItemIsSelectable)
+            checkbx.stateChanged.connect(partial(self.selectClasses, 0, clsid+1))
+
+            tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid, clsname[1], clsname[2])
+        
+        rowIdx =   len(self.db.getAllClasses())+1 if self.db.isOpen() else 0
+
+        for plugin in self.activePlugins.activePlugins.values():
+            allAnnotationLabels = plugin.instance.getAnnotationLabels()
+            print('Got annotation labels from plugin: ',allAnnotationLabels)
+
+            for label in allAnnotationLabels:
+                item = QTableWidgetItem('plugin:'+str(label.uid)+':'+label.name)
                 pixmap = QPixmap(10,10)
-                pixmap.fill(QColor.fromRgb(*hex_to_rgb(clsname[2])))
-                btn = QPushButton('')
-
-                btn.clicked.connect(partial(self.clickAnnoclass, clsid+1))
-                self.classButtons.append(btn)
+                pixmap.fill(QColor.fromRgb(label.color[0], label.color[1], label.color[2]))
+                
                 itemcol = QTableWidgetItem('')
-                itemcol.setFlags(Qt.NoItemFlags)
                 checkbx = QCheckBox()
-                checkbx.setChecked(True)
-                itemcol.setBackground(QColor.fromRgb(*hex_to_rgb(clsname[2])))
-                self.modelItems.append(checkbx)
-                self.ui.categoryView.setItem(clsid+1,2, item)
-                self.ui.categoryView.setItem(clsid+1,1, itemcol)
-                self.ui.categoryView.setCellWidget(clsid+1,0, checkbx)
-                self.ui.categoryView.setCellWidget(clsid+1,3, btn)
-                checkbx.stateChanged.connect(self.selectClasses)
+                itemcol.setBackground(QColor.fromRgb(label.color[0], label.color[1], label.color[2]))
+                self.pluginannotationTypesTable.append(checkbx)
+                self.ui.annotationTypeTableView.setItem(rowIdx,2, item)
+                self.ui.annotationTypeTableView.setItem(rowIdx,1, itemcol)
+                self.ui.annotationTypeTableView.setCellWidget(rowIdx,0, checkbx)
+                checkbx.stateChanged.connect(partial(self.selectClasses, plugin.shortName, label.uid))
 
-                tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid, clsname[1], clsname[2])
+                if (plugin.shortName not in self.annotationClasses):
+                    self.annotationClasses[plugin.shortName] = {}
+
+                if (label.uid) in self.annotationClasses[plugin.shortName]:
+                    checked=self.annotationClasses[plugin.shortName][label.uid]['Active']
+                else:
+                    checked=True
+
+                self.annotationClasses[plugin.shortName][label.uid] = {'plugin':0, 'checkbox':checkbx, 'Class':label.name, 'Active':checked}
+                checkbx.setChecked(checked)
+                
+
+                tableRows[rowIdx] = ClassRowItem(ClassRowItemId.ITEM_PLUGIN, label,color=label.color)
+
+                rowIdx+=1
             
-            rowIdx =   len(self.db.getAllClasses())+1 if self.db.isOpen() else 0
-            self.itemsSelected = np.ones(rowIdx+1)
 
-            if (self.activePlugin is not None):
-                annoLabels = self.activePlugin.instance.getAnnotationLabels()
+        self.classList = tableRows
 
-                for label in annoLabels:
-                    item = QTableWidgetItem('plugin:'+label.name)
-                    pixmap = QPixmap(10,10)
-                    pixmap.fill(QColor.fromRgb(label.color[0], label.color[1], label.color[2]))
-                    
-                    itemcol = QTableWidgetItem('')
-                    checkbx = QCheckBox()
-                    checkbx.setChecked(True)
-                    itemcol.setBackground(QColor.fromRgb(label.color[0], label.color[1], label.color[2]))
-                    self.pluginModelItems.append(checkbx)
-                    self.ui.categoryView.setItem(rowIdx,2, item)
-                    self.ui.categoryView.setItem(rowIdx,1, itemcol)
-                    self.ui.categoryView.setCellWidget(rowIdx,0, checkbx)
-                    checkbx.stateChanged.connect(self.selectPluginClasses)
+        model.itemChanged.connect(self.selectClasses)
 
-                    tableRows[rowIdx] = ClassRowItem(ClassRowItemId.ITEM_PLUGIN, label,color=label.color)
+        if (self.activePlugin is not None):
+            self.currentPluginVP.activeClasses = self.pluginItemsSelected
 
-                    rowIdx+=1
+        self.ui.annotationTypeTableView.verticalHeader().setVisible(False)
+        vheader = self.ui.annotationTypeTableView.verticalHeader()
+        vheader.setDefaultSectionSize(vheader.fontMetrics().height()+2)
+        self.ui.annotationTypeTableView.horizontalHeader().setVisible(False)
+        self.ui.annotationTypeTableView.setColumnWidth(0, 20)
+        self.ui.annotationTypeTableView.setColumnWidth(1, 20)
+        self.ui.annotationTypeTableView.setColumnWidth(2, 120)
+        self.ui.annotationTypeTableView.setColumnWidth(3, 50)
+        self.ui.annotationTypeTableView.setShowGrid(False)
 
-                    
+        if (self.imageOpened) and (self.db.isOpen()):
+            self.findSlideUID(self.slide.dimensions)
+        elif (self.db.isOpen()):
+            self.findSlideUID()
 
-                self.pluginItemsSelected = np.ones(len(annoLabels))
+        self.ui.annotatorComboBox.setModel(self.annotatorsModel)
 
-            self.classList = tableRows
-
-            model.itemChanged.connect(self.selectClasses)
-
-            self.currentVP.activeClasses = self.itemsSelected
-            if (self.activePlugin is not None):
-                self.currentPluginVP.activeClasses = self.pluginItemsSelected
-            self.ui.categoryView.verticalHeader().setVisible(False)
-            vheader = self.ui.categoryView.verticalHeader()
-            vheader.setDefaultSectionSize(vheader.fontMetrics().height()+2)
-            self.ui.categoryView.horizontalHeader().setVisible(False)
-            self.ui.categoryView.setColumnWidth(0, 20)
-            self.ui.categoryView.setColumnWidth(1, 20)
-            self.ui.categoryView.setColumnWidth(2, 120)
-            self.ui.categoryView.setColumnWidth(3, 50)
-            self.ui.categoryView.setShowGrid(False)
-
-            if (self.imageOpened) and (self.db.isOpen()):
-                self.findSlideUID(self.slide.dimensions)
-            elif (self.db.isOpen()):
-                self.findSlideUID()
-
-            self.ui.annotatorComboBox.setModel(self.annotatorsModel)
-
-            #if (self.imageOpened):
-            #    self.showImage()
+        #if (self.imageOpened):
+        #    self.showImage()
 
 
     def toggleAnnoclass(self, id):
         if (id<len(self.classList)):
-            if (self.pluginModelItems[item].checkState()):
-                self.pluginModelItems[item].setChecked(False)       
+            if (self.pluginannotationTypesTable[item].checkState()):
+                self.pluginannotationTypesTable[item].setChecked(False)       
             else: 
-                self.pluginModelItems[item].setChecked(True)       
+                self.pluginannotationTypesTable[item].setChecked(True)       
 
     def sliderChanged(self):
         """

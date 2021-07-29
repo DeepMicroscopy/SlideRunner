@@ -24,23 +24,21 @@ for finder, name, ispkg in sorted(iter_namespace(SlideRunner.plugins)):
 
 
 pluginList = list()
+shortNames=[]
 
 for plugin in sorted(sliderunner_plugins.keys()):
     newPlugin = pluginEntry()
     classes = inspect.getmembers(sliderunner_plugins[plugin], inspect.isclass)
     for classIdx in range(len(classes)):
         if (classes[classIdx][0] == 'Plugin'):
-            newPlugin.mainClass = classes[classIdx][0]
-            newPlugin.commonName = classes[classIdx][1].shortName
-            newPlugin.plugin = classes[classIdx][1]
-            newPlugin.inQueue = classes[classIdx][1].inQueue
-            newPlugin.outQueue = classes[classIdx][1].outQueue
-            newPlugin.version = classes[classIdx][1].version
-        #    newPlugin.instance = classes[0][1]()
+            newPlugin = classes[classIdx][1]
+            if newPlugin.shortName in shortNames:
+                print('++++ ERROR: Plugin has duplicate short name: ',newPlugin.shortName)
+                continue
             pluginList.append(newPlugin)
 
 
 print('List of available plugins:')
 for entry in pluginList:
-    print('%20s   Version %s' % (entry.commonName, entry.version))
+    print('%20s   Version %s' % (entry.shortName, entry.version))
 

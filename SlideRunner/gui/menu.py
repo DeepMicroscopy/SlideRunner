@@ -180,8 +180,8 @@ def definePluginMenu(self,pluginList):
 
         self.ui.pluginItems = list()
         for plugin in pluginList:
-                plugin.instance = plugin.plugin(self.progressBarQueue)
-                menuItem = pluginMenu.addAction(plugin.commonName, partial(self.togglePlugin, plugin))
+                plugin.instance = plugin(self.progressBarQueue)
+                menuItem = pluginMenu.addAction(plugin.shortName, partial(self.togglePlugin, plugin))
                 menuItem.setCheckable(True)
                 menuItem.setEnabled(True)
                 self.ui.pluginItems.append(menuItem)

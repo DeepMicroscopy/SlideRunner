@@ -18,7 +18,7 @@ import numpy as np
 from SlideRunner.gui import mouseEvents as mouseEvents
 from PyQt5 import QtWidgets
 from PyQt5.QtGui import QColor
-from SlideRunner.dataAccess.database import hex_to_rgb, rgb_to_hex
+from SlideRunner_dataAccess.database import hex_to_rgb, rgb_to_hex
 from shapely.geometry import * 
 
 

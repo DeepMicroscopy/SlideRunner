@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from SlideRunner.dataAccess.exact import *
-from SlideRunner.dataAccess.database import Database
+from SlideRunner_dataAccess.database import Database
 import os
 
 EXACT_UNITTEST_URL = 'https://exact.cs.fau.de/srut/'

@@ -26,7 +26,7 @@ import matplotlib.path as path
 import cv2
 from SlideRunner.gui import annotation as GUIannotation
 from SlideRunner.general import SlideRunnerPlugin
-from SlideRunner.dataAccess.annotations import *
+from SlideRunner_dataAccess.annotations import *
 
 def doubleClick(self, event):
     """
@@ -179,7 +179,8 @@ def leftClickImage(self, event):
 
         clickedAnno = None
         if (self.db.isOpen()):
-            clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP, zoom=self.getZoomValue())
+            # TODO: Fix me
+            #clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP, zoom=self.getZoomValue())
             if (clickedAnno is not None):
                 self.showDBEntry(clickedAnno)
                 self.selectedAnno = clickedAnno.uid

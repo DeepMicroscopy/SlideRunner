@@ -12,7 +12,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     inQueue = Queue()
     outQueue = Queue()
     updateTimer=0.5
-    outputType = SlideRunnerPlugin.PluginOutputType.BINARY_MASK
+    outputType = SlideRunnerPlugin.PluginOutputType.HEATMAP
     description = 'Apply simple OTSU threshold on the current image'
     pluginType = SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN
     

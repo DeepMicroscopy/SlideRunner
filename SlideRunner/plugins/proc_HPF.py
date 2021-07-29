@@ -27,7 +27,7 @@ import threading
 import openslide
 import numpy as np
 from threading import Thread
-import SlideRunner.dataAccess.annotations as annotations 
+import SlideRunner_dataAccess.annotations as annotations 
 
 
 class Plugin(SlideRunnerPlugin.SlideRunnerPlugin): 
@@ -42,6 +42,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     updateTimer=0.1
     slideFilename = None
     annos = list()
+    annotationLabels = {'HPF' : SlideRunnerPlugin.PluginAnnotationLabel(0,'HPF', [0,0,0,255]),}
+
     configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Re-center HPF', ctype=SlideRunnerPlugin.PluginConfigurationType.PUSHBUTTON),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid=1, name='Number of HPFs', initValue=1.00, minValue=1.0, maxValue=10.0),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid=2, name='Size of HPF (mm2)', initValue=0.237, minValue=0.20, maxValue=0.3),)) #0.237
@@ -53,6 +55,10 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
         
         
         pass
+
+    def getAnnotationLabels(self):
+        # sending default annotation labels
+        return list(self.annotationLabels.values())
 
     def getAnnotationUpdatePolicy():
           # This is important to tell SlideRunner that he needs to update for every change in position.
@@ -99,11 +105,10 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
         self.annos = list()
         if (int(job.configuration[1])==1):
-            myanno = annotations.rectangularAnnotation(0, center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, 'High-Power Field')
+            myanno = annotations.rectangularAnnotation(0, center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, 'High-Power Field', pluginAnnotationLabel=self.annotationLabels['HPF'])
         else:
-            myanno = annotations.rectangularAnnotation(0, center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, '%d High-Power Fields' %  int(job.configuration[1]))
+            myanno = annotations.rectangularAnnotation(0, center[0]-W_hpf/2, center[1]-H_hpf/2, center[0]+W_hpf/2, center[1]+H_hpf/2, '%d High-Power Fields' %  int(job.configuration[1]),pluginAnnotationLabel=self.annotationLabels['HPF'])
         self.annos.append(myanno)
 
         self.updateAnnotations()
 
- 

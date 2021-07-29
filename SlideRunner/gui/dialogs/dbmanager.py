@@ -1,5 +1,5 @@
 from SlideRunner.general.dependencies import *
-from SlideRunner.dataAccess.database import Database
+from SlideRunner_dataAccess.database import Database
 from functools import partial
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import pyqtSlot

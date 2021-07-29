@@ -1,8 +1,8 @@
 import requests
 import json
 from requests.auth import HTTPBasicAuth
-from SlideRunner.dataAccess.database import *
-from SlideRunner.dataAccess.annotations import *
+from SlideRunner_dataAccess.database import *
+from SlideRunner_dataAccess.annotations import *
 import time
 import datetime
 import re

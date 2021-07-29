@@ -29,9 +29,9 @@ import numpy as np
 import matplotlib.pyplot as plt 
 import matplotlib.colors
 import pickle
-import SlideRunner.dataAccess.annotations as annotations 
+import SlideRunner_dataAccess.annotations as annotations 
 import matplotlib.path as path
-from SlideRunner.dataAccess.database import Database, hex_to_rgb
+from SlideRunner_dataAccess.database import Database, hex_to_rgb
 
 
 class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
@@ -105,7 +105,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 self.annotationLabels = dict()
 
                 for key, (label, annoId,col) in enumerate(self.secondaryDB.getAllClasses()):
-                    self.annotationLabels[annoId] = SlideRunnerPlugin.PluginAnnotationLabel(0,'%s' % label, [*hex_to_rgb(col), 0])
+                    self.annotationLabels[annoId] = SlideRunnerPlugin.PluginAnnotationLabel(annoId,'%s' % label, [*hex_to_rgb(col), 255])
                 
                 pname,fname = os.path.split(job.slideFilename)
                 self.slideUID = self.secondaryDB.findSlideWithFilename(fname,pname)
@@ -130,7 +130,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
                 id_category = {x['id']:x['name'] for x in self.secondaryDB['categories']}
                 for key, (cat) in enumerate(self.secondaryDB['categories']):
-                    self.annotationLabels[int(cat['id'])] = SlideRunnerPlugin.PluginAnnotationLabel(0,'%s' % cat['name'], self.COLORS[key%len(self.COLORS)])
+                    self.annotationLabels[int(cat['id'])] = SlideRunnerPlugin.PluginAnnotationLabel(int(cat['id']),'%s' % cat['name'], self.COLORS[key%len(self.COLORS)])
                 
                 print('Added all labels')
 

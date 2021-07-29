@@ -1,5 +1,5 @@
 import SlideRunner.general.SlideRunnerPlugin as SlideRunnerPlugin
-import SlideRunner.dataAccess.annotations as annotations
+import SlideRunner_dataAccess.annotations as annotations
 import queue
 from threading import Thread
 from queue import Queue

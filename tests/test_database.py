@@ -1,4 +1,4 @@
-from SlideRunner.dataAccess.database import *
+from SlideRunner_dataAccess.database import *
 import os
 
 def test_database():
