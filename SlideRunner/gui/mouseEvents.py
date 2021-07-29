@@ -180,7 +180,7 @@ def leftClickImage(self, event):
         clickedAnno = None
         if (self.db.isOpen()):
             # TODO: Fix me
-            #clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP, zoom=self.getZoomValue())
+            clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, annotationClasses=self.annotationClasses, zoom=self.getZoomValue())
             if (clickedAnno is not None):
                 self.showDBEntry(clickedAnno)
                 self.selectedAnno = clickedAnno.uid
@@ -409,7 +409,7 @@ def rightClickImage(self, event):
             action = menu.exec_(self.mapToGlobal(event.pos()))
             return
 
-        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, self.currentVP, zoom=self.getZoomValue())
+        clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, annotationClasses=self.annotationClasses, zoom=self.getZoomValue())
         if (self.activePlugin is not None):
             clickedPluginAnno = self.activePlugin.instance.findClickAnnotation( clickPosition=mouseClickGlobal, pluginVP=self.currentPluginVP, zoom=self.getZoomValue())
         else:

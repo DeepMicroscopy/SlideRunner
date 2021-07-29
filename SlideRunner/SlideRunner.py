@@ -1755,7 +1755,7 @@ class SlideRunnerUI(QMainWindow):
         activeOverlays = [x for x in self.overlayMap.keys() if x is not None]
         print('Len activeOverlays:',len(activeOverlays))
         if ((self.activePlugins.numberActive > 0) and 
-           ((len(self.activePlugins.pluginsWithScrollUpdatePolicy)==0 ) or 
+           ((len(self.activePlugins.pluginsWithScrollUpdatePolicy)>0 ) or 
             len(self.activePlugins.imagePlugins)>0)):
             from threading import Timer
             if (self.updateTimer is not None):
@@ -1819,9 +1819,9 @@ class SlideRunnerUI(QMainWindow):
                                     npi[:,:,c] = np.uint8(np.clip(np.float32(npi[:,:,c])* (1-self.opacity) + self.opacity * (olm[:,:,c] ),0,255))
         else:
             print('No overlay', len(activeOverlays), len(self.activePlugins.pluginsWithOverlays))
-        if((self.activePlugins.activeOverlayPluginType != SlideRunnerPlugin.PluginTypes.NONE_PLUGIN) and hasattr(self.activePlugin.instance, 'overlayHeatmap')):
+        if((self.activePlugins.activeOverlayPluginType != SlideRunnerPlugin.PluginTypes.NONE_PLUGIN) and hasattr(self.activePlugins, 'activeOverlay') and hasattr(self.activePlugins.activeOverlay.instance, 'overlayHeatmap')):
             try:
-                heatmap = self.activePlugin.instance.overlayHeatmap(self.overviewimage)
+                heatmap = self.activePlugins.activeOverlay.instance.overlayHeatmap(self.overviewimage)
                 # Set pixmap of overview image (display overview image)
                 self.ui.OverviewLabel.setPixmap(self.vidImageToQImage(heatmap))
             except Exception as e:
@@ -1978,7 +1978,10 @@ class SlideRunnerUI(QMainWindow):
         """
         for plugin in self.annotationClasses:
             for row in self.annotationClasses[plugin]:
-                self.annotationClasses[plugin][row]['Active'] = self.annotationClasses[plugin][row]['checkbox'].checkState()
+                try:
+                    self.annotationClasses[plugin][row]['Active'] = self.annotationClasses[plugin][row]['checkbox'].checkState()
+                except Exception:
+                    pass
 
         self.showAnnotationsInOverview()
         self.showImage()
