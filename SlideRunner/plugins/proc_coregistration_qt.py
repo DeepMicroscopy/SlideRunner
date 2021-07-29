@@ -123,8 +123,6 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 imgarea_w=job.coordinates[2:4]
                 size_im = (int(imgarea_w[0]/closest_ds), int(imgarea_w[1]/closest_ds))
                 print('Image size: ',size_im)
-                #location = [int(x+y) for x,y in zip(job.coordinates[0:2],offset)]
-#                location = [int(x/closest_ds) for x in reg_coordinates]
                 location = [int(x) for x in reg_coordinates[0:2]]
                 print('Location (original):',job.coordinates[0:2])
                 print('Location (offset): ',location)
@@ -140,7 +138,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                 # signal to exit this thread
                 quitSignal=True
                 continue
-            print('OTSU plugin: received 1 image from queue')
+            
 
 
 
