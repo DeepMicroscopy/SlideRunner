@@ -34,6 +34,7 @@ class PluginTypes(enumerate):
 
 class PluginOutputType(enumerate):
       HEATMAP = 0
+      BINARY_MASK = 0
       RGB_IMAGE = 1
       RGB_OVERLAY = 2
       NO_OVERLAY = 3
