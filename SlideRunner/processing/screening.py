@@ -56,6 +56,7 @@ class screeningMap(object):
         check_y = np.int16(np.floor((coordinates[1])*self.map.shape[0]))
         self.w_screeningmap = np.int16(np.floor(0.9*imgarea_w[0]/self.slideLevelDimensions[0][0]*self.mapWorkingCopy.shape[1]))
         self.h_screeningmap = np.int16(np.floor(0.9*imgarea_w[1]/self.slideLevelDimensions[0][1]*self.mapWorkingCopy.shape[0]))
+#        print('Checking ',check_x,check_y,self.w_screeningmap,self.h_screeningmap,imgarea_w,np.sum(self.mapWorkingCopy))
 
         sumMap = np.sum(self.mapWorkingCopy[check_y:check_y+self.h_screeningmap, check_x:check_x+self.w_screeningmap])
         if (sumMap>0):
@@ -109,7 +110,7 @@ class screeningMap(object):
         self.h_screeningmap = np.int16(np.floor(0.9*imgarea_w[1]/self.slideLevelDimensions[0][1]*self.mapWorkingCopy.shape[0]))
 
 
-        self.mapWorkingCopy[y_screeningmap:y_screeningmap+self.h_screeningmap,x_screeningmap:x_screeningmap+self.w_screeningmap] = 0
+        #self.mapWorkingCopy[y_screeningmap:y_screeningmap+self.h_screeningmap,x_screeningmap:x_screeningmap+self.w_screeningmap] = 0
 
         image_dims=self.slideLevelDimensions[0]
 
