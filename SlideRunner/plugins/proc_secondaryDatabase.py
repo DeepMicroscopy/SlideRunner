@@ -141,7 +141,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
                         myanno = annotations.rectangularAnnotation(uid=k, x1=bbox[0], y1=bbox[1], x2=bbox[2], y2=bbox[3], pluginAnnotationLabel=self.annotationLabels[int(anno['category_id'])])                
                         self.annos.append(myanno)
             else:
-                selt.setMessage('Could not interpret database format: '+oldArchive.split('.')[-1].upper())
+                self.setMessage('Could not interpret database format: '+oldArchive.split('.')[-1].upper())
 
             self.sendAnnotationLabelUpdate()
 
