@@ -7,4 +7,4 @@ nibabel==3.1.1
 EXCAT-Sync==0.0.20
 scikit-image==0.16.2
 SlideRunner_dataAccess==1.0.3
-opencv-python=4.5.3
+opencv-python==4.5.3
