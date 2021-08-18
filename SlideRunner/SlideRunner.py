@@ -2540,6 +2540,10 @@ class SlideRunnerUI(QMainWindow):
 
         self.ui.annotationTypeTableView.setRowCount(len(classes)+1+len(allAnnotationLabels))
 
+        if (self.redrawDBClasses):
+            self.redrawDBClasses=False
+            self.annotationClasses[0] = {}
+
         self.ui.annotationTypeTableView.setColumnCount(4)
         item = QTableWidgetItem('unknown')
         pixmap = QPixmap(10,10)
@@ -2547,7 +2551,13 @@ class SlideRunnerUI(QMainWindow):
         itemcol = QTableWidgetItem('')
         itemcol.setBackground(QColor.fromRgb(self.get_color(0)[0],self.get_color(0)[1],self.get_color(0)[2]))
         checkbx = QCheckBox()
-        checkbx.setChecked(True)
+        if (0) in self.annotationClasses[0]:
+            checked=self.annotationClasses[0][0]['Active']
+        else:
+            checked=True
+        self.annotationClasses[0][0] = {'plugin':0, 'checkbox':checkbx, 'Class':'unknown', 'Active':checked}
+        checkbx.setChecked(checked)
+
         tableRows[0] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, 0, uid=0, color='#000000')
         checkbx.stateChanged.connect(self.selectClasses)
         self.ui.annotationTypeTableView.setItem(0,2, item)
@@ -2560,9 +2570,6 @@ class SlideRunnerUI(QMainWindow):
         # For all classes in the database, make an entry in the table with
         # a class button and respective correct color
         
-        if (self.redrawDBClasses):
-            self.redrawDBClasses=False
-            self.annotationClasses[0] = {}
 
         for clsid in range(len(classes)):
             clsname = classes[clsid]
