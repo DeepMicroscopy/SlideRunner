@@ -2090,6 +2090,23 @@ class SlideRunnerUI(QMainWindow):
         self.ui.databaseLabel.setText(dbinfo)
         self.showDBstatistics()
 
+    def saveTIFFfile(self, coordinates):
+        image = self.slide.read_region(location=coordinates[0:2], size=[coordinates[2]-coordinates[0], coordinates[3]-coordinates[1]], level=0, zLevel=self.zPosition)
+        filename = QFileDialog.getSaveFileName(filter='TIFF Images (*.tiff)')[0]
+        if openslide.PROPERTY_NAME_MPP_X in self.slide.properties:
+            mpp_x = float(self.slide.properties[openslide.PROPERTY_NAME_MPP_X])
+            mpp_y = float(self.slide.properties[openslide.PROPERTY_NAME_MPP_Y])
+            cm2in = 2.54
+            micron2cm = 10000
+            # res_x is microns/px, 1/res_x is px/micron
+            dpi_x = 1/mpp_x * micron2cm * cm2in
+            dpi_y = 1/mpp_y * micron2cm * cm2in
+            if filename is not None and len(filename)>0:
+                image.save(filename, dpi=[dpi_x,dpi_y])
+        else:
+            if filename is not None and len(filename)>0:
+                image.save(filename)
+
     def savescreenshot(self):
         filename = QFileDialog.getSaveFileName(filter='PNG Images (*.png)')[0]
         if filename is not None and len(filename)>0:

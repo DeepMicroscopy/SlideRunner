@@ -474,8 +474,8 @@ def rightClickImage(self, event):
                             act.setChecked(True)
                         menuitems.append(act)
 
-
-
+            if (clickedAnno.annotationType == AnnotationType.AREA):
+                act = menu.addAction('Crop and save selection as TIFF file', partial(self.saveTIFFfile, coordinates = [int(clickedAnno.x1), int(clickedAnno.y1), int(clickedAnno.x2), int(clickedAnno.y2)]))
 
             if (self.activePlugin is not None):
                 pluginActionMenu = menu.addMenu('Plugin:'+self.activePlugin.instance.shortName)
