@@ -45,7 +45,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     annotationLabels = {'HPF' : SlideRunnerPlugin.PluginAnnotationLabel(0,'HPF', [0,0,0,255]),}
 
     configurationList = list((SlideRunnerPlugin.PluginConfigurationEntry(uid=0, name='Re-center HPF', ctype=SlideRunnerPlugin.PluginConfigurationType.PUSHBUTTON),
-                              SlideRunnerPlugin.PluginConfigurationEntry(uid=1, name='Number of HPFs', initValue=1.00, minValue=1.0, maxValue=10.0),
+                              SlideRunnerPlugin.PluginConfigurationEntry(uid=1, name='Number of HPFs', initValue=0.5, minValue=0.5, maxValue=10.0),
                               SlideRunnerPlugin.PluginConfigurationEntry(uid=2, name='Size of HPF (mm2)', initValue=0.237, minValue=0.20, maxValue=0.3),)) #0.237
     
     def __init__(self, statusQueue:Queue):
@@ -97,8 +97,8 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
 
         micronsPerPixel = self.slide.properties[openslide.PROPERTY_NAME_MPP_X]
 
-        W_hpf = int(W_hpf_microns / float(micronsPerPixel)) * np.sqrt(float(int(job.configuration[1]))) 
-        H_hpf = int(H_hpf_microns / float(micronsPerPixel)) * np.sqrt(float(int(job.configuration[1])))
+        W_hpf = int(W_hpf_microns / float(micronsPerPixel)) * np.sqrt(float(0.5*int(2*job.configuration[1]))) 
+        H_hpf = int(H_hpf_microns / float(micronsPerPixel)) * np.sqrt(float(0.5*int(2*job.configuration[1])))
 
         center = (int((job.coordinates[0]+0.5*job.coordinates[2])),
                   int((job.coordinates[1]+0.5*job.coordinates[3])))
