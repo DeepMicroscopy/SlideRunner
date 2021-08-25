@@ -315,7 +315,7 @@ def releaseImage(self, event):
 
             self.showImage()
             menu = QMenu(self)
-            clickedAnno = self.db.findIntersectingAnnotation(polygonAnnotation(-1, self.ui.wandAnnotation.polygon), self.currentVP, annoType=AnnotationType.POLYGON)
+            clickedAnno = self.db.findIntersectingAnnotation(polygonAnnotation(-1, self.ui.wandAnnotation.polygon), self.currentVP, annoType=AnnotationType.POLYGON, annotationClasses=self.annotationClasses)
             if (clickedAnno is not None):
                 self.selectedAnno = clickedAnno.uid
                 self.showImage()
@@ -380,7 +380,7 @@ def rightClickImage(self, event):
 
         if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON):
             menu = QMenu(self)
-            clickedAnno = self.db.findIntersectingAnnotation(polygonAnnotation(-1, self.ui.annotationsList), self.currentVP, annoType=AnnotationType.POLYGON)
+            clickedAnno = self.db.findIntersectingAnnotation(polygonAnnotation(-1, self.ui.annotationsList), self.currentVP, annoType=AnnotationType.POLYGON, annotationClasses=self.annotationClasses)
             if (clickedAnno is not None):
                 self.selectedAnno = clickedAnno.uid
                 self.showImage()
