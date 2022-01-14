@@ -14,6 +14,7 @@ from skimage.color import rgb2lab
 from sklearn.naive_bayes import GaussianNB
 from sklearn import linear_model
 import matplotlib.pyplot as plt
+from PIL import Image
 import logging
 
 class TissueDetector:
@@ -209,8 +210,22 @@ class WSI_Matcher:
             layer_match_offset = []
             layer_matched_patch_cnt = 0
             for p in range(len(fixed_loc_x)):
-                fixed_patch = fixed_wsi_obj.read_region((fixed_loc_y[p], fixed_loc_x[p]), l + 1, (layer_patch_size[l], layer_patch_size[l])).convert("RGB")
-                float_patch = float_wsi_obj.read_region((float_loc_y[p], float_loc_x[p]), l + 1, (layer_patch_size[l], layer_patch_size[l])).convert("RGB")
+                fixed_patch = fixed_wsi_obj.read_region((fixed_loc_y[p], fixed_loc_x[p]), l + 1, (layer_patch_size[l], layer_patch_size[l]))
+                float_patch = float_wsi_obj.read_region((float_loc_y[p], float_loc_x[p]), l + 1, (layer_patch_size[l], layer_patch_size[l]))
+
+                alpha_fixed = np.array(fixed_patch)[:,:,-1]
+                alpha_float = np.array(fixed_patch)[:,:,-1]
+
+                fixed_patch = np.array(fixed_patch)[:,:,0:3]
+                float_patch = np.array(float_patch)[:,:,0:3]
+
+                for k in range(3):
+                    fixed_patch[alpha_fixed==0,k] = 255
+                    float_patch[alpha_float==0,k] = 255
+                
+                fixed_patch = Image.fromarray(fixed_patch)
+                float_patch = Image.fromarray(float_patch)
+
                 Content_rich_fixed = self.filter_by_content_area(np.array(fixed_patch), area_threshold=0.5)
                 Content_rich_float = self.filter_by_content_area(np.array(float_patch), area_threshold=0.5)
                 if Content_rich_fixed and Content_rich_float:
@@ -365,7 +380,7 @@ class Plugin(SlideRunnerPlugin.SlideRunnerPlugin):
     pluginType = SlideRunnerPlugin.PluginTypes.IMAGE_PLUGIN
 
     configurationList = list((
-                            SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Second WSI', mask='*.svs;;*.tif'),
+                            SlideRunnerPlugin.FilePickerConfigurationEntry(uid='file', name='Second WSI', mask='*.svs;;*.tif;;*.mrxs;;*.*'),
                             SlideRunnerPlugin.PluginConfigurationEntry(uid='xoffset', name='X Offset', initValue=0, minValue=-2000, maxValue=2000.0),
                             SlideRunnerPlugin.PluginConfigurationEntry(uid='yoffset', name='Y Offset', initValue=0, minValue=-2000, maxValue=2000.0),
                             SlideRunnerPlugin.PushbuttonPluginConfigurationEntry(uid='match',name='Match')
