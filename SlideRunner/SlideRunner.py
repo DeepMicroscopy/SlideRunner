@@ -290,6 +290,10 @@ class SlideRunnerUI(QMainWindow):
         else:
             self.rotateImage = bool(self.settings.value('rotateImage',False))
 
+        if (isinstance(self.settings.value('labelImageVisible',True),str)):
+            self.labelImageVisible = True if self.settings.value('labelImageVisible',True).upper()=='TRUE' else False
+        else:
+            self.labelImageVisible = bool(self.settings.value('labelImageVisible',True))
 
         if (SLIDERUNNER_DEBUG):
             self.logger = logging.getLogger()
@@ -823,7 +827,19 @@ class SlideRunnerUI(QMainWindow):
 
     """
 
+    def setLabelImage(self):
+        """
+            Sets the label Image visibility
+        """
+        self.labelImageVisible = not self.labelImageVisible
+        self.settings.setValue('labelImageVisible',self.labelImageVisible)
+        self.ui.labelimg.setChecked(self.labelImageVisible)
+        self.showImage()
+
     def setRotate(self):
+        """
+            Sets the rotate property of the slide
+        """
         self.rotateImage = not self.rotateImage
         self.settings.setValue('rotateImage',self.rotateImage)
         self.ui.rotate.setChecked(self.settings.value('rotateImage', False))
@@ -1924,6 +1940,13 @@ class SlideRunnerUI(QMainWindow):
             else:
                 cv2.putText(npi, '%d microns' % legendMicrons, (positionLegendX, positionLegendY+15), cv2.FONT_HERSHEY_PLAIN , 0.7,(0,0,0),1,cv2.LINE_AA)
 
+        # Add Label Image (if configured and available):
+        if (self.labelImg is not None) and (self.labelImageVisible):
+            lis = self.labelImg.shape
+            npi[5:15+lis[0], 5:15+lis[1],0:3] = 0
+            npi[10:10+lis[0], 10:10+lis[1],0:3] = self.labelImg[:,:,0:3]
+            npi[5:15+lis[0], 5:15+lis[1],3] = 255
+
         if (self.overlayExtremes is not None):
             # Add legend for colour code
             positionColorLegendX = npi.shape[1]-80
@@ -2840,6 +2863,8 @@ class SlideRunnerUI(QMainWindow):
         self.ui.frameSlider.setFPS(self.slide.fps)
         self.ui.frameSlider.setValue(0)
         self.ui.frameSlider.valueChanged.connect(self.frameChanged)
+
+        self.labelImg = self.slide.get_label_image(target_size_x=150)
 
         if (openslide.PROPERTY_NAME_OBJECTIVE_POWER in self.slide.properties):
             self.slideMagnification = self.slide.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]

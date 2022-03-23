@@ -153,6 +153,12 @@ def defineMenu(self, MainWindow, pluginList, initial=True):
         rotval = MainWindow.settings.value('rotateImage', False)
         self.rotate.setChecked(rotval if not isinstance(rotval,str) else rotval.upper()=='TRUE')
 
+        self.labelimg = self.zoomMenu.addAction('Label image visible', MainWindow.setLabelImage)
+        self.labelimg.setCheckable(True)
+        visval = MainWindow.settings.value('labelImageVisible', True)
+        self.labelimg.setChecked(visval if not isinstance(visval,str) else visval.upper()=='TRUE')
+
+
         self.menuItemView = self.zoomMenu.addAction('Go to coordinate', MainWindow.goToCoordinate)
         self.saveSnapshot = self.zoomMenu.addAction('Create snapshot of current view', MainWindow.savescreenshot)
         self.copySnapshot = self.zoomMenu.addAction('Copy snapshot of current view (clipboard)', MainWindow.copyscreenshot)
