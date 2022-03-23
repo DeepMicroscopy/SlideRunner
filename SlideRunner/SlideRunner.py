@@ -2864,7 +2864,11 @@ class SlideRunnerUI(QMainWindow):
         self.ui.frameSlider.setValue(0)
         self.ui.frameSlider.valueChanged.connect(self.frameChanged)
 
-        self.labelImg = self.slide.get_label_image(target_size_x=150)
+        if hasattr(self.slide, 'get_label_image'):
+            self.labelImg = self.slide.get_label_image(target_size_x=150)
+        else:
+            print('SlideRunner_dataAccess is not capable of retrieving label images. Please update SlideRunner_dataAccess.')
+            self.labelImg = None
 
         if (openslide.PROPERTY_NAME_OBJECTIVE_POWER in self.slide.properties):
             self.slideMagnification = self.slide.properties[openslide.PROPERTY_NAME_OBJECTIVE_POWER]
