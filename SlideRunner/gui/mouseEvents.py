@@ -325,9 +325,10 @@ def releaseImage(self, event):
                 addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno, self.ui.wandAnnotation.polygon))
 
             DBclasses=self.db.getAllClasses()
-            DBclassToName = {classId:className for className,classId,color in DBclasses}
+            DBclassIdxToName = {idx:className for idx, (className,classId,color) in enumerate(DBclasses)}
+            DBclassIdxToClassId = {idx:classId for idx, (className,classId,color) in enumerate(DBclasses)}
             if (self.lastAnnotationClass>0):
-                act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.wandAnnotation.polygon))
+                act=menu.addAction('Annotate (%s)'%DBclassIdxToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, DBclassIdxToClassId[self.lastAnnotationClass], event, self.ui.wandAnnotation.polygon))
                 act.setShortcut(Qt.Key_Enter)
             addmenu = menu.addMenu('Annotate as:')
             menuitems = list()
