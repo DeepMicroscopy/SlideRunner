@@ -39,8 +39,10 @@ def doubleClick(self, event):
         if (self.ui.annotationMode==2): # replace annotation
                 act=menu.addAction('Save annotation',partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
         else:
+            DBclassIdxToName = {idx+1:className for idx, (className,classId,color) in enumerate(DBclasses)}
+            DBclassIdxToClassId = {idx+1:classId for idx, (className,classId,color) in enumerate(DBclasses)}
             if (self.lastAnnotationClass>0):
-                act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
+                act=menu.addAction('Annotate (%s)'%DBclassIdxToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, DBclassIdxToClassId[self.lastAnnotationClass], event, self.ui.annotationsList))
                 act.setShortcut(Qt.Key_Enter)
             addmenu = menu.addMenu('Annotate as:')
             menuitems = list()
@@ -325,8 +327,8 @@ def releaseImage(self, event):
                 addmenu.addAction('Add area to existing annotation', partial(GUIannotation.addToPolygon, self, clickedAnno, self.ui.wandAnnotation.polygon))
 
             DBclasses=self.db.getAllClasses()
-            DBclassIdxToName = {idx:className for idx, (className,classId,color) in enumerate(DBclasses)}
-            DBclassIdxToClassId = {idx:classId for idx, (className,classId,color) in enumerate(DBclasses)}
+            DBclassIdxToName = {idx+1:className for idx, (className,classId,color) in enumerate(DBclasses)}
+            DBclassIdxToClassId = {idx+1:classId for idx, (className,classId,color) in enumerate(DBclasses)}
             if (self.lastAnnotationClass>0):
                 act=menu.addAction('Annotate (%s)'%DBclassIdxToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, DBclassIdxToClassId[self.lastAnnotationClass], event, self.ui.wandAnnotation.polygon))
                 act.setShortcut(Qt.Key_Enter)
@@ -393,10 +395,14 @@ def rightClickImage(self, event):
             if (self.ui.annotationMode==2): # replace annotation
                 act=menu.addAction('Save annotation',partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
             else:
-                DBclassToName = {classId:className for className,classId,color in DBclasses}
+                DBclassIdxToName = {idx+1:className for idx, (className,classId,color) in enumerate(DBclasses)}
+                DBclassIdxToClassId = {idx+1:classId for idx, (className,classId,color) in enumerate(DBclasses)}
                 if (self.lastAnnotationClass>0):
-                    act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
+                    act=menu.addAction('Annotate (%s)'%DBclassIdxToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, DBclassIdxToClassId[self.lastAnnotationClass], event, self.ui.annotationsList))
                     act.setShortcut(Qt.Key_Enter)
+#                if (self.lastAnnotationClass>0):
+#                    act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
+#                    act.setShortcut(Qt.Key_Enter)
                 addmenu = menu.addMenu('Annotate as:')
             
                 menuitems = list()

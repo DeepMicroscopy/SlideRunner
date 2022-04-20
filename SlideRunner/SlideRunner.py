@@ -1977,10 +1977,12 @@ class SlideRunnerUI(QMainWindow):
             return
         if (row>=len(self.annotationTypesTable)):
             return
-        self.annotationTypesTable[row].stateChanged.disconnect(self.selectClasses)
-        self.annotationTypesTable[row].setChecked(not(self.annotationTypesTable[row].checkState()))
+        
+        entry = list(self.annotationTypesTable.keys())[row]
+        self.annotationTypesTable[entry].stateChanged.disconnect(self.selectClasses)
+        self.annotationTypesTable[entry].setChecked(not(self.annotationTypesTable[row].checkState()))
     
-        self.annotationTypesTable[row].stateChanged.connect(self.selectClasses)
+        self.annotationTypesTable[entry].stateChanged.connect(self.selectClasses)
        
         self.selectClasses(None)
 
@@ -2000,6 +2002,7 @@ class SlideRunnerUI(QMainWindow):
             Helper function to select classes for enabling/disabling display of annotations
 
         """
+        print('Running selectClasses',plugin,row)
         for plugin in self.annotationClasses:
             for row in self.annotationClasses[plugin]:
                 try:
@@ -2570,7 +2573,7 @@ class SlideRunnerUI(QMainWindow):
         tableRows = dict()
         model = QStandardItemModel()
         
-        self.annotationTypesTable = list()
+        self.annotationTypesTable = dict()
         self.pluginannotationTypesTable = list()
         classes =   self.db.getAllClasses() if self.db.isOpen() else []
         self.classButtons = list()
@@ -2605,41 +2608,40 @@ class SlideRunnerUI(QMainWindow):
         self.ui.annotationTypeTableView.setCellWidget(0,0, checkbx)
         self.annotationClassOrigin = {}
         if (self.db.isOpen()):
-            self.annotationTypesTable.append(checkbx)
+            self.annotationTypesTable[0] = checkbx
 
         # For all classes in the database, make an entry in the table with
         # a class button and respective correct color
         
 
-        for clsid in range(len(classes)):
-            clsname = classes[clsid]
-            item = QTableWidgetItem(clsname[0])
+        for clsid, (className,classId,color) in enumerate(classes):
+            item = QTableWidgetItem(className)
             item.setFlags(Qt.ItemIsSelectable)
             pixmap = QPixmap(10,10)
-            pixmap.fill(QColor.fromRgb(*hex_to_rgb(clsname[2])))
+            pixmap.fill(QColor.fromRgb(*hex_to_rgb(color)))
             btn = QPushButton('')
 
             btn.clicked.connect(partial(self.clickAnnoclass, clsid+1))
-            self.classButtons.append(btn)
+            self.classButtons.append(btn) 
             itemcol = QTableWidgetItem('')
             itemcol.setFlags(Qt.NoItemFlags)
             checkbx = QCheckBox()
-            itemcol.setBackground(QColor.fromRgb(*hex_to_rgb(clsname[2])))
-            self.annotationTypesTable.append(checkbx)
+            itemcol.setBackground(QColor.fromRgb(*hex_to_rgb(color)))
+            self.annotationTypesTable[classId] = checkbx
             self.ui.annotationTypeTableView.setItem(clsid+1,2, item)
             self.ui.annotationTypeTableView.setItem(clsid+1,1, itemcol)
             self.ui.annotationTypeTableView.setCellWidget(clsid+1,0, checkbx)
             self.ui.annotationTypeTableView.setCellWidget(clsid+1,3, btn)
-            if (clsid+1) in self.annotationClasses[0]:
-                checked=self.annotationClasses[0][clsid+1]['Active']
+            if (classId) in self.annotationClasses[0]:
+                checked=self.annotationClasses[0][classId]['Active']
             else:
                 checked=True
-            self.annotationClasses[0][clsid+1] = {'plugin':0, 'checkbox':checkbx, 'Class':clsname[0], 'Active':checked}
+            self.annotationClasses[0][classId] = {'plugin':0, 'checkbox':checkbx, 'Class':className, 'Active':checked}
             checkbx.setChecked(checked)
 
-            checkbx.stateChanged.connect(partial(self.selectClasses, 0, clsid+1))
+            checkbx.stateChanged.connect(partial(self.selectClasses, 0, classId))
 
-            tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid, clsname[1], clsname[2])
+            tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid, classId, color)
         
         rowIdx =   len(self.db.getAllClasses())+1 if self.db.isOpen() else 0
 
