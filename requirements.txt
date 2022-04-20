@@ -1,7 +1,7 @@
 rollbar==0.14.7
 openslide-wrapper==1.1.2
 matplotlib==3.1.1
-numpy==1.17.3
+numpy==1.21.0
 requests_toolbelt==0.9.1
 nibabel==3.1.1
 EXCAT-Sync==0.0.20
