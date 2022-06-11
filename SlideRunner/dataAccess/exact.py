@@ -513,7 +513,7 @@ class ExactManager():
                         self.log(1,f'Changing all annotation labels of old type = {oldId}, with annotation Type={annoType}, to new type: {newId}')
                         database.changeAllAnnotationLabelsOfType(oldId, annoType, newId)
                         # reload slide
-                        database.loadIntoMemory(database.annotationsSlide,zLevel)
+                        database.loadIntoMemory(database.annotationsSlide,zLevel=None)
 
 
         self.progress(1, callback=callback)
