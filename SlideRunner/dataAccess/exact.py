@@ -176,10 +176,9 @@ class ExactManager():
         self.progress(float(monitor.bytes_read)/monitor.len)
 
 
-    def retrieve_and_insert(self, dataset_id:int, slideuid:int, database:Database,  callback:callable=None, **kwargs ):
+    def _retrieve_and_insert(self, dataset_id:int, slideuid:int, database:Database,  callback:callable=None, **kwargs ):
 
         def createDatabaseObject():
-            database.deleteTriggers()
             zLevel = anno.vector['frame']-1 if 'frame' in anno.vector else 0
             if (vector_type == 3): # line
                 annoId = database.insertNewPolygonAnnotation(annoList=coords, slideUID=slideuid, classID=classes_rev[class_name], annotator=persons[person_name], exact_id=exact_id, description=anno.description, zLevel=zLevel)
@@ -202,7 +201,6 @@ class ExactManager():
             if (anno.deleted):
                 database.removeAnnotation(database.guids[uuid],onlyMarkDeleted=True)
             
-            database.addTriggers()
             return annoId
 
         self.progress(0, callback=callback)
@@ -214,8 +212,6 @@ class ExactManager():
         
         if (slideuid is None):
             raise ExactProcessError('Slide not in database. Please add it first.')
-
-        database.deleteTriggers()
 
         classes = {y:x for x,y,col in database.getAllClasses()}
         classes_rev = {x:y for x,y,col in database.getAllClasses()}
@@ -281,7 +277,8 @@ class ExactManager():
                     annoId = createDatabaseObject()
                     database.setGUID(annoid=annoId, guid=uuid)
                     database.setLastModified(annoid=annoId, lastModified=lastedit.timestamp())
-                    self.log(1, f'Importing remote object with guid {uuid}')
+                    self.log(1, f'Importing remote object with guid {uuid}, last edit: {lastedit.timestamp()}')
+                    
                 elif (vlen>0):
 #                    print('Object exists, last edit was: ',lastedit.timestamp(), database.annotations[database.guids[uuid]].lastModified)
                     if (lastedit.timestamp()-EPS_TIME_CONVERSION>database.annotations[database.guids[uuid]].lastModified):
@@ -309,7 +306,6 @@ class ExactManager():
                             database.addAnnotationLabel(classId=classes_rev[class_name], person=persons[person_name], annoId=database.guids[uuid], exact_id=anno.id)
                             self.log(1,'Adding new label for annotation uuid = ',uuid,classes_rev[class_name],persons[person_name])
         
-        database.addTriggers()
 
     def retrieve_imagesets(self):
         imagesets = self.APIs.image_sets_api.list_image_sets(pagination=False, expand='product_set').results
@@ -319,7 +315,10 @@ class ExactManager():
 
         annotypedict = dict()
         mergeLocalClasses=dict()
-        self.retrieve_and_insert(dataset_id=dataset_id, slideuid=slideuid, database=database, callback=callback)
+
+        database.deleteTriggers()
+
+        self._retrieve_and_insert(dataset_id=dataset_id, slideuid=slideuid, database=database, callback=callback)
 
         def getAnnotationTypes():
             annotypes = self.APIs.annotation_types_api.list_annotation_types(product=product_id, pagination=False).results
@@ -433,7 +432,7 @@ class ExactManager():
                             vector = list_to_exactvector(dbanno.coordinates.tolist(),zLevel=dbanno.zLevel)
                             self.APIs.annotations_api.partial_update_annotation(id=idts, annotation_type=get_or_create_annotationtype(lts,dbanno.annotationType), last_edit_time=lastModified, vector=vector, deleted=dbanno.deleted, unique_identifier=dbanno.guid, description=dbanno.text)
 #                            self.update_annotation(,annotation_id=idts, )      
-#                            print('UPDATING Annotation')           
+#                            print(f'UPDATING Annotation {idts}', lastedit.timestamp()+EPS_TIME_CONVERSION, dbanno.lastModified)           
                         else:
                             # case: exact_id is unknown
                             # can have the following causes:
@@ -481,9 +480,7 @@ class ExactManager():
                         # add new exact_id to DB field
                         label = dbanno.labels[i]
                         # for local update, do not set Annotation.lastModified
-                        database.deleteTriggers()
                         database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=det['annotations']['id'])
-                        database.addTriggers()
                         label.exact_id = det['annotations']['id']
 
             # make updates to local database until final.
@@ -494,10 +491,8 @@ class ExactManager():
                 pending_requests-=1
                 i = context['labeluid']
                 label = dbanno.labels[i]
-                database.deleteTriggers()
                 print('Received reply:',res)
                 database.setAnnotationLabel(classId=label.classId,  person=label.annnotatorId, entryId=label.uid, annoIdx=dbanno.uid, exact_id=res.id)
-                database.addTriggers()
                 label.exact_id = res.id
 
             # finally, lets find out if we need to make modifications to the 
@@ -515,6 +510,7 @@ class ExactManager():
                         # reload slide
                         database.loadIntoMemory(database.annotationsSlide,zLevel=None)
 
+        database.addTriggers()
 
         self.progress(1, callback=callback)
 
