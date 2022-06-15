@@ -6,5 +6,5 @@ requests_toolbelt==0.9.1
 nibabel==3.1.1
 EXCAT-Sync==0.0.20
 scikit-image==0.16.2
-SlideRunner_dataAccess==1.0.3
+SlideRunner_dataAccess==1.0.6
 opencv-python==4.5.3.56
