@@ -32,11 +32,12 @@ class ClassRowItemId (enumerate):
     ITEM_PLUGIN = 1
 
 class ClassRowItem(object):
-    def __init__(self,  itemID: ClassRowItemId, classID, uid:int = None, color:str='#000000'):
+    def __init__(self,  itemID: ClassRowItemId, classID, uid:int = None, color:str='#000000', clickable:bool=True):
         self.itemID = itemID
         self.uid = uid
         self.color = color
         self.classID = classID
+        self.clickable = clickable
 
 
 class WandAnnotation(object):

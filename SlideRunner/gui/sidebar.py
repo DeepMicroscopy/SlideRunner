@@ -33,6 +33,11 @@ class ClassSelectTableWidget(QTableWidget):
                                 changeColorAction = menu.addAction('Change color', partial(GUIannotation.changeClassColor, self.parentObject, self.parentObject.classList[rowId].color, self.parentObject.classList[rowId].uid))                
                                 renameAction = menu.addAction('Rename class',partial(GUIannotation.renameClass,self.parentObject, self.parentObject.classList[rowId].uid))                
                                 removeAction = menu.addAction('Remove class', partial(GUIannotation.deleteClass, self.parentObject, self.parentObject.classList[rowId].uid))                
+                                
+                                if (self.parentObject.classList[rowId].clickable == True):
+                                        clickableAction = menu.addAction('Make class non-clickable', partial(GUIannotation.clickableClass, self.parentObject, self.parentObject.classList[rowId].uid, False))                
+                                else:
+                                        clickableAction = menu.addAction('Make class clickable', partial(GUIannotation.clickableClass, self.parentObject, self.parentObject.classList[rowId].uid, True))                
 
                                 removeAllOfClassAction = menu.addAction('Remove all of this class from slide', partial(GUIannotation.deleteAllFromClassOnSlide,self.parentObject, self.parentObject.classList[rowId].uid))
                                 setSlideLabel = menu.addAction('Assign to complete image', partial(GUIannotation.addImageLabel, self.parentObject, self.parentObject.classList[rowId].uid))                

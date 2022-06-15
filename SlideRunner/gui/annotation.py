@@ -72,6 +72,11 @@ def renameClass(self, classID, event = None):
         self.db.renameClass(classID, name)
         self.showDatabaseUIelements()
 
+def clickableClass(self, classID, clickable:bool, event = None):
+    self.db.setClassClickable(classID, clickable)
+    self.showDatabaseUIelements()
+    self.showImage()
+
 def changeClassColor(self,oldcolor, classID, event = None):
 
 

@@ -2614,8 +2614,8 @@ class SlideRunnerUI(QMainWindow):
         # a class button and respective correct color
         
 
-        for clsid, (className,classId,color) in enumerate(classes):
-            item = QTableWidgetItem(className)
+        for clsid, (className,classId,color,clckbl) in enumerate(classes):
+            item = QTableWidgetItem(className if clckbl else '('+className+')')
             item.setFlags(Qt.ItemIsSelectable)
             pixmap = QPixmap(10,10)
             pixmap.fill(QColor.fromRgb(*hex_to_rgb(color)))
@@ -2636,12 +2636,12 @@ class SlideRunnerUI(QMainWindow):
                 checked=self.annotationClasses[0][classId]['Active']
             else:
                 checked=True
-            self.annotationClasses[0][classId] = {'plugin':0, 'checkbox':checkbx, 'Class':className, 'Active':checked}
+            self.annotationClasses[0][classId] = {'plugin':0, 'checkbox':checkbx, 'Class':className, 'Active':checked, 'Clickable': clckbl}
             checkbx.setChecked(checked)
 
             checkbx.stateChanged.connect(partial(self.selectClasses, 0, classId))
 
-            tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid, classId, color)
+            tableRows[clsid+1] = ClassRowItem(ClassRowItemId.ITEM_DATABASE, clsid, classId, color, clckbl)
         
         rowIdx =   len(self.db.getAllClasses())+1 if self.db.isOpen() else 0
 

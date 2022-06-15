@@ -213,9 +213,9 @@ class ExactManager():
         if (slideuid is None):
             raise ExactProcessError('Slide not in database. Please add it first.')
 
-        classes = {y:x for x,y,col in database.getAllClasses()}
-        classes_rev = {x:y for x,y,col in database.getAllClasses()}
-        classes_col = {y:col for x,y,col in database.getAllClasses()}
+        classes = {y:x for x,y,col,clckbl in database.getAllClasses()}
+        classes_rev = {x:y for x,y,col,clckbl in database.getAllClasses()}
+        classes_col = {y:col for x,y,col,clckbl in database.getAllClasses()}
 
         persons = {x:y for x,y in database.getAllPersons()}
         
@@ -256,9 +256,9 @@ class ExactManager():
                         raise AccessViolationError('Not permitted to create new classes, but class %d not found' % anno.annotation_type['name'])
                     else:
                         database.insertClass(class_name)
-                        classes = {x:y for y,x,col in database.getAllClasses()}
-                        classes_rev = {x:y for x,y,col in database.getAllClasses()}
-                        classes_col = {y:col for x,y,col in database.getAllClasses()}
+                        classes = {x:y for y,x,col,clckbl in database.getAllClasses()}
+                        classes_rev = {x:y for x,y,col,clckbl in database.getAllClasses()}
+                        classes_col = {y:col for x,y,col,clckbl in database.getAllClasses()}
                 
                 vector_type = anno.annotation_type['vector_type']
                 vlen = int(len(anno.vector)/2)
@@ -387,9 +387,9 @@ class ExactManager():
         annodict = {uuid:annos[np.where(uuids==uuid)] for uuid in uuids}
 
 
-        classes = {y:x for x,y,col in database.getAllClasses()}
-        classes_col = {y:col for x,y,col in database.getAllClasses()}
-        classes_rev = {x:y for x,y,col in database.getAllClasses()}
+        classes = {y:x for x,y,col,clckbl in database.getAllClasses()}
+        classes_col = {y:col for x,y,col,clckbl in database.getAllClasses()}
+        classes_rev = {x:y for x,y,col,clckbl in database.getAllClasses()}
 
         uidToSend, nameToSend = database.getExactPerson()
         pending_requests=0
