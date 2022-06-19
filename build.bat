@@ -1,1 +1,1 @@
-pyinstaller --windowed --onefile main.spec
+pyinstaller main.spec
