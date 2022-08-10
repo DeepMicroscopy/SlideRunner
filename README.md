@@ -124,6 +124,44 @@ This mode creates a polygon, i.e. a connected line of points corresponding to a 
 Important positions are annotations shown with a cross in a circle. The size of this annotation does not change depending on the zooming level. An important position does not
 have a class attached to it.
 
+## Key Shortcuts
+**General**
+
+|  Key &nbsp; &nbsp; &nbsp; &nbsp;  | Function      |
+|-----------|------------|
+| Ctrl + D     | Open default database |
+| Ctrl + C     | Open custom database  |
+| Ctrl + V     | Database overview     |
+| Ctrl + O     | Open image            |
+| Ctrl + Q     | Quit                  |
+
+**View**
+
+| Key       | Function      |
+|-----------|------------|
+| +                | Zoom in                         |
+| -                | Zoom out                        |
+| Ctrl + Alt + C   | Create snapshot of current view |
+| X                | Full plugin opacity             |
+| V                | Half plugin opacity             |
+| Y                | No plugin opacity               |
+| N                | Next frame in screening mode    |
+
+**Annotation**
+
+| Key &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  | Function      |
+|-----------|------------|
+| S | Object center annotation      |
+| R | Bounding box annotation       |
+| P | Polygon annotation            |
+| W | Magic wand annotation         |
+| F | Important position annotation |
+| C | Spot annotation               |
+| Del | Delete currently selected annotation               |
+| Esc | Cancel polygon annotation   |
+| Ctrl + R | Remove last polygon point   |
+
+
 ## News
 
 New version 1.22.0 has a much improved plugin interface. Amongst the many improvements are annotation support from the plugin, as well as the ability to copy annotations from the plugin to the database, even annotation groups. 

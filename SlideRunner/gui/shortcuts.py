@@ -47,6 +47,9 @@ def defineShortcuts(self):
     shortcut = QShortcut(QKeySequence('Shift+0'), self)
     shortcut.activated.connect(partial(GUIannotation.deleteImageLabel, self))
 
+    shortcut = QShortcut(QKeySequence('Ctrl+R'), self)
+    shortcut.activated.connect(partial(self.removeLastPolygonPoint, self))
+
     # Set keyboard shortcuts
     shortcutEsc = QShortcut(QKeySequence("Esc"), self)
     shortcutEsc.activated.connect(self.hitEscape)
