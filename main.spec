@@ -3,7 +3,7 @@
 block_cipher = None
 
 a = Analysis(['main.py'],
-             pathex=['C:\\Users\\Marc\\SlideRunner\\SlideRunner'],
+             pathex=[],
              binaries=[('libopenslide-0.dll','.')],
              datas=[('SlideRunner/artwork/*.png','SlideRunner/artwork'),
                     ('SlideRunner/plugins/*.*','SlideRunner/plugins')],
@@ -15,6 +15,10 @@ a = Analysis(['main.py'],
              win_private_assemblies=False,
              cipher=block_cipher,
              noarchive=False)
+for d in a.datas:
+    if '_C.cp37-win_amd64.pyd' in d[0]:
+        a.datas.remove(d)
+        break
 pyz = PYZ(a.pure, a.zipped_data,
              cipher=block_cipher)
 exe = EXE(pyz,
@@ -30,4 +34,4 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=True )
+          console=False)

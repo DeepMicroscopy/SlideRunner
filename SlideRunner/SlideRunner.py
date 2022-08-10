@@ -358,12 +358,8 @@ class SlideRunnerUI(QMainWindow):
         if (ret == 0): # Yes was pressed  
             rollbar.report_exc_info((exctype, value, tb))
 
-    def exceptionHook_threading(self, exc:threading.ExceptHookArgs):
-        print('Error:',exc)
-        excmsg = '\n'.join(traceback.format_exception(exc.exc_type, exc.exc_value, exc.exc_traceback))
-        print(excmsg)
-        #self.progressBarQueue.put((SlideRunnerPlugin.StatusInformation.SHOW_EXCEPTION,exc))
-
+    def exceptionHook_threading(self, exctype, value, tb):
+        self.show_exception("Thread was terminated", exctype, value, tb)
 
     def exceptionHook(self, exctype, value, tb):
         self.show_exception("Exception", exctype, value, tb)
