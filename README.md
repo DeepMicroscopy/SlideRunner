@@ -151,15 +151,15 @@ have a class attached to it.
 
 | Key &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  | Function      |
 |-----------|------------|
-| S | Object center annotation               |
-| R | Outline annotation (rectangular)       |
-| P | Outline annotation (polygon)           |
-| W | Magic wand annotation                  |
-| F | Annotation of important position       |
-| C | Outline annotation (circle)            |
-| Del | Delete currently selected annotation |
-| Esc | Cancel polygon annotation            |
-| Ctrl + R | Remove last polygon point       |
+| S | Object center annotation      |
+| R | Bounding box annotation       |
+| P | Polygon annotation            |
+| W | Magic wand annotation         |
+| F | Important position annotation |
+| C | Spot annotation               |
+| Del | Delete currently selected annotation               |
+| Esc | Cancel polygon annotation   |
+| Ctrl + R | Remove last polygon point   |
 
 ## News
 
