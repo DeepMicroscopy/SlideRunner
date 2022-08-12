@@ -52,8 +52,10 @@ def test_setup():
     except:
         print('Unable to destroy annotation types')    
 
-    apis.team_api.create_team(name='Test')
-    apis.image_sets_api.create_image_set(team=1, name='Test-Imageset')
+    body = Team(name='TestTeam')
+    apis.team_api.create_team(body=body)
+    body = ImageSet(team=1, name='Test-ImageSet')
+    apis.image_sets_api.create_image_set(body=body)
 
 
 def test_images():
