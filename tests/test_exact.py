@@ -52,6 +52,9 @@ def test_setup():
     except:
         print('Unable to destroy annotation types')    
 
+    apis.team_api.create_team(name='Test')
+    apis.image_sets_api.create_image_set(team=1, name='Test-Imageset')
+
 
 def test_images():
 
@@ -73,8 +76,6 @@ def test_images():
     # generate dummy image
     dummy=np.random.randint(0,255, (200,200,3))
     cv2.imwrite('dummy.png', dummy)
-
-
 
     apis.images_api.create_image(file_path='dummy.png', image_type=0, image_set=imageset).results
 
