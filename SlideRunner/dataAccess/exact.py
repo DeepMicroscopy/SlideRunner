@@ -326,7 +326,7 @@ class ExactManager():
             annotypedictret = {annotype.name:annotype for annotype in annotypes}
             return annotypedictret 
 
-        def get_or_create_annotationtype(labelId:int, annotationType:AnnotationType) -> (int, str):
+        def get_or_create_annotationtype(labelId:int, annotationType:AnnotationType):
 
             """
                 Retrieve the correct annotation_type_id from the annotation type dictionary. If non-existent,
