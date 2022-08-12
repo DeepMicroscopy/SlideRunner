@@ -4,7 +4,7 @@ from SlideRunner.dataAccess.exact import *
 from SlideRunner_dataAccess.database import Database
 import os
 
-EXACT_UNITTEST_URL = 'https://exact.cs.fau.de/srut/'
+EXACT_UNITTEST_URL = 'http://localhost:1337/'
 
 
 from exact_sync.v1.api_client import ApiClient as client
@@ -29,8 +29,8 @@ from exact_sync.v1.api_client import ApiClient
 from pathlib import Path
 
 configuration = Configuration()
-configuration.username = 'sliderunner_unittest'
-configuration.password = 'unittestpw'
+configuration.username = 'testuser'
+configuration.password = 'testpw'
 configuration.host = EXACT_UNITTEST_URL
 
 
