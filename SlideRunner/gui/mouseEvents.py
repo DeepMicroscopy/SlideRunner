@@ -361,8 +361,9 @@ def releaseImage(self, event):
 
 def removeLastPolygonPoint(self):
     if (self.ui.annotationMode == 1):
-        self.ui.annotationsList.pop()           
-        self.showImage()
+        if len(self.ui.annotationsList) > 0:
+            self.ui.annotationsList.pop()
+            self.showImage()
 
 
 def rightClickImage(self, event):
