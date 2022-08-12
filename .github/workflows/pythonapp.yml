@@ -29,6 +29,7 @@ jobs:
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
         flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     - name: Set up EXACT for unit tests
+      shell: 'script -q -e -c "bash {0}"'
       run: |
         git clone https://github.com/ChristianMarzahl/Exact.git
         cd Exact
