@@ -161,7 +161,6 @@ have a class attached to it.
 | Esc | Cancel polygon annotation   |
 | Ctrl + R | Remove last polygon point   |
 
-
 ## News
 
 New version 1.22.0 has a much improved plugin interface. Amongst the many improvements are annotation support from the plugin, as well as the ability to copy annotations from the plugin to the database, even annotation groups. 
@@ -194,7 +193,7 @@ The major entity of our database model is the annotation. Each annotation can ha
 ![DB Structure](SlideRunner/doc/SlideRunner_UML.png)
 
 
-## Troubleshotting
+## Troubleshooting
 
 **Programm won't start, error message: Missing or nonfunctional package openslide: Couldn't locate OpenSlide dylib. Is OpenSlide installed?**
 
