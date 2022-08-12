@@ -34,6 +34,8 @@ jobs:
         cd Exact
         export DJANGO_SUPERUSER_USERNAME=testuser
         export DJANGO_SUPERUSER_PASSWORD=testpw
+        cp env.dev env.prod
+        cp exact/exact/settings.py.example exact/exact/settings.py
         docker-compose -f docker-compose.prod.yml up -d --build
         docker-compose -f docker-compose.prod.yml exec web python3 manage.py migrate --noinput 
         docker-compose -f docker-compose.prod.yml exec web python3 manage.py createsuperuser --noinput
