@@ -411,7 +411,7 @@ def rightClickImage(self, event):
                     act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self,clsname[1], event, self.ui.annotationsList))
                     menuitems.append(act)
             addmenu = menu.addAction('Cancel', self.hitEscape)
-            addmenu = menu.addAction('Remove last point', partial(self.removeLastPolygonPoint,self))
+            addmenu = menu.addAction('Remove last point (Crtr + R)', partial(self.removeLastPolygonPoint,self))
 
 
             action = menu.exec_(self.mapToGlobal(event.pos()))

@@ -1,12 +1,9 @@
 import SlideRunner.general.SlideRunnerPlugin as SlideRunnerPlugin
-import queue
 from threading import Thread
 from queue import Queue
 import cv2
 import os
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.colors
 import h5py
 import openslide
 
