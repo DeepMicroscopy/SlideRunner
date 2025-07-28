@@ -87,8 +87,8 @@ To run, the following libraries and their dependencies will be installed:
 Library           | version           |  link             
 ------------------|-------------------|-------------------
 PyQt6             | >= 6.9.1          | https://pyqt.sourceforge.net/
-numpy             | >= 2.0.2          | https://www.numpy.org
-cv2 (OpenCV3)     | >= 4.12.0         | https://opencv.org
+numpy             | >= 1.24.4         | https://www.numpy.org
+cv2 (OpenCV3)     | >= 4.7.0.72       | https://opencv.org
 sqlite3           | >= 2.6.0          | https://www.sqlite.org
 openslide         | >= 1.4.2          | https://www.openslide.org
 

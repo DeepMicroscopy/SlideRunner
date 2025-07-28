@@ -17,7 +17,7 @@
         Prerequisites:
             Package             Tested version
             openslide           1.4.2
-            cv2                 opencv4.12.0
+            cv2                 opencv4.7.0
             pyqt                PyQt6-6.9.1
             sqlite3             2.6.0
             matplotlib          3.9.4
