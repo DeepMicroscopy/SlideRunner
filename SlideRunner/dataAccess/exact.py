@@ -332,7 +332,7 @@ class ExactManager():
                 Retrieve the correct annotation_type_id from the annotation type dictionary. If non-existent,
                 create it.
             """
-            nonlocal annotypedict, classToSend, mergeLocalClasses
+            nonlocal annotypedict#, classToSend, mergeLocalClasses
             name = classes[labelId][0:20]
             annotationType_names = { AnnotationType.AREA: 'area',
                                     AnnotationType.POLYGON: 'poly',
