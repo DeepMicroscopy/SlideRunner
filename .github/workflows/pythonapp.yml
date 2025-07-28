@@ -38,10 +38,10 @@ jobs:
         cp env.dev env.prod
         cp env.dev.db env.prod.db
         cp exact/exact/settings.py.example exact/exact/settings.py
-        docker-compose -f docker-compose.prod.yml up -d --build
-        docker-compose -f docker-compose.prod.yml exec web python3 manage.py migrate --noinput 
-        docker-compose -f docker-compose.prod.yml exec web python3 manage.py createsuperuser --noinput
-        docker-compose -f docker-compose.prod.yml exec web python3 manage.py collectstatic --no-input --clear
+        docker compose -f docker-compose.prod.yml up -d --build
+        docker compose -f docker-compose.prod.yml exec web python3 manage.py migrate --noinput 
+        docker compose -f docker-compose.prod.yml exec web python3 manage.py createsuperuser --noinput
+        docker compose -f docker-compose.prod.yml exec web python3 manage.py collectstatic --no-input --clear
     - name: Test with pytest
       run: |
         pip install pytest
