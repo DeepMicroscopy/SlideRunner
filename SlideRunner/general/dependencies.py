@@ -13,8 +13,10 @@
         Bildverarbeitung fuer die Medizin 2018, Springer Verlag, Berlin-Heidelberg
 
 """
-from PyQt5 import QtWidgets
+from PyQt6 import QtWidgets
 import re
+import functools
+import os
 
 def numeric(text) -> str:
     """
@@ -47,14 +49,14 @@ def check_qt_dependencies():
     import sys
 
     try:
-        __import__('PyQt5')
+        __import__('PyQt6')
     except:
-        print('Error: PyQT5 not found. Please install.')
+        print('Error: PyQt6 not found. Please install.')
         sys.exit(1)
     else:
-        from PyQt5.QtCore import QT_VERSION_STR
+        from PyQt6.QtCore import QT_VERSION_STR
         if not (check_version(QT_VERSION_STR, '5.6.0')):
-            print('Your PyQT5 is too old (%s). Please upgrade to >= 5.6.0.' % QT_VERSION_STR)
+            print('Your PyQt6 is too old (%s). Please upgrade to >= 5.6.0.' % QT_VERSION_STR)
             sys.exit(1)
 
 def check_all_dependencies():
@@ -92,7 +94,7 @@ def check_all_dependencies():
                 (hasattr(lib,'version') and type(lib.version)==str and not check_version(lib.version,version))):
 
                 reply = QtWidgets.QMessageBox.information(None, 'Error',
-                    'Too old package %s: Version should be at least %s' % (name, version), QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                    'Too old package %s: Version should be at least %s' % (name, version), QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
 
 
 import sys
@@ -103,11 +105,11 @@ check_all_dependencies()
 
 # The rest should now load fine
 
-# More PyQt5 imports
-from PyQt5.QtCore import QThread, QStringListModel, Qt, pyqtSignal
-from PyQt5.QtGui import QPixmap, QColor, QImage, QStandardItemModel, QStandardItem, QBrush, QIcon, QKeySequence
-#from PyQt5.QtWidgets import *
-from PyQt5.QtWidgets import QDialog, QWidget, QFileDialog, QMenu,QInputDialog, QAction, QPushButton, QItemDelegate, QTableWidgetItem, QCheckBox
+# More PyQt6 imports
+from PyQt6.QtCore import QThread, QStringListModel, Qt, pyqtSignal
+from PyQt6.QtGui import QPixmap, QColor, QImage, QStandardItemModel, QStandardItem, QBrush, QIcon, QKeySequence, QAction
+#from PyQt6.QtWidgets import *
+from PyQt6.QtWidgets import QDialog, QWidget, QFileDialog, QMenu,QInputDialog, QPushButton, QItemDelegate, QTableWidgetItem, QCheckBox
 
 # internal imports
 from SlideRunner.gui.SlideRunner_ui import Ui_MainWindow
@@ -131,4 +133,4 @@ from SlideRunner.general.types import pluginEntry
 
 import matplotlib.cm 
 partial = functools.partial
-path = path.path
+path = os.path

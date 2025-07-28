@@ -1,6 +1,6 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtCore, QtGui, QtWidgets
 import numpy as np
-from PyQt5.QtCore import Qt
+from PyQt6.QtCore import Qt
 
 
 class zoomSlider(QtWidgets.QWidget):
@@ -66,8 +66,8 @@ class zoomSlider(QtWidgets.QWidget):
         self.valueChanged.emit()
 
     def mousePressEvent(self, event, dragging=False):
-        if ((event.button() == Qt.LeftButton)) or dragging:
-            pntr_x = float(event.localPos().x())
+        if ((event.button() == Qt.MouseButton.LeftButton)) or dragging:
+            pntr_x = float(event.position().x())
             w = self.size().width() - 40
 
             zoomPos = (pntr_x-20)/w
@@ -122,23 +122,23 @@ class zoomSlider(QtWidgets.QWidget):
         qp.drawRect(20-1, 20, w_net+2, 5)
 
         qp.setBrush(QtGui.QColor(70, 70, 70))
-        font = QtGui.QFont('Serif', 7, QtGui.QFont.Light)
+        font = QtGui.QFont('Serif', 7, QtGui.QFont.Weight.Light)
         qp.setFont(font)
 
         for j in range(len(self.steps)):
             qp.setPen(QtGui.QColor(93, 93, 93))
             qp.drawLine(self.num[j]*w_net/100+20, 25, self.num[j]*w_net/100+20, 32)
             labelstr = str(self.steps[j])+' x'
-            fw = metrics.width(labelstr)
+            fw = metrics.horizontalAdvance(labelstr)
             qp.setPen(QtGui.QColor(255, 255, 255))
             qp.drawText(self.num[j]*w_net/100-fw/2+20, h, labelstr)
 
 
-        font = QtGui.QFont('Serif', 12, QtGui.QFont.Light)
+        font = QtGui.QFont('Serif', 12, QtGui.QFont.Weight.Light)
         qp.setFont(font)
 
 
-        tw = metrics.width(self.text)
+        tw = metrics.horizontalAdvance(self.text)
         qp.setPen(QtGui.QColor(38, 38, 38))
         qp.setBrush(QtGui.QColor(71, 71, 71))
 

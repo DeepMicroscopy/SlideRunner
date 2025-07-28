@@ -16,13 +16,13 @@
 
         Prerequisites:
             Package             Tested version
-            openslide           1.1.1
-            cv2                 opencv3-3.1.0
-            pyqt                pyqt5-5.5.0
+            openslide           1.4.2
+            cv2                 opencv4.12.0
+            pyqt                PyQt6-6.9.1
             sqlite3             2.6.0
-            matplotlib          2.0.0
-            shapely             1.6.4
-            rollbar             0.14
+            matplotlib          3.9.4
+            shapely             2.0.7
+            rollbar             1.3.0
 
 
 
@@ -52,9 +52,9 @@ from multiprocessing import freeze_support
 
 dependencies.check_qt_dependencies()
 
-from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt6 import QtWidgets, QtGui, QtCore
 from SlideRunner.gui import splashScreen, menu, style
-from PyQt5.QtWidgets import QMainWindow, QApplication
+from PyQt6.QtWidgets import QMainWindow, QApplication
 
 
 # Splash screen is displayed, go on with the rest.
@@ -62,7 +62,17 @@ from PyQt5.QtWidgets import QMainWindow, QApplication
 from SlideRunner.general.dependencies import *
 from SlideRunner_dataAccess.annotations import ViewingProfile
 from SlideRunner_dataAccess.slide import SlideReader
-from PyQt5.QtCore import QSettings
+from PyQt6.QtCore import QSettings
+import threading
+import numpy as np
+import queue
+import traceback
+import logging
+import rollbar
+import os
+import cv2
+import openslide
+import time
 
 # Thread for receiving images from the plugin
 class imageReceiverThread(threading.Thread):
@@ -337,21 +347,21 @@ class SlideRunnerUI(QMainWindow):
         msgBox = QtWidgets.QMessageBox()
         msgBox.setText("Uncaught exception")
         msgBox.setInformativeText('Plugin exception')
-        msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)
-        btn = msgBox.addButton(QtWidgets.QPushButton('Report to developers'), QtWidgets.QMessageBox.YesRole)
+        msgBox.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+        btn = msgBox.addButton(QtWidgets.QPushButton('Report to developers'), QtWidgets.QMessageBox.ButtonRole.YesRole)
         msgBox.setDetailedText(excmsg)
         msgBox.setDefaultButton(btn)
         ret = msgBox.exec()      
         if (ret == 0): # Yes was pressed  
-            rollbar.report_exc_info((exctype, value, tb))
+            rollbar.report_exc_info((exc.exctype, exc.value, exc.tb))
 
     def show_exception(self, headline, exctype, value, tb):
         excmsg = '\n'.join(traceback.format_exception(exctype, value, tb))
         msgBox = QtWidgets.QMessageBox()
         msgBox.setText("Uncaught exception")
         msgBox.setInformativeText(headline)
-        msgBox.setStandardButtons(QtWidgets.QMessageBox.Ok)
-        btn = msgBox.addButton(QtWidgets.QPushButton('Report to developers'), QtWidgets.QMessageBox.YesRole)
+        msgBox.setStandardButtons(QtWidgets.QMessageBox.StandardButton.Ok)
+        btn = msgBox.addButton(QtWidgets.QPushButton('Report to developers'), QtWidgets.QMessageBox.ButtonRole.YesRole)
         msgBox.setDetailedText(excmsg)
         msgBox.setDefaultButton(btn)
         ret = msgBox.exec()      
@@ -453,7 +463,7 @@ class SlideRunnerUI(QMainWindow):
 
     def dragEnterEvent(self, e):
          if (e.mimeData().hasUrls()):
-            e.setDropAction(QtCore.Qt.LinkAction)
+            e.setDropAction(QtCore.Qt.DropAction.LinkAction)
             e.accept()
          else:
             e.ignore() 
@@ -508,7 +518,7 @@ class SlideRunnerUI(QMainWindow):
             self.pluginPushbuttons[plugin.shortName] = dict()
             self.pluginFilepickers[plugin.shortName] = dict()
             self.pluginComboboxes[plugin.shortName] = dict()
-            sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+            sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
             sizePolicy.setHorizontalStretch(1.0)
             sizePolicy.setVerticalStretch(0)
             for pluginConfig in plugin.configurationList:
@@ -544,16 +554,16 @@ class SlideRunnerUI(QMainWindow):
                     newLabel.setStyleSheet('font-size:8px')
                     self.ui.tab3Layout.addWidget(newLabel)
                     self.pluginTextLabels[plugin.shortName][pluginConfig.uid] = newLabel
-                    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.MinimumExpanding, QtWidgets.QSizePolicy.Minimum)
+                    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.MinimumExpanding, QtWidgets.QSizePolicy.Policy.Minimum)
                     sizePolicy.setHorizontalStretch(1.0)
                     sizePolicy.setVerticalStretch(0)
                     newSlider = QtWidgets.QSlider(self.ui.tab3widget)
                     newSlider.setMinimum(pluginConfig.minValue*1000)
                     newSlider.setMaximum(pluginConfig.maxValue*1000)
                     newSlider.setValue(pluginConfig.initValue*1000)
-                    newSlider.setOrientation(QtCore.Qt.Horizontal)
+                    newSlider.setOrientation(QtCore.Qt.Orientation.Horizontal)
                     newSlider.setSizePolicy(sizePolicy)
-                    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+                    sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
                     sizePolicy.setHorizontalStretch(1.0)
                     sizePolicy.setVerticalStretch(0)
                     newSlider.valueChanged.connect(partial(self.triggerPluginConfigChanged, plugin.shortName))
@@ -909,7 +919,7 @@ class SlideRunnerUI(QMainWindow):
                 if (self.lastScreeningLeftUpper[1] == 1.0 - relOffset_y):
                     self.ui.iconScreening.setChecked(False)
                     reply = QtWidgets.QMessageBox.information(self, 'Message',
-                            'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                            'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
                     return
                 self.lastScreeningLeftUpper[1] += self.mainImageSize[1] * self.getZoomValue()*0.9/ self.slide.level_dimensions[0][1]
                 if (self.lastScreeningLeftUpper[1]>1):
@@ -917,7 +927,7 @@ class SlideRunnerUI(QMainWindow):
                 if (self.lastScreeningLeftUpper[1]<ycoord):
                     self.ui.iconScreening.setChecked(False)
                     reply = QtWidgets.QMessageBox.information(self, 'Message',
-                            'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                            'All image parts have been covered. Thank you!', QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
                     
                 self.lastScreeningLeftUpper[0] = 0
 
@@ -1039,7 +1049,7 @@ class SlideRunnerUI(QMainWindow):
                 self.setZoomTo(annoDims[0],annoDims[1])
             else:
                 reply = QtWidgets.QMessageBox.information(self, 'Message',
-                                        'All objects have been rated by you. Thanks :)', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                                        'All objects have been rated by you. Thanks :)', QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
 
 
         self.showImage()
@@ -1068,7 +1078,7 @@ class SlideRunnerUI(QMainWindow):
             filename = str(url.toLocalFile())        
         ext = os.path.splitext(filename)[1]
         if (ext.upper() == '.SVS'):
-            e.setDropAction(QtCore.Qt.LinkAction)
+            e.setDropAction(QtCore.Qt.DropAction.LinkAction)
             e.accept() 
 
             self.openSlide(filename)
@@ -1076,9 +1086,9 @@ class SlideRunnerUI(QMainWindow):
     def hitEscape(self):
         if (self.ui.mode==UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
             reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                          'Do you want to cancel your polygon annotation?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                          'Do you want to cancel your polygon annotation?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-            if reply == QtWidgets.QMessageBox.No:
+            if reply == QtWidgets.QMessageBox.StandardButton.No:
                 return
 
             if (self.ui.annotationMode==2): #replace polygon object
@@ -1089,9 +1099,9 @@ class SlideRunnerUI(QMainWindow):
     def setUIMode(self,mode: UIMainMode):
         if (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) and not (mode == UIMainMode.MODE_ANNOTATE_POLYGON ) and (self.ui.annotationMode>0):
             reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                          'Do you want to stop your polygon annotation? Hint: If you want to move the image during annotation, hold shift while dragging the image.', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                          'Do you want to stop your polygon annotation? Hint: If you want to move the image during annotation, hold shift while dragging the image.', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-            if reply == QtWidgets.QMessageBox.No:
+            if reply == QtWidgets.QMessageBox.StandardButton.No:
                 return
             
             if (self.ui.annotationMode==2): #replace polygon object
@@ -1138,13 +1148,13 @@ class SlideRunnerUI(QMainWindow):
             self.ui.iconWand.setChecked(True)
 
     def toQImage(self, im, copy=False):
-        qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format_RGBA8888)
+        qim = QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QImage.Format.Format_RGBA8888)
         return qim
 
     def vidImageToQImage(self, cvImg):
         height, width, channel = cvImg.shape
         bytesPerLine = 3 * width
-        qImg = QImage(cvImg.data, width, height, QtGui.QImage.Format_RGB888)
+        qImg = QImage(cvImg.data, width, height, QtGui.QImage.Format.Format_RGB888)
         return QtGui.QPixmap.fromImage(qImg)
 
 
@@ -1201,16 +1211,16 @@ class SlideRunnerUI(QMainWindow):
             return QWidget.eventFilter(self, source, event)
         
         if (isinstance(event,QtGui.QNativeGestureEvent)):
-            if (event.gestureType()==QtCore.Qt.BeginNativeGesture):
+            if (event.gestureType()==QtCore.Qt.NativeGestureType.BeginNativeGesture):
                 self.eventIntegration=0
                 self.eventCounter=0
 
-            if (event.gestureType()==QtCore.Qt.ZoomNativeGesture):
+            if (event.gestureType()==QtCore.Qt.NativeGestureType.ZoomNativeGesture):
                 self.eventIntegration+=event.value()
                 self.eventCounter+= 1
 
-            if ((event.gestureType()==QtCore.Qt.EndNativeGesture) or
-                ((event.gestureType() == QtCore.Qt.ZoomNativeGesture) and (self.eventCounter>5))):
+            if ((event.gestureType()==QtCore.Qt.NativeGestureType.EndNativeGesture) or
+                ((event.gestureType() == QtCore.Qt.NativeGestureType.ZoomNativeGesture) and (self.eventCounter>5))):
                 self.setZoomValue(self.getZoomValue() * np.power(1.25, -self.eventIntegration*5))
                 self.eventIntegration = 0
                 self.eventCounter = 0
@@ -1307,7 +1317,7 @@ class SlideRunnerUI(QMainWindow):
             for clsname in allPers:
                 act=menu.addAction('as: '+clsname[0],partial(self.defineAnnotator,clsname[1]))
 
-            action = menu.exec_(self.mapToGlobal(event.pos()))
+            action = menu.exec(self.mapToGlobal(event.pos()))
 
         return self.annotator
 
@@ -1370,9 +1380,9 @@ class SlideRunnerUI(QMainWindow):
         """
         quit_msg = "Are you sure you want to remove this annotation?"
         reply = QtWidgets.QMessageBox.question(self, 'Message',
-                                           quit_msg, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                           quit_msg, QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-        if reply == QtWidgets.QMessageBox.Yes:
+        if reply == QtWidgets.QMessageBox.StandardButton.Yes:
             self.db.removeAnnotation(annoId)
             self.showImage()
 
@@ -1387,8 +1397,8 @@ class SlideRunnerUI(QMainWindow):
             self.db.annotations[annoId].coordinates = cont
             self.showImage()
 
-            reply = QtWidgets.QMessageBox.question(self, 'Question', 'Simplification done. Accept?',QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
-            if reply == QtWidgets.QMessageBox.Yes:
+            reply = QtWidgets.QMessageBox.question(self, 'Question', 'Simplification done. Accept?',QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
+            if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                 ## simplify path in DB
                 self.db.setPolygonCoordinates(annoId, cont, self.slideUID, zLevel=self.zPosition)
                 pass
@@ -1533,15 +1543,15 @@ class SlideRunnerUI(QMainWindow):
                 print('SLIDEUID IS NONE',slideUID)
                 msg = "Slide is not in database. Do you wish to add it?"
                 reply = YesNoAbortDialog('Question',msg,'Yes, add it.','No, open other slide', 'No, close database.')
-                if reply == QtWidgets.QMessageBox.Yes:
+                if reply == QtWidgets.QMessageBox.StandardButton.Yes:
                     self.db.insertNewSlide(self.slidename,self.slidepathname, uid)
                     self.findSlideUID(dimensions)
                     self.db.setSlideDimensions(slideUID, dimensions)
                     return
-                elif reply== QtWidgets.QMessageBox.No:
+                elif reply== QtWidgets.QMessageBox.StandardButton.No:
                     slname = self.openSlideDialog()
                     self.findSlideUID()
-                elif reply == QtWidgets.QMessageBox.Abort:
+                elif reply == QtWidgets.QMessageBox.StandardButton.Abort:
                     self.closeDatabase()
                 else:
                     print('Reply was: ',reply)
@@ -2047,9 +2057,9 @@ class SlideRunnerUI(QMainWindow):
         
         if not success:
             reply = QtWidgets.QMessageBox.information(self, 'Message',
-                    'Warning: Database %s not found. Do you want to create a new database?' % filename, QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                    'Warning: Database %s not found. Do you want to create a new database?' % filename, QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-            if (reply == QtWidgets.QMessageBox.Yes):
+            if (reply == QtWidgets.QMessageBox.StandardButton.Yes):
                 success = self.db.create(filename)
                 if (success):
                     self.addAnnotator()
@@ -2154,10 +2164,10 @@ class SlideRunnerUI(QMainWindow):
                 correctSlide = self.db.findSlideForAnnotation(num)
                 if (correctSlide is None) or len(correctSlide)==0:
                     reply = QtWidgets.QMessageBox.information(self, 'Message',
-                           'Not found in database.', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                           'Not found in database.', QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
                 else:
                     reply = QtWidgets.QMessageBox.information(self, 'Message',
-                           'Not found on slide. Please open "%s".' % correctSlide[0], QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                           'Not found on slide. Please open "%s".' % correctSlide[0], QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
                 return
                 
             coords = np.asarray(allAnnos)
@@ -2221,9 +2231,9 @@ class SlideRunnerUI(QMainWindow):
             
                     if (exact_id is not None):
                         reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                                    f'{filename} is already linked with an image on exact. Exporting it will create another copy on the server. Really proceed to export?', [QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.Cancel], QtWidgets.QMessageBox.No)
+                                                    f'{filename} is already linked with an image on exact. Exporting it will create another copy on the server. Really proceed to export?', [QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.Cancel], QtWidgets.QMessageBox.StandardButton.No)
 
-                        if reply == QtWidgets.QMessageBox.No:
+                        if reply == QtWidgets.QMessageBox.StandardButton.No:
                             continue
 
                         if reply == QtWidgets.QMessageBox.Cancel:
@@ -2232,9 +2242,9 @@ class SlideRunnerUI(QMainWindow):
                     pathname = '.' if pathname is None or len(pathname)==0 else str(pathname)
                     if not (os.path.exists(str(pathname)+os.sep+filename)):
                         reply = QtWidgets.QMessageBox.question(self, 'Image not found',
-                                                f'{filename} could not be found in {pathname}. Exclude from list and continue with export?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                                f'{filename} could not be found in {pathname}. Exclude from list and continue with export?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-                        if reply == QtWidgets.QMessageBox.No:
+                        if reply == QtWidgets.QMessageBox.StandardButton.No:
                             break
 
                     slidesToSync.append([uid, filename, pathname])
@@ -2256,7 +2266,7 @@ class SlideRunnerUI(QMainWindow):
             iselect = [k for k,name in enumerate(items) if name==item][0]
             if not hasattr(imagesets[iselect], 'product_set'):
                 QtWidgets.QMessageBox.warning(self, 'Error','Please create a product for this team first.', 
-                                            QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                                            QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
 
                 return
             products = ['%d: ' % p['id']+p['name'] for p in imagesets[iselect].product_set]
@@ -2274,7 +2284,7 @@ class SlideRunnerUI(QMainWindow):
 
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
-                                          QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                                          QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
             raise(e)
             return
 
@@ -2378,7 +2388,7 @@ class SlideRunnerUI(QMainWindow):
                 invalids = self.db.execute('SELECT uid FROM Annotations where guid is Null').fetchall()
                 for (invalidid,) in invalids:
                     reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                                f'Annotation with id {invalidid} in {filename} has invalid UUID. This can be a sign of a corrupt database. Randomly assign new UUID?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.Cancel)
+                                                f'Annotation with id {invalidid} in {filename} has invalid UUID. This can be a sign of a corrupt database. Randomly assign new UUID?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.Cancel)
 
                     if reply == QtWidgets.QMessageBox.Cancel:
                         return
@@ -2403,7 +2413,7 @@ class SlideRunnerUI(QMainWindow):
 #             self.popupmessage('Sync completed.')
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
-                                          QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                                          QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
             return
         
 
@@ -2418,12 +2428,12 @@ class SlideRunnerUI(QMainWindow):
         try:
             ELD = ExactDownloadDialog(self.db, self.settings)
 
-            ELD.exec_()
+            ELD.exec()
 
 
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
-                                          QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                                          QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
             return
 
         self.findSlideUID()
@@ -2456,10 +2466,10 @@ class SlideRunnerUI(QMainWindow):
 
             ELD = ExactLinkDialog(self.db, self.settings, imagesets[iselect].id)
 
-            ELD.exec_()
+            ELD.exec()
         except Exception as e:
             QtWidgets.QMessageBox.warning(self, 'Error','Unable to proceed: '+str(e), 
-                                          QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                                          QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
             raise(e)
             return
 
@@ -2476,7 +2486,7 @@ class SlideRunnerUI(QMainWindow):
 
         DBM = DatabaseManager(self.db)
 
-        DBM.exec_()
+        DBM.exec()
         if (len(DBM.loadSlide)>0):
             self.openSlide(DBM.loadSlide)
         else:
@@ -2612,7 +2622,7 @@ class SlideRunnerUI(QMainWindow):
 
         for clsid, (className,classId,color,clckbl) in enumerate(classes):
             item = QTableWidgetItem(className if clckbl else '('+className+')')
-            item.setFlags(Qt.ItemIsSelectable)
+            item.setFlags(QtCore.Qt.ItemFlag.ItemIsSelectable)
             pixmap = QPixmap(10,10)
             pixmap.fill(QColor.fromRgb(*hex_to_rgb(color)))
             btn = QPushButton('')
@@ -2620,7 +2630,7 @@ class SlideRunnerUI(QMainWindow):
             btn.clicked.connect(partial(self.clickAnnoclass, clsid+1))
             self.classButtons.append(btn) 
             itemcol = QTableWidgetItem('')
-            itemcol.setFlags(Qt.NoItemFlags)
+            itemcol.setFlags(QtCore.Qt.ItemFlag.NoItemFlags)
             checkbx = QCheckBox()
             itemcol.setBackground(QColor.fromRgb(*hex_to_rgb(color)))
             self.annotationTypesTable[classId] = checkbx
@@ -2706,10 +2716,10 @@ class SlideRunnerUI(QMainWindow):
 
     def toggleAnnoclass(self, id):
         if (id<len(self.classList)):
-            if (self.pluginannotationTypesTable[item].checkState()):
-                self.pluginannotationTypesTable[item].setChecked(False)       
+            if (self.pluginannotationTypesTable[id].checkState()):
+                self.pluginannotationTypesTable[id].setChecked(False)       
             else: 
-                self.pluginannotationTypesTable[item].setChecked(True)       
+                self.pluginannotationTypesTable[id].setChecked(True)       
 
     def sliderChanged(self):
         """
@@ -2764,9 +2774,9 @@ class SlideRunnerUI(QMainWindow):
         if (os.path.isfile(dbfilename)):
 
             reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                           'This database already exists. Do you REALLY wish to overwrite it?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                           'This database already exists. Do you REALLY wish to overwrite it?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-            if reply == QtWidgets.QMessageBox.No:
+            if reply == QtWidgets.QMessageBox.StandardButton.No:
                 return
 
         self.writeDebug('Creating new DB as %s' % dbfilename)
@@ -2842,7 +2852,7 @@ class SlideRunnerUI(QMainWindow):
         """
         if not (os.path.exists(filename)):
             reply = QtWidgets.QMessageBox.information(self, 'Error',
-                           'File not found: %s' % filename, QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                           'File not found: %s' % filename, QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
             return
 
         try:
@@ -2952,4 +2962,4 @@ def main(slideReaderThread,app,splash,version,pluginList):
     if (myapp.activePlugin is not None):
         myapp.activePlugin.inQueue.put(None)
         myapp.activePlugin.inQueue.put(SlideRunnerPlugin.jobToQueueTuple(description=SlideRunnerPlugin.JobDescription.QUIT_PLUGIN_THREAD))
-    app.exec_()
+    app.exec()

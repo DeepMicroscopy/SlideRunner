@@ -14,9 +14,9 @@
         Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314.
 """
 
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QSplashScreen
-from PyQt5.QtCore import  Qt
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QSplashScreen
+from PyQt6.QtCore import Qt
 
 import os
 
@@ -29,8 +29,8 @@ def splashScreen(app, version) -> QSplashScreen:
 
     # Create and display the splash screen
     splash_pix = QPixmap(ARTWORK_DIR_NAME+'SplashScreen.png')
-    splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
-    splash.showMessage('Version %s\n'%version, alignment = Qt.AlignHCenter + Qt.AlignBottom, color=Qt.black)
+    splash = QSplashScreen(splash_pix, Qt.WindowType.WindowStaysOnTopHint)
+    splash.showMessage('Version %s\n'%version, alignment = Qt.AlignmentFlag.AlignHCenter + Qt.AlignmentFlag.AlignBottom, color=Qt.GlobalColor.black)
     splash.setMask(splash_pix.mask())
     splash.show()
     app.processEvents()

@@ -1,12 +1,12 @@
 from SlideRunner.general.dependencies import *
 from SlideRunner_dataAccess.database import Database
 from functools import partial
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import pyqtSlot
+from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6.QtCore import pyqtSlot
 import sys
 import os
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QAction, QTableWidget,QTableWidgetItem,QVBoxLayout
-from PyQt5.QtGui import QIcon
+from PyQt6.QtWidgets import QMainWindow, QApplication, QWidget, QTableWidget,QTableWidgetItem,QVBoxLayout
+from PyQt6.QtGui import QIcon, QAction
 
 class DatabaseManager(QDialog):
 
@@ -60,7 +60,7 @@ class DatabaseManager(QDialog):
         self.tableWidget.move(0,0)
         self.tableWidget.resizeColumnsToContents()
         self.tableWidget.viewport().installEventFilter(self)
-        self.tableWidget.setEditTriggers(QtWidgets.QTableWidget.NoEditTriggers)
+        self.tableWidget.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
 
     def loadFile(self, uid):
         
@@ -75,9 +75,9 @@ class DatabaseManager(QDialog):
 
     def removeFile(self, uid):
         reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                        'Do you really want to delete the file and all annotations from the database?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                        'Do you really want to delete the file and all annotations from the database?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-        if reply == QtWidgets.QMessageBox.No:
+        if reply == QtWidgets.QMessageBox.StandardButton.No:
             return
         self.DB.removeFileFromDatabase(uid[0])
         self.DB.commit()
@@ -87,12 +87,12 @@ class DatabaseManager(QDialog):
     def removeExactLink(self, uids:list):
         if (len(uids)>1):
             reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                            'Do you really want to remove the link to EXACT for these slides?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                            'Do you really want to remove the link to EXACT for these slides?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
         else:
             reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                            'Do you really want to remove the link to EXACT for this slide?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                            'Do you really want to remove the link to EXACT for this slide?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-        if reply == QtWidgets.QMessageBox.No:
+        if reply == QtWidgets.QMessageBox.StandardButton.No:
             return
         for uid in uids:
             self.DB.execute(f'UPDATE Slides SET exactImageID=Null where uid=={uid}')
@@ -101,8 +101,8 @@ class DatabaseManager(QDialog):
         self.show()
 
     def eventFilter(self, source, event):
-        if(event.type() == QtCore.QEvent.MouseButtonPress and
-           event.buttons() == QtCore.Qt.RightButton and
+        if(event.type() == QtCore.QEvent.Type.MouseButtonPress and
+           event.buttons() == QtCore.Qt.MouseButton.RightButton and
            source is self.tableWidget.viewport()):
             rows = np.unique([x.row() for x in self.tableWidget.selectedItems()])
             rowuids = [self.los[x][0] for x in rows]
@@ -115,7 +115,7 @@ class DatabaseManager(QDialog):
                     menu.addAction('Remove EXACT link selected rows ', partial(self.removeExactLink, rowuids))         #(QAction('test'))
                 else:
                     menu.addAction('Remove EXACT link for '+self.los[item.row()][1], partial(self.removeExactLink, rowuids))         #(QAction('test'))
-                menu.exec_(event.globalPos())
+                menu.exec(event.globalPos())
         return super(DatabaseManager, self).eventFilter(source, event)
 
  

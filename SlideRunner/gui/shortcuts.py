@@ -19,8 +19,7 @@
 """
 
 
-from PyQt5.QtWidgets import QShortcut
-from PyQt5.QtGui import QKeySequence
+from PyQt6.QtGui import QKeySequence, QShortcut
 from functools import partial
 from SlideRunner.gui import annotation as GUIannotation
 
@@ -70,10 +69,10 @@ def defineShortcuts(self):
     shortcutN.activated.connect(self.nextScreeningStep)
     shortcuts.append(shortcutN)
 
-    shortcut = QShortcut(QKeySequence.Delete, self)
+    shortcut = QShortcut(QKeySequence.StandardKey.Delete, self)
     shortcut.activated.connect(self.deleteCurrentSelection)
     shortcuts.append(shortcut)
-    shortcut = QShortcut(QKeySequence.Backspace, self)
+    shortcut = QShortcut(QKeySequence.StandardKey.Backspace, self)
     shortcut.activated.connect(self.deleteCurrentSelection)
     shortcuts.append(shortcut)
 

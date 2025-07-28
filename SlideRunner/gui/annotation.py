@@ -16,8 +16,8 @@
 
 import numpy as np
 from SlideRunner.gui import mouseEvents as mouseEvents
-from PyQt5 import QtWidgets
-from PyQt5.QtGui import QColor
+from PyQt6 import QtWidgets
+from PyQt6.QtGui import QColor
 from SlideRunner_dataAccess.database import hex_to_rgb, rgb_to_hex
 from shapely.geometry import * 
 
@@ -92,9 +92,9 @@ def changeClassColor(self,oldcolor, classID, event = None):
 def deleteClass(self, classID, event = None):
     text = self.db.getClassByID(classID)
     reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                    'Do you really wish to delete this class and all of its objects?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                    'Do you really wish to delete this class and all of its objects?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-    if reply == QtWidgets.QMessageBox.No:
+    if reply == QtWidgets.QMessageBox.StandardButton.No:
         return
 
     self.db.deleteClass(classID)
@@ -124,9 +124,9 @@ def deleteAllFromClassOnSlide(self, classID, event = None):
         return
 
     reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                    'Do you really wish to delete all objects of this class from the current slide?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                    'Do you really wish to delete all objects of this class from the current slide?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-    if reply == QtWidgets.QMessageBox.No:
+    if reply == QtWidgets.QMessageBox.StandardButton.No:
         return
 
 
@@ -150,9 +150,9 @@ def copyAllAnnotations(self, pluginAnnoClass, classID, event = None):
     annos = self.activePlugin.instance.getAnnotationsOfLabel(pluginAnnoClass)
 
     reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                    'Do you really wish to copy %d annotation items of this class to the database?' % len(annos), QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                    'Do you really wish to copy %d annotation items of this class to the database?' % len(annos), QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-    if reply == QtWidgets.QMessageBox.No:
+    if reply == QtWidgets.QMessageBox.StandardButton.No:
         return
     
     for pluginAnno in annos:

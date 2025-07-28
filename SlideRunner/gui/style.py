@@ -17,13 +17,13 @@
         Style definitions
 """
 
-from PyQt5.QtWidgets import  QStyleFactory
-from PyQt5.QtGui import QPalette, QColor
-from PyQt5.QtCore import Qt
+from PyQt6.QtWidgets import  QStyleFactory
+from PyQt6.QtGui import QPalette, QColor
+from PyQt6.QtCore import Qt
 
-from PyQt5 import QtGui, QtCore
+from PyQt6 import QtGui, QtCore
 
-#from PyQt5.QtWidgets import QDialog, QStyleFactory, QWidget, QFileDialog, QMenu,QInputDialog, QAction, QPushButton, QItemDelegate, QTableWidgetItem, QCheckBox
+#from PyQt6.QtWidgets import QDialog, QStyleFactory, QWidget, QFileDialog, QMenu,QInputDialog, QAction, QPushButton, QItemDelegate, QTableWidgetItem, QCheckBox
 
 def setStyle(app):
 
@@ -31,20 +31,20 @@ def setStyle(app):
 
     darkPalette = QPalette()
     
-    darkPalette.setColor(QPalette.Window, QColor.fromRgb(53,53,53))
-    darkPalette.setColor(QPalette.WindowText, Qt.white)
-    darkPalette.setColor(QPalette.Base, QColor.fromRgb(25,25,25))
-    darkPalette.setColor(QPalette.AlternateBase, QColor.fromRgb(53,53,53))
-    darkPalette.setColor(QPalette.ToolTipBase, Qt.white)
-    darkPalette.setColor(QPalette.ToolTipText, Qt.white)
-    darkPalette.setColor(QPalette.Text, Qt.white)
-    darkPalette.setColor(QPalette.Button, QColor.fromRgb(53,53,53))
-    darkPalette.setColor(QPalette.ButtonText, Qt.white)
-    darkPalette.setColor(QPalette.BrightText, Qt.red)
-    darkPalette.setColor(QPalette.Link, QColor.fromRgb(42, 130, 218))
+    darkPalette.setColor(QPalette.ColorRole.Window, QColor.fromRgb(53,53,53))
+    darkPalette.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+    darkPalette.setColor(QPalette.ColorRole.Base, QColor.fromRgb(25,25,25))
+    darkPalette.setColor(QPalette.ColorRole.AlternateBase, QColor.fromRgb(53,53,53))
+    darkPalette.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
+    darkPalette.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+    darkPalette.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
+    darkPalette.setColor(QPalette.ColorRole.Button, QColor.fromRgb(53,53,53))
+    darkPalette.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
+    darkPalette.setColor(QPalette.ColorRole.BrightText, Qt.GlobalColor.red)
+    darkPalette.setColor(QPalette.ColorRole.Link, QColor.fromRgb(42, 130, 218))
 
-    darkPalette.setColor(QPalette.Highlight, QColor.fromRgb(42, 130, 218))
-    darkPalette.setColor(QPalette.HighlightedText, Qt.black)
+    darkPalette.setColor(QPalette.ColorRole.Highlight, QColor.fromRgb(42, 130, 218))
+    darkPalette.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.black)
 
     import os
 

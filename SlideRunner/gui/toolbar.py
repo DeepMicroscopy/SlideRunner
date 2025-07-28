@@ -15,8 +15,7 @@
 """
 
 from functools import partial
-from PyQt5.QtWidgets import QAction
-from PyQt5.QtGui import QIcon
+from PyQt6.QtGui import QIcon, QAction
 from SlideRunner.gui.types import *
 """
     Construct toolbar

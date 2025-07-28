@@ -14,18 +14,18 @@
         Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314.
 """
 
-from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt6 import QtGui, QtWidgets, QtCore
 import sys
 from time import time,sleep
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QDialog, QApplication, QMainWindow
-from PyQt5.QtWidgets import QSplashScreen
-from PyQt5.QtCore import  Qt
+from PyQt6.QtGui import QPixmap, QAction
+from PyQt6.QtWidgets import QDialog, QApplication, QMainWindow
+from PyQt6.QtWidgets import QSplashScreen
+from PyQt6.QtCore import  Qt
 from functools import partial
 
 import os
 ARTWORK_DIR_NAME = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))+os.sep+'artwork'+os.sep
-from PyQt5.QtWidgets import QDialog, QWidget, QFileDialog, QMenu,QInputDialog, QAction, QPushButton, QItemDelegate, QTableWidgetItem, QCheckBox
+from PyQt6.QtWidgets import QDialog, QWidget, QFileDialog, QMenu,QInputDialog, QPushButton, QItemDelegate, QTableWidgetItem, QCheckBox
 
 
 def closeDlg(splash,e):
@@ -45,7 +45,7 @@ def welcomeExactDialog(app, settingsObject, mainwindow):
 
         # Create and display the about screen
         splash_pix = QPixmap(ARTWORK_DIR_NAME+'ExactWelcomeScreen.png')
-        splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
+        splash = QSplashScreen(splash_pix, Qt.WindowType.WindowStaysOnTopHint)
 
         btn = QPushButton('Enable EXACT', splash)
         btn.move(140, 320)

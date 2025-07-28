@@ -86,11 +86,11 @@ To run, the following libraries and their dependencies will be installed:
 
 Library           | version           |  link             
 ------------------|-------------------|-------------------
-PyQT5             | >= 5.6.0         | https://pyqt.sourceforge.net/
-numpy             | >= 1.13           | https://www.numpy.org
-cv2 (OpenCV3)     | >= 3.1.0          | https://opencv.org
+PyQt6             | >= 6.9.1          | https://pyqt.sourceforge.net/
+numpy             | >= 2.0.2          | https://www.numpy.org
+cv2 (OpenCV3)     | >= 4.12.0         | https://opencv.org
 sqlite3           | >= 2.6.0          | https://www.sqlite.org
-openslide         | >= 1.1.1          | https://www.openslide.org
+openslide         | >= 1.4.2          | https://www.openslide.org
 
 ## Screenshots
 

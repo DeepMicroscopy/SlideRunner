@@ -1,6 +1,6 @@
 from SlideRunner.general.dependencies import *
 from functools import partial
-import PyQt5.QtCore as QtCore
+import PyQt6.QtCore as QtCore
 
 def hitClose(ev, d: QDialog, elem:dict):
     if (elem['editx'].text().isdigit()) and (elem['edity'].text().isdigit()):
@@ -37,8 +37,8 @@ def getCoordinatesDialog(self):
     b1.clicked.connect(partial(hitClose, d=d, elem=elem))
 
     d.setWindowTitle("Enter Coordinates")
-    d.setWindowModality(Qt.ApplicationModal)
-    d.exec_()
+    d.setWindowModality(Qt.WindowModality.ApplicationModal)
+    d.exec()
 
     return int(editx.text()), int(edity.text())
 

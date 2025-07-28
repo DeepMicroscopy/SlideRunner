@@ -1,11 +1,11 @@
 from SlideRunner.general.dependencies import *
 from SlideRunner_dataAccess.database import Database
 from functools import partial
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import pyqtSlot
+from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6.QtCore import pyqtSlot
 import sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QAction, QTableWidget,QTableWidgetItem,QVBoxLayout
-from PyQt5.QtGui import QIcon
+from PyQt6.QtWidgets import QMainWindow, QApplication, QWidget, QTableWidget,QTableWidgetItem,QVBoxLayout
+from PyQt6.QtGui import QIcon, QAction
 from SlideRunner.dataAccess.exact import *
 from functools import partial
 
@@ -81,9 +81,9 @@ class ExactDownloadDialog(QDialog):
         exactid, _, imname, linked = los
         if not (linked==''):
             reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                            f'This image exists already in the database. Check out new copy?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                            f'This image exists already in the database. Check out new copy?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-            if reply == QtWidgets.QMessageBox.No:
+            if reply == QtWidgets.QMessageBox.StandardButton.No:
                 return
         
         savefolder = QtWidgets.QFileDialog.getExistingDirectory()
@@ -95,17 +95,17 @@ class ExactDownloadDialog(QDialog):
         (image_id, product_id, imageset_id) = [int(x) for x in exactid.split('/')]
 
         reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                        f'Add image and annotations to database?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                        f'Add image and annotations to database?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
 
         progress = QtWidgets.QProgressDialog("Downloading image ..", "Cancel", 0, 100, self)
-        progress.setWindowModality(QtCore.Qt.WindowModal)
+        progress.setWindowModality(QtCore.Qt.WindowModality.WindowModal)
         progress.show()
 
         status, outfilename = self.exm.APIs.images_api.download_image(image_id, target_path=savefolder+os.sep+filename,original_image=True)
 #        image_download_image(image_id=image_id, target_folder=savefolder, callback=progress.setValue)
 
-        if reply == QtWidgets.QMessageBox.Yes:
+        if reply == QtWidgets.QMessageBox.StandardButton.Yes:
             fpath,fname = os.path.split(outfilename)
             slideid = self.DB.insertNewSlide(fname,fpath)
 
@@ -115,7 +115,7 @@ class ExactDownloadDialog(QDialog):
             self.exm.sync(dataset_id=image_id, imageset_id=imageset_id, product_id=product_id, slideuid=slideid, filename=imname, database=self.DB, callback=progress.setValue)
 
             reply = QtWidgets.QMessageBox.information(self, 'Finished',
-                           'Download finished', QtWidgets.QMessageBox.Ok, QtWidgets.QMessageBox.Ok)
+                           'Download finished', QtWidgets.QMessageBox.StandardButton.Ok, QtWidgets.QMessageBox.StandardButton.Ok)
 
         progress.close()
 #        self.DB.execute(f'UPDATE Slides set exactImageID={exactid} where uid=={self.DB.annotationsSlide}')
@@ -123,14 +123,14 @@ class ExactDownloadDialog(QDialog):
         self.show()
 
     def eventFilter(self, source, event):
-        if(event.type() == QtCore.QEvent.MouseButtonPress and
-           event.buttons() == QtCore.Qt.RightButton and
+        if(event.type() == QtCore.QEvent.Type.MouseButtonPress and
+           event.buttons() == QtCore.Qt.MouseButton.RightButton and
            source is self.tableWidget.viewport()):
             item = self.tableWidget.itemAt(event.pos())
             if item is not None:
                 menu = QMenu(self)
                 menu.addAction('Download this image', partial(self.download, self.los[item.row()]))         #(QAction('test'))
-                menu.exec_(event.globalPos())
+                menu.exec(event.globalPos())
         return super(ExactDownloadDialog, self).eventFilter(source, event)
 
  

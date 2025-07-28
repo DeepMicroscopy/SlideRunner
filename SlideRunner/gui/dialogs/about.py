@@ -14,13 +14,13 @@
         Springer Vieweg, Berlin, Heidelberg, 2018. pp. 309-314.
 """
 
-from PyQt5 import QtGui, QtWidgets, QtCore
+from PyQt6 import QtGui, QtWidgets, QtCore
 import sys
 from time import time,sleep
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QDialog, QApplication, QMainWindow
-from PyQt5.QtWidgets import QSplashScreen
-from PyQt5.QtCore import  Qt
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import QDialog, QApplication, QMainWindow
+from PyQt6.QtWidgets import QSplashScreen
+from PyQt6.QtCore import  Qt
 from functools import partial
 
 import os
@@ -34,9 +34,9 @@ def aboutDialog(app,version):
 
         # Create and display the about screen
         splash_pix = QPixmap(ARTWORK_DIR_NAME+'AboutScreen.png')
-        splash = QSplashScreen(splash_pix, Qt.WindowStaysOnTopHint)
+        splash = QSplashScreen(splash_pix, Qt.WindowType.WindowStaysOnTopHint)
 
-        splash.showMessage('Version %s\n'%version, alignment = Qt.AlignHCenter + Qt.AlignBottom, color=Qt.black)
+        splash.showMessage('Version %s\n'%version, alignment = Qt.AlignmentFlag.AlignHCenter + Qt.AlignmentFlag.AlignBottom, color=Qt.GlobalColor.black)
         splash.setMask(splash_pix.mask())
         splash.show()
 

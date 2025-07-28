@@ -1,6 +1,6 @@
 from SlideRunner.general.dependencies import *
 from functools import partial
-import PyQt5.QtCore as QtCore
+import PyQt6.QtCore as QtCore
 cmaps = ['viridis', 'plasma', 'inferno', 'magma', 'cividis', 'Greys', 'Purples', 'Blues', 'Greens', 'Oranges', 'Reds',
             'YlOrBr', 'YlOrRd', 'OrRd', 'PuRd', 'RdPu', 'BuPu',
             'GnBu', 'PuBu', 'YlGnBu', 'PuBuGn', 'BuGn', 'YlGn', 'binary', 'gist_yarg', 'gist_gray', 'gray', 'bone', 'pink',
@@ -68,7 +68,7 @@ def settingsDialog(settingsObject):
     newSlider.setMinimum(1)
     newSlider.setMaximum(100)
     newSlider.setValue(int(settingsObject.value('SpotCircleRadius')))
-    newSlider.setOrientation(QtCore.Qt.Horizontal)
+    newSlider.setOrientation(QtCore.Qt.Orientation.Horizontal)
     layout.addWidget(newSlider, 1,1)
     elem['radiusSlider'] = newSlider
 
@@ -142,6 +142,6 @@ def settingsDialog(settingsObject):
 
 #    b1.move(50,50)
     d.setWindowTitle("Settings")
-    d.setWindowModality(Qt.ApplicationModal)
-    d.exec_()
+    d.setWindowModality(Qt.WindowModality.ApplicationModal)
+    d.exec()
 

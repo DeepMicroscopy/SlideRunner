@@ -16,10 +16,10 @@
 
 
 from SlideRunner.gui.types import *
-from PyQt5.QtWidgets import QMenu
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap, QWheelEvent
+from PyQt6.QtWidgets import QMenu
+from PyQt6 import QtWidgets
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap, QWheelEvent
 from functools import partial
 import numpy as np
 import matplotlib.path as path
@@ -43,7 +43,7 @@ def doubleClick(self, event):
             DBclassIdxToClassId = {idx+1:classId for idx, (className,classId,color,clckbl) in enumerate(DBclasses)}
             if (self.lastAnnotationClass>0):
                 act=menu.addAction('Annotate (%s)'%DBclassIdxToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, DBclassIdxToClassId[self.lastAnnotationClass], event, self.ui.annotationsList))
-                act.setShortcut(Qt.Key_Enter)
+                act.setShortcut(Qt.Key.Key_Enter)
             addmenu = menu.addMenu('Annotate as:')
             menuitems = list()
             for clsname in DBclasses:
@@ -52,7 +52,7 @@ def doubleClick(self, event):
         addmenu = menu.addAction('Cancel', self.hitEscape)
         addmenu = menu.addAction('Remove last point', partial(self.removeLastPolygonPoint,self))
 
-        action = menu.exec_(self.mapToGlobal(event.pos()))
+        action = menu.exec(self.mapToGlobal(event.pos()))
 
 def wheelEvent(self, event: QWheelEvent):
     """
@@ -64,29 +64,28 @@ def wheelEvent(self, event: QWheelEvent):
         return
     
     # Disable wheel if x position is leaving image compartment
-    if (event.x()>self.ui.verticalScrollBar.pos().x()):
+    if (event.position().x() > self.ui.verticalScrollBar.pos().x()):
         return
 
-    if (event.source() == Qt.MouseEventSynthesizedBySystem):
-        # touch pad geasture - use direct scrolling, not zooming
-        # this is usually indicative for Mac OS
-        subs = np.asarray([float(event.pixelDelta().x()), float(event.pixelDelta().y())])/32000.0*self.getZoomValue()
+
+    pixel_len = event.pixelDelta().manhattanLength()
+    angle_len = event.angleDelta().manhattanLength()
+
+    # Heuristic: use smooth zoom only if pixel delta is non-zero
+    # and angle delta is zero or very small
+    if pixel_len > 0 and angle_len < 15:
+        # Likely touchpad scroll (or smooth scrolling)
+        delta = event.pixelDelta()
+        subs = np.array([delta.x(), delta.y()]) / 32000.0 * self.getZoomValue()
         self.relativeCoords -= subs
-        if (self.relativeCoords[0]<-0.5):
-            self.relativeCoords[0]=-0.5
+        self.relativeCoords = np.maximum(self.relativeCoords, -0.5)
+    else:
+        # Likely discrete wheel
+        steps = event.angleDelta().y() / 120
+        self.setZoomValue(self.getZoomValue() * np.power(1.25, -steps))
 
-        if (self.relativeCoords[1]<-0.5):
-            self.relativeCoords[1]=-0.5
-
-        
-    else: # mouse wheel - use scrolling
-        inc = 1
-        if (event.angleDelta().y()>0):
-            inc = -1
-        self.setZoomValue(self.getZoomValue() * np.power(1.25, -inc))
-    
-    self.showImage()
-    self.updateScrollbars()
+        self.showImage()
+        self.updateScrollbars()
 
 
 def moveImage(self, event):
@@ -100,13 +99,13 @@ def moveImage(self, event):
     # Move image if shift+left click
     modifiers = QtWidgets.QApplication.keyboardModifiers()
     posx,posy = getMouseEventPosition(self, event)
-    if (modifiers == Qt.ControlModifier) and (self.dragPoint):
+    if (modifiers == Qt.KeyboardModifier.ControlModifier) and (self.dragPoint):
         cx,cy = self.screenToSlide((posx,posy))
         self.db.annotations[self.drag_id[0]].coordinates[self.drag_id[1],:] = [cx,cy]
         self.showImage()
 
-    if (modifiers == Qt.ShiftModifier) or (self.ui.clickToMove):
-        self.setCursor(Qt.ClosedHandCursor)
+    if (modifiers == Qt.KeyboardModifier.ShiftModifier) or (self.ui.clickToMove):
+        self.setCursor(Qt.CursorShape.ClosedHandCursor)
         cx,cy = self.screenToSlide((posx,posy))
         anno_abs = self.screenToSlide(self.ui.anno_pt1)
         offsetx = anno_abs[0]-cx           
@@ -118,7 +117,7 @@ def moveImage(self, event):
         self.updateScrollbars()
         self.showImage()
     else:
-        self.setCursor(Qt.ArrowCursor)
+        self.setCursor(Qt.CursorShape.ArrowCursor)
 
     if (self.ui.mode == UIMainMode.MODE_ANNOTATE_AREA) & (self.ui.annotationMode>0):
         self.ui.annotationMode=2
@@ -142,7 +141,7 @@ def moveImage(self, event):
             self.ui.wandAnnotation.tolerance = min(100,max(2,np.abs(self.screenToSlide(getMouseEventPosition(self,event))[0]-self.ui.wandAnnotation.x)))
             self.showImage()
 
-    if not (modifiers == Qt.ShiftModifier) and (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
+    if not (modifiers == Qt.KeyboardModifier.ShiftModifier) and (self.ui.mode == UIMainMode.MODE_ANNOTATE_POLYGON) & (self.ui.annotationMode>0):
         self.ui.moveDots+=1
         if (len(self.ui.annotationsList)>0) and all([abs(a-p)<3 for a,p in zip(self.slideToScreen(self.ui.annotationsList[-1]),getMouseEventPosition(self,event))]):
             return      
@@ -162,10 +161,10 @@ def leftClickImage(self, event):
         self.ui.dragPoint = False
         # Move image if shift+left click
         modifiers = QtWidgets.QApplication.keyboardModifiers()
-        if (modifiers == Qt.ShiftModifier) or ((self.db.isOpen() == False) and (self.activePlugin == False)):
+        if (modifiers == Qt.KeyboardModifier.ShiftModifier) or ((self.db.isOpen() == False) and (self.activePlugin == False)):
             self.ui.clickToMove = True
             self.ui.anno_pt1 = (posx,posy)
-            self.setCursor(Qt.ClosedHandCursor)
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
             return
 
         mouseClickGlobal = self.screenToSlide((posx,posy))
@@ -189,7 +188,7 @@ def leftClickImage(self, event):
             else:
                 self.selectedAnno = None
 
-        if (clickedAnno is not None) and (modifiers == Qt.ControlModifier) :
+        if (clickedAnno is not None) and (modifiers == Qt.KeyboardModifier.ControlModifier) :
                 pp = clickedAnno.positionInAnnotationHandle(mouseClickGlobal, self.getZoomValue())
                 if (pp is not None):
                     self.drag_id = [clickedAnno.uid, pp]
@@ -207,7 +206,7 @@ def leftClickImage(self, event):
                 for clsname in self.db.getAllClasses():
                     act=addmenu.addAction(clsname[0],partial(self.addAnnotationLabel, clsname[1], event, clickedAnno.uid))
                     menuitems.append(act)
-                action = menu.exec_(self.mapToGlobal(event.pos()))
+                action = menu.exec(self.mapToGlobal(event.pos()))
             else:
                 self.db.addAnnotationLabel(self.lastAnnotationClass, self.retrieveAnnotator(event), clickedAnno.uid)
                 self.writeDebug('new label for object with class %d, slide %d, person %d' % ( self.lastAnnotationClass, self.slideUID,self.retrieveAnnotator(event)))
@@ -219,7 +218,7 @@ def leftClickImage(self, event):
             # Move image
             self.ui.anno_pt1 = (posx,posy)
             self.ui.clickToMove = True
-            self.setCursor(Qt.ClosedHandCursor)
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
 
         if clickedAnno is None and (self.ui.mode == UIMainMode.MODE_ANNOTATE_WAND) and (self.db.isOpen()):
             self.ui.wandAnnotation = WandAnnotation(self.screenToSlide(getMouseEventPosition(self,event)))
@@ -234,7 +233,7 @@ def leftClickImage(self, event):
                     act=addmenu.addAction(clsname[0],partial(GUIannotation.addSpotAnnotation,self, clsname[1], event))
                     menuitems.append(act)
 
-                action = menu.exec_(self.mapToGlobal(event.pos()))
+                action = menu.exec(self.mapToGlobal(event.pos()))
                 
             elif (self.db.isOpen()):
                 # Fast annotation mode. Just add GUIannotation.
@@ -265,7 +264,7 @@ def getMouseEventPosition(self,event):
     """
         Retrieves the current position of a mouse pointer event
     """
-    pos = (int(event.localPos().x()), int(event.localPos().y()))
+    pos = (int(event.position().x()), int(event.position().y()))
     return pos
 
 
@@ -275,7 +274,7 @@ def releaseImage(self, event):
         Callback function for a mouse release event in the main image
     """
     self.ui.clickToMove = False
-    self.setCursor(Qt.ArrowCursor)
+    self.setCursor(Qt.CursorShape.ArrowCursor)
     if (self.dragPoint):
         posx,posy = getMouseEventPosition(self, event)
         cx,cy = self.screenToSlide((posx,posy))
@@ -295,7 +294,7 @@ def releaseImage(self, event):
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.addAreaAnnotation,self, clsname[1], event))
                 menuitems.append(act)
 
-            action = menu.exec_(self.mapToGlobal(event.pos()))
+            action = menu.exec(self.mapToGlobal(event.pos()))
             self.showImage()
         else:
             GUIannotation.addAreaAnnotation(self, self.lastAnnotationClass, event)
@@ -331,14 +330,14 @@ def releaseImage(self, event):
             DBclassIdxToClassId = {idx+1:classId for idx, (className,classId,color,clckbl) in enumerate(DBclasses)}
             if (self.lastAnnotationClass>0):
                 act=menu.addAction('Annotate (%s)'%DBclassIdxToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, DBclassIdxToClassId[self.lastAnnotationClass], event, self.ui.wandAnnotation.polygon))
-                act.setShortcut(Qt.Key_Enter)
+                act.setShortcut(Qt.Key.Key_Enter)
             addmenu = menu.addMenu('Annotate as:')
             menuitems = list()
             for clsname in DBclasses:
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.addPolygonAnnotation,self, clsname[1], event, self.ui.wandAnnotation.polygon))
                 menuitems.append(act)
 
-            action = menu.exec_(self.mapToGlobal(event.pos()))
+            action = menu.exec(self.mapToGlobal(event.pos()))
 
         
         self.ui.wandAnnotation = WandAnnotation()
@@ -354,7 +353,7 @@ def releaseImage(self, event):
                 act=addmenu.addAction(clsname[0],partial(GUIannotation.addCircleAnnotation,self, clsname[1], event))
                 menuitems.append(act)
 
-            action = menu.exec_(self.mapToGlobal(event.pos()))
+            action = menu.exec(self.mapToGlobal(event.pos()))
         else:
             GUIannotation.addCircleAnnotation(self, self.lastAnnotationClass, event)
         self.showImage()
@@ -400,10 +399,10 @@ def rightClickImage(self, event):
                 DBclassIdxToClassId = {idx+1:classId for idx, (className,classId,color,clckbl) in enumerate(DBclasses)}
                 if (self.lastAnnotationClass>0):
                     act=menu.addAction('Annotate (%s)'%DBclassIdxToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, DBclassIdxToClassId[self.lastAnnotationClass], event, self.ui.annotationsList))
-                    act.setShortcut(Qt.Key_Enter)
+                    act.setShortcut(Qt.Key.Key_Enter)
 #                if (self.lastAnnotationClass>0):
 #                    act=menu.addAction('Annotate (%s)'%DBclassToName[self.lastAnnotationClass],partial(GUIannotation.addPolygonAnnotation,self, self.lastAnnotationClass, event, self.ui.annotationsList))
-#                    act.setShortcut(Qt.Key_Enter)
+#                    act.setShortcut(Qt.Key.Key_Enter)
                 addmenu = menu.addMenu('Annotate as:')
             
                 menuitems = list()
@@ -414,7 +413,7 @@ def rightClickImage(self, event):
             addmenu = menu.addAction('Remove last point (Crtr + R)', partial(self.removeLastPolygonPoint,self))
 
 
-            action = menu.exec_(self.mapToGlobal(event.pos()))
+            action = menu.exec(self.mapToGlobal(event.pos()))
             return
 
         clickedAnno = self.db.findClickAnnotation(mouseClickGlobal, annotationClasses=self.annotationClasses, zoom=self.getZoomValue())
@@ -522,7 +521,7 @@ def rightClickImage(self, event):
         act = submenu.addAction('continue from here', partial(self.redefineScreeningLastUpper))
         
 
-    action = menu.exec_(self.mapToGlobal(event.pos()))
+    action = menu.exec(self.mapToGlobal(event.pos()))
     if (self.db.isOpen()):
         self.showDBentryCount()
 
@@ -530,8 +529,8 @@ def pressImage(self, event):
     """
         Callback function for a click on the main image
     """
-    if (event.button() == Qt.LeftButton):
-            leftClickImage(self,event)
-    elif (event.button()==Qt.RightButton):
-            rightClickImage(self,event)
+    if (event.button() == Qt.MouseButton.LeftButton):
+        leftClickImage(self, event)
+    elif (event.button() == Qt.MouseButton.RightButton):
+        rightClickImage(self, event)
 

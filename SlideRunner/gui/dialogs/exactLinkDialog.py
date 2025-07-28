@@ -1,11 +1,11 @@
 from SlideRunner.general.dependencies import *
 from SlideRunner_dataAccess.database import Database
 from functools import partial
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtCore import pyqtSlot
+from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6.QtCore import pyqtSlot
 import sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QAction, QTableWidget,QTableWidgetItem,QVBoxLayout
-from PyQt5.QtGui import QIcon
+from PyQt6.QtWidgets import QMainWindow, QApplication, QWidget, QTableWidget,QTableWidgetItem,QVBoxLayout
+from PyQt6.QtGui import QIcon, QAction
 from SlideRunner.dataAccess.exact import *
 
 
@@ -76,9 +76,9 @@ class ExactLinkDialog(QDialog):
         exactid, _, linked = los
         if not (linked==''):
             reply = QtWidgets.QMessageBox.question(self, 'Question',
-                                            'Do you really want to link this image to a new image?', QtWidgets.QMessageBox.Yes, QtWidgets.QMessageBox.No)
+                                            'Do you really want to link this image to a new image?', QtWidgets.QMessageBox.StandardButton.Yes, QtWidgets.QMessageBox.StandardButton.No)
 
-            if reply == QtWidgets.QMessageBox.No:
+            if reply == QtWidgets.QMessageBox.StandardButton.No:
                 return
         (image_id, product_id, imageset_id) = [int(x) for x in exactid.split('/')]
         self.DB.execute(f'UPDATE Slides set exactImageID="{exactid}" where uid=={self.DB.annotationsSlide}')
@@ -86,14 +86,14 @@ class ExactLinkDialog(QDialog):
         self.show()
 
     def eventFilter(self, source, event):
-        if(event.type() == QtCore.QEvent.MouseButtonPress and
-           event.buttons() == QtCore.Qt.RightButton and
+        if(event.type() == QtCore.QEvent.Type.MouseButtonPress and
+           event.buttons() == QtCore.Qt.MouseButton.RightButton and
            source is self.tableWidget.viewport()):
             item = self.tableWidget.itemAt(event.pos())
             if item is not None:
                 menu = QMenu(self)
                 menu.addAction('Link to this image '+item.text(), partial(self.link, self.los[item.row()]))         #(QAction('test'))
-                menu.exec_(event.globalPos())
+                menu.exec(event.globalPos())
         return super(ExactLinkDialog, self).eventFilter(source, event)
 
  

@@ -1,31 +1,31 @@
-from PyQt5.QtWidgets import QMessageBox, QAbstractButton
+from PyQt6.QtWidgets import QMessageBox, QAbstractButton
 
 def YesNoAbortDialog(title:str='Question', text:str='Answer?', textYes:str='Yes', textNo:str='No', textAbort:str=None):
 
     box = QMessageBox()
-    box.setIcon(QMessageBox.Question)
+    box.setIcon(QMessageBox.Icon.Question)
     box.setWindowTitle(title)
     box.setText(text)
 
-    box.setStandardButtons(QMessageBox.Yes|QMessageBox.No)
+    box.setStandardButtons(QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No)
     if (textAbort is not None):
-        box.setStandardButtons(QMessageBox.Yes|QMessageBox.No|QMessageBox.Abort)
-        abortBtn = box.button(QMessageBox.Abort)
+        box.setStandardButtons(QMessageBox.StandardButton.Yes|QMessageBox.StandardButton.No|QMessageBox.StandardButton.Abort)
+        abortBtn = box.button(QMessageBox.StandardButton.Abort)
         abortBtn.setText(textAbort)
     else:
         abortBtn=None
         
-    buttonY = box.button(QMessageBox.Yes)
+    buttonY = box.button(QMessageBox.StandardButton.Yes)
     buttonY.setText(textYes)
-    buttonN = box.button(QMessageBox.No)
+    buttonN = box.button(QMessageBox.StandardButton.No)
     buttonN.setText(textNo)
-    box.exec_()
+    box.exec()
 
     if (box.clickedButton()==buttonY):
-        return QMessageBox.Yes
+        return QMessageBox.StandardButton.Yes
     elif (box.clickedButton()==buttonN):
-        return QMessageBox.No
+        return QMessageBox.StandardButton.No
     elif (box.clickedButton()==abortBtn):
-        return QMessageBox.Abort
+        return QMessageBox.StandardButton.Abort
 
     return None

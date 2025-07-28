@@ -1,10 +1,10 @@
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QMenu
-from PyQt5.QtWidgets import QTableWidget
+from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6.QtWidgets import QMenu
+from PyQt6.QtWidgets import QTableWidget
 from SlideRunner.gui.types import *
 from SlideRunner.gui import annotation as GUIannotation
 from functools import partial
-from PyQt5.QtCore import Qt
+from PyQt6.QtCore import Qt
 
 class ClassSelectTableWidget(QTableWidget):
     def __init__(self, parent = None, parentObject = None):
@@ -15,7 +15,7 @@ class ClassSelectTableWidget(QTableWidget):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
         columnId = self.columnAt(event.pos().x())
         rowId = self.rowAt(event.pos().y())
-        if (modifiers == Qt.ShiftModifier):
+        if (modifiers == Qt.KeyboardModifier.ShiftModifier):
                 partial(GUIannotation.addImageLabel, self.parentObject, self.parentObject.classList[rowId].uid)()
                 return
 
@@ -52,7 +52,7 @@ class ClassSelectTableWidget(QTableWidget):
                                         act=addmenu.addAction(clsname[0],partial(GUIannotation.copyAllAnnotations,self.parentObject,self.parentObject.classList[rowId].classID, clsname[1], event))
                                         menuitems.append(act)
 
-        action = menu.exec_(self.mapToGlobal(event.pos()))
+        action = menu.exec(self.mapToGlobal(event.pos()))
 
 
 def addSidebar(self, parentObject):
@@ -60,7 +60,7 @@ def addSidebar(self, parentObject):
         self.tabView = QtWidgets.QTabWidget()
 
 
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
 #        sizePolicy.setHeightForWidth(self.tabView.sizePolicy().hasHeightForWidth())
@@ -72,7 +72,7 @@ def addSidebar(self, parentObject):
         self.tab1widget.setLayout(self.tab1Layout)
         self.tab1Layout.setObjectName("tab1Layout")
 
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(10)
         sizePolicy.setHeightForWidth(self.tab1widget.sizePolicy().hasHeightForWidth())
@@ -84,7 +84,7 @@ def addSidebar(self, parentObject):
         self.tab2widget.setLayout(self.tab2Layout)
         self.tab2Layout.setObjectName("tab2Layout")
 
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
         sizePolicy.setHeightForWidth(self.tab2widget.sizePolicy().hasHeightForWidth())
@@ -94,14 +94,14 @@ def addSidebar(self, parentObject):
 
 
         self.annotationTypeTableView = ClassSelectTableWidget(self.centralwidget, parentObject)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.MinimumExpanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
         sizePolicy.setHeightForWidth(self.annotationTypeTableView.sizePolicy().hasHeightForWidth())
         self.annotationTypeTableView.setSizePolicy(sizePolicy)
         self.annotationTypeTableView.setMinimumSize(QtCore.QSize(200, 100))
 #        self.annotationTypeTableView.setMaximumSize(QtCore.QSize(16777215, 120))
-        self.annotationTypeTableView.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.annotationTypeTableView.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.ExtendedSelection)
         self.annotationTypeTableView.setObjectName("annotationTypeTableView")
         self.annotationTypeTableView.setColumnCount(0)
         self.annotationTypeTableView.setRowCount(0)
@@ -113,7 +113,7 @@ def addSidebar(self, parentObject):
         self.annotatorComboBox.setVisible(False)
         self.tab1Layout.addWidget(self.annotatorComboBox)
         self.statisticView = QtWidgets.QTableView(self.tab2widget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
         sizePolicy.setHeightForWidth(self.statisticView.sizePolicy().hasHeightForWidth())
@@ -124,7 +124,7 @@ def addSidebar(self, parentObject):
         self.statisticView.setVisible(True)
         self.tab2Layout.addWidget(self.statisticView)
         self.inspectorTableView = QtWidgets.QTableView(self.centralwidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Maximum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
         sizePolicy.setHeightForWidth(self.inspectorTableView.sizePolicy().hasHeightForWidth())
@@ -136,7 +136,7 @@ def addSidebar(self, parentObject):
         self.statusLabel = QtWidgets.QLabel(self.centralwidget)
         self.statusLabel.setObjectName("statusLabel")
         self.progressBar = QtWidgets.QProgressBar(self.centralwidget)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.progressBar.sizePolicy().hasHeightForWidth())
@@ -146,20 +146,20 @@ def addSidebar(self, parentObject):
 
         self.opacitySlider = QtWidgets.QSlider(self.centralwidget)
         self.opacitySlider.setEnabled(False)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.opacitySlider.sizePolicy().hasHeightForWidth())
         self.opacitySlider.setSizePolicy(sizePolicy)
         self.opacitySlider.setProperty("value", 50)
-        self.opacitySlider.setOrientation(QtCore.Qt.Horizontal)
+        self.opacitySlider.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.opacitySlider.setObjectName("opacitySlider")
 
 
         self.stretchlabel = QtWidgets.QLabel(self.centralwidget)
         self.stretchlabel.setObjectName("stretchlabel")
         self.stretchlabel.setText("")
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
         self.stretchlabel.setSizePolicy(sizePolicy)        
@@ -189,7 +189,7 @@ def addSidebar(self, parentObject):
         self.tab3Layout.addWidget(self.opacitySlider)
 
 
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.MinimumExpanding)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.MinimumExpanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         self.tab3widget.setSizePolicy(sizePolicy)        
