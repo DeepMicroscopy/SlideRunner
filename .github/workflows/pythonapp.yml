@@ -42,6 +42,16 @@ jobs:
         docker compose -f docker-compose.prod.yml exec web python3 manage.py migrate --noinput 
         docker compose -f docker-compose.prod.yml exec web python3 manage.py createsuperuser --noinput
         docker compose -f docker-compose.prod.yml exec web python3 manage.py collectstatic --no-input --clear
+    - name: Wait for EXACT backend to be ready
+      run: |
+        for i in {1..60}; do
+          if curl -s http://localhost:1337/api/v1/teams/; then
+            echo "EXACT backend is up!"
+            break
+          fi
+          echo "Waiting for EXACT backend..."
+          sleep 5
+        done
     - name: Test with pytest
       run: |
         pip install pytest
