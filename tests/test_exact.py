@@ -63,7 +63,21 @@ def test_images():
     client = ApiClient(configuration)
     apis = ExactAPIs(client)
 
-    imageset =  apis.image_sets_api.list_image_sets().results[0].id
+    image_sets = apis.image_sets_api.list_image_sets().results
+    if not image_sets:
+        # Create a team if needed
+        teams = apis.team_api.list_teams().results
+        if not teams:
+            team = apis.team_api.create_team(body=Team(name='TestTeam'))
+            team_id = team.id
+        else:
+            team_id = teams[0].id
+        # Create image set
+        body = ImageSet(team=team_id, name='Test-ImageSet')
+        apis.image_sets_api.create_image_set(body=body)
+        image_sets = apis.image_sets_api.list_image_sets().results
+
+    imageset = image_sets[0].id
 
     # Delete all images
     product_id=1
